@@ -1,0 +1,28 @@
+{
+  "compress": {
+    "toplevel": true,
+    "keep_fargs": false,
+    "passes": 1000,
+    "pure_getters": true,
+    "arrows": true,
+    "unsafe": true,
+    "unsafe_comps": true,
+    "unsafe_math": true,
+    "reduce_vars": true,
+    "hoist_props": true,
+    "collapse_vars": true,
+    "module": true
+  },
+  "mangle": {
+    "toplevel": true,
+    "properties": {
+      "regex": "/^.*_$/"
+    }
+  },
+  "output": {
+    "preamble": "\"use strict\""
+  },
+  "module": true,
+  "toplevel": true,
+  "keep_fnames": false
+}

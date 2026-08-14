@@ -1,0 +1,23 @@
+{
+  "name": "js13k2025",
+  "version": "1.0.0",
+  "author": "David Brad (davidbrad.015@gmail.com)",
+  "description": "js13k entry for the 2025 edition of the jam",
+  "main": "index.html",
+  "license": "MIT",
+  "dependencies": {
+    "esbuild": "^0.25.5",
+    "esbuild-plugin-spglsl": "^0.0.3",
+    "html-inline": "^1.2.0",
+    "html-minifier-terser": "^7.2.0",
+    "roadroller": "^2.1.0",
+    "spglsl": "^0.3.1",
+    "uglify-js": "^3.19.3"
+  },
+  "overrides": {
+    "minimist": "1.2.8"
+  },
+  "devDependencies": {
+    "tsdoc-markdown": "^1.5.0"
+  }
+}

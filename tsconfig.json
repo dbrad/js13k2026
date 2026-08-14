@@ -1,0 +1,42 @@
+{
+    "compilerOptions": {
+        "module": "esnext",
+        "target": "esnext",
+        "lib": [
+            "dom",
+            "esnext",
+            "webworker"
+        ],
+        "noImplicitAny": true,
+        "noEmit": true,
+        "strict": true,
+        "strictFunctionTypes": true,
+        "noUnusedLocals": true,
+        "typeRoots": [
+            "../node_modules/@types",
+            "../src"
+        ],
+        "types": [],
+        "paths": {
+            "@root/*": [
+                "./src/*"
+            ],
+            "@res/*": [
+                "./src/res/*"
+            ],
+            "@shaders/*": [
+                "./src/shaders/*"
+            ],
+            "@debug": [
+                "./src/ts/__debug/debug.ts"
+            ],
+        }
+    },
+    "exclude": [
+        "node_modules",
+        "node_modules/**/*"
+    ],
+    "include": [
+        "./src/ts/**/*.ts"
+    ]
+}
