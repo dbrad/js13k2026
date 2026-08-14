@@ -1,4 +1,5 @@
 import { glPushColorQuad, glPushText } from "../gl";
+import { mapData, mapH, mapW } from "../raycast";
 
 let frameCount = 0;
 let fps = 60;
@@ -59,9 +60,9 @@ export let togglePerformanceDisplay = (): void => {
 let col1 = SCREEN_WIDTH - 8;
 let col2 = SCREEN_WIDTH - 160;
 
-export let drawPerformanceMeter = (): void => {
+export let drawPerformanceMeter = (px: number, py: number): void => {
     if (DEBUG && showPerformance) {
-        glPushColorQuad(0, 0, SCREEN_WIDTH, 85, 0xff000000);
+        glPushColorQuad(0, 0, SCREEN_WIDTH, 100, 0xff000000);
 
         glPushText(`fps ${fps.toFixed(0).padStart(7, " ")} hz`, col1, 5, 0xffffffff, 1, "right");
         glPushText(`frame ${displayMs} ms`, col1, 18, 0xffffffff, 1, "right");
@@ -75,6 +76,17 @@ export let drawPerformanceMeter = (): void => {
         glPushText(`update ${displaySpikeUpdateTime} us`, col2, 44, 0xffffffff, 1, "right");
         // glPushText(`draw ${displaySpikeDrawTime} us`, col2, 57, 0xffffffff, 1, "right");
         glPushText(`render ${displaySpikeRenderTime} us`, col2, 70, 0xffffffff, 1, "right");
+
+        for (let x = 0; x < mapW; x++) {
+            for (let y = 0; y < mapH; y++) {
+                if (mapData[y * mapW + x] === 0) {
+                    glPushColorQuad(x * 2, y * 2, 2, 2, 0xff000066);
+                }
+                if (px >= x && px < x + 1 && py >= y && py < y + 1) {
+                    glPushColorQuad(x * 2, y * 2, 2, 2, 0xff00ff00);
+                }
+            }
+        }
     }
 };
 

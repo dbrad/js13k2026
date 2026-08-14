@@ -58,6 +58,16 @@ type Scene = {
     drawGUI_: VoidFunction,
 };
 
+type Room = {
+    id_: number;
+    x_: number;
+    y_: number;
+    w_: number;
+    h_: number;
+    centerX_: number;
+    centerY_: number;
+};
+
 type Mote = {
     x_: number;
     y_: number;

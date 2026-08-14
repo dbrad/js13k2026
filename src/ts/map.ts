@@ -1,35 +1,25 @@
-import { random } from "./math";
+import { abs, floor, max, min, random } from "./math";
 import { AMBIENT } from "./raycast";
-
-type Room = {
-    id: number;
-    x: number;
-    y: number;
-    w: number;
-    h: number;
-    centerX: number;
-    centerY: number;
-};
 
 export let generateDungeon = (width: number, height: number, minRoomSize: number, maxRoomSize: number, maxRooms: number, loopChance: number = 0.15, deadEndChance: number = 0.20): [Int8Array, Float32Array, number, number] => {
     let lightMap = new Float32Array(width * height);
-    lightMap.fill(AMBIENT);                 // import or hardcode 0.32
+    lightMap.fill(AMBIENT);
 
     let grid = new Int8Array(width * height).fill(1); // 1 represents wall, 0 represents floor
     let rooms: Room[] = [];
 
     let intersects = (r1: Room, r2: Room): boolean => {
         return (
-            r1.x < r2.x + r2.w + 1 &&
-            r1.x + r1.w > r2.x - 1 &&
-            r1.y < r2.y + r2.h + 1 &&
-            r1.y + r1.h > r2.y - 1
+            r1.x_ < r2.x_ + r2.w_ + 1 &&
+            r1.x_ + r1.w_ > r2.x_ - 1 &&
+            r1.y_ < r2.y_ + r2.h_ + 1 &&
+            r1.y_ + r1.h_ > r2.y_ - 1
         );
     };
 
     let carveHorizontalTunnel = (x1: number, x2: number, y: number) => {
-        let start = Math.min(x1, x2);
-        let end = Math.max(x1, x2);
+        let start = min(x1, x2);
+        let end = max(x1, x2);
         for (let x = start; x <= end; x++) {
             let index = y * width + x;
             if (grid[index] === 1) grid[index] = 0;
@@ -37,8 +27,8 @@ export let generateDungeon = (width: number, height: number, minRoomSize: number
     };
 
     let carveVerticalTunnel = (y1: number, y2: number, x: number) => {
-        let start = Math.min(y1, y2);
-        let end = Math.max(y1, y2);
+        let start = min(y1, y2);
+        let end = max(y1, y2);
         for (let y = start; y <= end; y++) {
             let index = y * width + x;
             if (grid[index] === 1) grid[index] = 0;
@@ -46,11 +36,11 @@ export let generateDungeon = (width: number, height: number, minRoomSize: number
     };
     let connectRooms = (r1: Room, r2: Room) => {
         if (random() < 0.5) {
-            carveHorizontalTunnel(r1.centerX, r2.centerX, r1.centerY);
-            carveVerticalTunnel(r1.centerY, r2.centerY, r2.centerX);
+            carveHorizontalTunnel(r1.centerX_, r2.centerX_, r1.centerY_);
+            carveVerticalTunnel(r1.centerY_, r2.centerY_, r2.centerX_);
         } else {
-            carveVerticalTunnel(r1.centerY, r2.centerY, r1.centerX);
-            carveHorizontalTunnel(r1.centerX, r2.centerX, r2.centerY);
+            carveVerticalTunnel(r1.centerY_, r2.centerY_, r1.centerX_);
+            carveHorizontalTunnel(r1.centerX_, r2.centerX_, r2.centerY_);
         }
     };
 
@@ -59,16 +49,16 @@ export let generateDungeon = (width: number, height: number, minRoomSize: number
     let px = 0;
     let py = 0;
     for (let i = 0; i < maxRooms; i++) {
-        let w = Math.floor(random() * (maxRoomSize - minRoomSize + 1)) + minRoomSize;
-        let h = Math.floor(random() * (maxRoomSize - minRoomSize + 1)) + minRoomSize;
-        let x = Math.floor(random() * (width - w - 2)) + 1;
-        let y = Math.floor(random() * (height - h - 2)) + 1;
+        let w = floor(random() * (maxRoomSize - minRoomSize + 1)) + minRoomSize;
+        let h = floor(random() * (maxRoomSize - minRoomSize + 1)) + minRoomSize;
+        let x = floor(random() * (width - w - 2)) + 1;
+        let y = floor(random() * (height - h - 2)) + 1;
 
         let newRoom: Room = {
-            id: roomIdCounter,
-            x, y, w, h,
-            centerX: Math.floor(x + w / 2),
-            centerY: Math.floor(y + h / 2)
+            id_: roomIdCounter,
+            x_: x, y_: y, w_: w, h_: h,
+            centerX_: floor(x + w / 2),
+            centerY_: floor(y + h / 2)
         };
 
         let overlap = false;
@@ -80,14 +70,14 @@ export let generateDungeon = (width: number, height: number, minRoomSize: number
         }
 
         if (!overlap) {
-            for (let ry = newRoom.y; ry < newRoom.y + newRoom.h; ry++) {
-                for (let rx = newRoom.x; rx < newRoom.x + newRoom.w; rx++) {
+            for (let ry = newRoom.y_; ry < newRoom.y_ + newRoom.h_; ry++) {
+                for (let rx = newRoom.x_; rx < newRoom.x_ + newRoom.w_; rx++) {
                     grid[ry * width + rx] = 0;
                 }
             }
             if (px === 0 && py === 0) {
-                px = newRoom.centerX;
-                py = newRoom.centerY;
+                px = newRoom.centerX_;
+                py = newRoom.centerY_;
             }
             rooms.push(newRoom);
             roomIdCounter++;
@@ -100,21 +90,21 @@ export let generateDungeon = (width: number, height: number, minRoomSize: number
     let connections = new Set<string>();
     let connectedRoomIds = new Set<number>();
 
-    connectedRoomIds.add(rooms[0].id);
+    connectedRoomIds.add(rooms[0].id_);
 
-    let getEdgeKey = (id1: number, id2: number) => `${Math.min(id1, id2)}-${Math.max(id1, id2)}`;
+    let getEdgeKey = (id1: number, id2: number) => `${min(id1, id2)}-${max(id1, id2)}`;
 
     while (connectedRoomIds.size < rooms.length) {
         let minDistance = Infinity;
         let bestEdge: [Room, Room] | null = null;
 
         for (let r1 of rooms) {
-            if (!connectedRoomIds.has(r1.id)) continue;
+            if (!connectedRoomIds.has(r1.id_)) continue;
 
             for (let r2 of rooms) {
-                if (connectedRoomIds.has(r2.id)) continue;
+                if (connectedRoomIds.has(r2.id_)) continue;
 
-                let dist = Math.abs(r1.centerX - r2.centerX) + Math.abs(r1.centerY - r2.centerY);
+                let dist = abs(r1.centerX_ - r2.centerX_) + abs(r1.centerY_ - r2.centerY_);
                 if (dist < minDistance) {
                     minDistance = dist;
                     bestEdge = [r1, r2];
@@ -129,12 +119,12 @@ export let generateDungeon = (width: number, height: number, minRoomSize: number
             }
 
             connectRooms(r1, r2);
-            connections.add(getEdgeKey(r1.id, r2.id));
-            connectedRoomIds.add(r2.id);
+            connections.add(getEdgeKey(r1.id_, r2.id_));
+            connectedRoomIds.add(r2.id_);
         } else {
-            let unconnected = rooms.find(r => !connectedRoomIds.has(r.id));
+            let unconnected = rooms.find(r => !connectedRoomIds.has(r.id_));
             if (unconnected) {
-                connectedRoomIds.add(unconnected.id);
+                connectedRoomIds.add(unconnected.id_);
             }
         }
     }
@@ -144,13 +134,11 @@ export let generateDungeon = (width: number, height: number, minRoomSize: number
         for (let j = i + 1; j < rooms.length; j++) {
             let r1 = rooms[i];
             let r2 = rooms[j];
-            let edgeKey = getEdgeKey(r1.id, r2.id);
+            let edgeKey = getEdgeKey(r1.id_, r2.id_);
 
             if (!connections.has(edgeKey)) {
-                let dist = Math.abs(r1.centerX - r2.centerX) + Math.abs(r1.centerY - r2.centerY);
-
-                // Only loop relatively close rooms to avoid long, layout-ruining hallways
-                let maxSpread = Math.max(width, height) * 0.4;
+                let dist = abs(r1.centerX_ - r2.centerX_) + abs(r1.centerY_ - r2.centerY_);
+                let maxSpread = max(width, height) * 0.4;
                 if (dist < maxSpread && random() < loopChance) {
                     connectRooms(r1, r2);
                     connections.add(edgeKey);

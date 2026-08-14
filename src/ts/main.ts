@@ -6,7 +6,7 @@ import { entityAdd, entityCollect, entityDraw } from "./entity";
 import { gl, glClear, glFlush, glInit, glPushColorQuad, glPushText, uShake } from "./gl";
 import { A_IS_DOWN, DOWN_IS_DOWN, drawControls, initializeInput, isTouchEvent, LEFT_IS_DOWN, RIGHT_IS_DOWN, UP_IS_DOWN, updateHardwareInput, updateInputState } from "./input";
 import { generateDungeon } from "./map";
-import { PI } from "./math";
+import { cos, PI, sin } from "./math";
 import { FOG_B, FOG_G, FOG_R, rayMove, rayRender, rayRenderFloorCeiling, raySetMap } from "./raycast";
 import { getShakeSum, shakeUpdate, shakeX, shakeY, updateHeadbob, zeroShake } from "./shake";
 import { loadTextureAtlas } from "./texture";
@@ -87,8 +87,8 @@ window.addEventListener("load", async (): Promise<void> => {
                 let speed = 2 * dt;
                 let moving = false;
 
-                let dirX = Math.cos(angle);
-                let dirY = Math.sin(angle);
+                let dirX = cos(angle);
+                let dirY = sin(angle);
 
                 updateHardwareInput();
                 updateInputState(delta, dt);
@@ -132,18 +132,8 @@ window.addEventListener("load", async (): Promise<void> => {
                 glPushColorQuad(0, SCREEN_HEIGHT - 16, SCREEN_WIDTH + 1, 16, 0xff000000);
                 drawControls();
                 if (DEBUG) {
-                    drawPerformanceMeter();
+                    drawPerformanceMeter(px, py);
                 }
-                // for (let x = 0; x < mapW; x++) {
-                //     for (let y = 0; y < mapH; y++) {
-                //         if (map[y * mapW + x] === 0) {
-                //             glPushColorQuad(x * 2, y * 2, 2, 2, 0xff0000ff);
-                //         }
-                //         if (px >= x && px < x + 1 && py >= y && py < y + 1) {
-                //             glPushColorQuad(x * 2, y * 2, 2, 2, 0xff00ff00);
-                //         }
-                //     }
-                // }
                 glFlush();
             }
             performanceMark("render_end");

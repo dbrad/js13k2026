@@ -1,5 +1,5 @@
 import { glPushColorQuad } from "./gl";
-import { PI, random } from "./math";
+import { cos, min, PI, random, sin } from "./math";
 import { FOV, mapH, mapW, rayIsSolid, zBuffer } from "./raycast";
 
 let MAX_MOTES = 220;
@@ -19,7 +19,7 @@ for (let i = 0; i < MAX_MOTES; i++) {
     motes[i] = {
         x_: 0, y_: 0, z_: 0.5,
         vx_: 0, vy_: 0, vz_: 0,
-        preferX_: Math.cos(ang), preferY_: Math.sin(ang),
+        preferX_: cos(ang), preferY_: sin(ang),
         phase_: 0, size_: 1, active_: false
     };
 }
@@ -43,8 +43,8 @@ let respawn = (m: Mote, px: number, py: number): void => {
     m.z_ = Z_MIN + random() * (Z_MAX - Z_MIN);
 
     let ang = random() * PI * 2;
-    m.preferX_ = Math.cos(ang);
-    m.preferY_ = Math.sin(ang);
+    m.preferX_ = cos(ang);
+    m.preferY_ = sin(ang);
 
     m.vx_ = m.preferX_ * DRIFT_SPEED * (0.7 + random() * 0.6);
     m.vy_ = m.preferY_ * DRIFT_SPEED * (0.7 + random() * 0.6);
@@ -79,12 +79,12 @@ export let moteUpdate = (dt: number, px: number, py: number, angle: number): voi
 
         if (random() < 0.003) {
             let ang = random() * PI * 2;
-            m.preferX_ = Math.cos(ang);
-            m.preferY_ = Math.sin(ang);
+            m.preferX_ = cos(ang);
+            m.preferY_ = sin(ang);
         }
 
-        let drive1 = Math.sin(time * 0.85 + m.phase_) * 0.22;
-        let drive2 = Math.cos(time * 1.35 + m.phase_ * 0.7) * 0.18;
+        let drive1 = sin(time * 0.85 + m.phase_) * 0.22;
+        let drive2 = cos(time * 1.35 + m.phase_ * 0.7) * 0.18;
         m.vz_ += (drive1 + drive2) * dt;
         if (m.z_ < Z_MIN) m.vz_ += (Z_MIN - m.z_) * 2.5 * dt;
         if (m.z_ > Z_MAX) m.vz_ += (Z_MAX - m.z_) * 2.5 * dt;
@@ -107,8 +107,8 @@ export let moteUpdate = (dt: number, px: number, py: number, angle: number): voi
 };
 
 export let moteDraw = (px: number, py: number, angle: number): void => {
-    let dirX = Math.cos(angle);
-    let dirY = Math.sin(angle);
+    let dirX = cos(angle);
+    let dirY = sin(angle);
     let planeX = -dirY * FOV;
     let planeY = dirX * FOV;
     let invDet = 1.0 / (planeX * dirY - dirX * planeY);
@@ -136,7 +136,7 @@ export let moteDraw = (px: number, py: number, angle: number): void => {
         let vOffset = ((m.z_ - 0.5) / transformY) * (SCREEN_HEIGHT * 0.5);
         let drawY = (SCREEN_HEIGHT * 0.5) - moteH * 0.5 - vOffset;
 
-        let alpha = Math.min(0.38, 0.38 / transformY);
+        let alpha = min(0.38, 0.38 / transformY);
         let col = ((alpha * 255) | 0) << 24 | 0x00E8F0FF;
 
         glPushColorQuad(screenX - moteH * 0.5, drawY, moteH, moteH, col);

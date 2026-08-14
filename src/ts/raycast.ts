@@ -1,5 +1,5 @@
 import { gl, glPushColorQuad, glPushQuad, uDir, updateLightmap, uPlane, uPlayer } from "./gl";
-import { clamp, floor, sqrt } from "./math";
+import { abs, clamp, cos, floor, max, min, sin, sqrt } from "./math";
 import { TEXTURE_CACHE } from "./texture";
 
 let TEX_SIZE = 16;
@@ -24,7 +24,7 @@ export let FOG_END = 9;
 
 export let mapW = 0;
 export let mapH = 0;
-let mapData: Int8Array = new Int8Array(0);
+export let mapData: Int8Array = new Int8Array(0);
 export let zBuffer = new Float32Array(SCREEN_WIDTH);
 
 export let fogFactor = (dist: number): number => {
@@ -54,14 +54,14 @@ export let raySetMap = (w: number, h: number, data: Int8Array, lights?: Float32A
 export let rayRender = (px: number, py: number, angle: number, now: number): void => {
     lightMap.fill(AMBIENT);
     lightCalculated.fill(0);
-    let dirX = Math.cos(angle);
-    let dirY = Math.sin(angle);
+    let dirX = cos(angle);
+    let dirY = sin(angle);
     let planeX = -dirY * FOV;
     let planeY = dirX * FOV;
     let rpx = floor(px);
     let rpy = floor(py);
 
-    let phase = Math.sin(now * 30);
+    let phase = sin(now * 30);
     let fading = 0.03 * phase;
 
     lightMap[rpy * mapW + rpx] = 0.75 - fading;
@@ -74,8 +74,8 @@ export let rayRender = (px: number, py: number, angle: number, now: number): voi
         let mapX = rpx;
         let mapY = rpy;
 
-        let deltaDistX = Math.abs(1 / (rayDirX || 1e-10));
-        let deltaDistY = Math.abs(1 / (rayDirY || 1e-10));
+        let deltaDistX = abs(1 / (rayDirX || 1e-10));
+        let deltaDistY = abs(1 / (rayDirY || 1e-10));
 
         let stepX: number, stepY: number;
         let sideDistX: number, sideDistY: number;
@@ -146,8 +146,8 @@ export let rayRender = (px: number, py: number, angle: number, now: number): voi
         } else {
             perpWallDist = (mapY - py + (1 - stepY) / 2) / rayDirY;
         }
-        perpWallDist = Math.max(perpWallDist, 1e-4);
-        let distForFog = Math.min(perpWallDist, FOG_END);
+        perpWallDist = max(perpWallDist, 1e-4);
+        let distForFog = min(perpWallDist, FOG_END);
         zBuffer[x] = perpWallDist;
 
         let lineHeight = SCREEN_HEIGHT / perpWallDist;
@@ -169,7 +169,7 @@ export let rayRender = (px: number, py: number, angle: number, now: number): voi
         } else {
             wallX = px + perpWallDist * rayDirX;
         }
-        wallX -= Math.floor(wallX);
+        wallX -= floor(wallX);
 
         let texX = (wallX * TEX_SIZE) | 0;
         if (side === 0 && rayDirX > 0) texX = TEX_SIZE - texX - 1;
@@ -182,7 +182,7 @@ export let rayRender = (px: number, py: number, angle: number, now: number): voi
 
         let cellLight = lightMap[mapY * mapW + mapX];
 
-        let shade = Math.min(1.0, 1.0 / (1.0 + perpWallDist * 0.18));
+        let shade = min(1.0, 1.0 / (1.0 + perpWallDist * 0.18));
         let finalShade = (side === 1 ? shade * 0.82 : shade) * cellLight;
 
         let vt0 = wallTexture.v0_ + vStart * (wallTexture.v1_ - wallTexture.v0_);
@@ -194,8 +194,8 @@ export let rayRender = (px: number, py: number, angle: number, now: number): voi
 };
 
 export let rayRenderFloorCeiling = (px: number, py: number, angle: number): void => {
-    let dirX = Math.cos(angle);
-    let dirY = Math.sin(angle);
+    let dirX = cos(angle);
+    let dirY = sin(angle);
     let planeX = -dirY * FOV;
     let planeY = dirX * FOV;
 

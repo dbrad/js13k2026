@@ -1,5 +1,5 @@
 import { gl, uShake } from "./gl";
-import { random } from "./math";
+import { cos, random, sin } from "./math";
 
 let shakeTime = 0;
 let shakeDuration = 0;
@@ -19,8 +19,8 @@ export let updateHeadbob = (dtMs: number, isMoving: boolean, speed: number): voi
         return;
     }
     headbobTime += dtMs * (speed * 0.5);
-    bobX = Math.sin(headbobTime * 0.5) * 0.95;
-    bobY = Math.cos(headbobTime * 0.8) * 1.2;
+    bobX = sin(headbobTime * 0.5) * 0.95;
+    bobY = cos(headbobTime * 0.8) * 1.2;
 };
 
 export let shakeTrigger = (magnitude: number, durationMs: number): void => {

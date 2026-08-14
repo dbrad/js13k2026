@@ -1,5 +1,5 @@
 import { glPushQuad } from "./gl";
-import { PI, random } from "./math";
+import { abs, cos, max, min, PI, random, sin } from "./math";
 import { AMBIENT, FOG_END, FOG_START, lightMap, mapH, mapW, zBuffer } from "./raycast";
 import { TEXTURE_CACHE } from "./texture";
 
@@ -106,8 +106,8 @@ export let entityCountActive = (): number => {
 export let entityCollect = (px: number, py: number, angle: number): void => {
     visibleCount = 0;
 
-    let dirX = Math.cos(angle);
-    let dirY = Math.sin(angle);
+    let dirX = cos(angle);
+    let dirY = sin(angle);
     let planeX = -dirY * FOV;
     let planeY = dirX * FOV;
     let invDet = 1.0 / (planeX * dirY - dirX * planeY);
@@ -125,7 +125,7 @@ export let entityCollect = (px: number, py: number, angle: number): void => {
         if (transformY <= 0.15) continue;
 
         let screenX = (SCREEN_WIDTH * 0.5) * (1 + transformX / transformY);
-        let height = Math.abs(SCREEN_HEIGHT / transformY) * e.scale_;
+        let height = abs(SCREEN_HEIGHT / transformY) * e.scale_;
 
         if (screenX < -height || screenX > SCREEN_WIDTH + height) continue;
 
@@ -142,7 +142,7 @@ export let entityCollect = (px: number, py: number, angle: number): void => {
             slot.dist_ = transformY;
             slot.screenX_ = screenX;
             slot.height_ = height;
-            slot.light_ = Math.min(1.6, cellLight);
+            slot.light_ = min(1.6, cellLight);
         }
     }
 
@@ -164,7 +164,7 @@ export let entityDraw = (dt: number): void => {
         let tex = TEXTURE_CACHE[e.texId_];
         if (!tex) continue;
 
-        let phase = Math.sin(dt * 3 + e.data_);
+        let phase = sin(dt * 3 + e.data_);
 
         let fog = fogFactor(s.dist_);
         let halfW = s.height_ * 0.5;
@@ -174,8 +174,8 @@ export let entityDraw = (dt: number): void => {
         let drawStartY = (SCREEN_HEIGHT - s.height_) * 0.5 + bob;
         let litColour = modulateABGR(e.colour_, s.light_);
 
-        let startCol = Math.max(0, drawStartX | 0);
-        let endCol = Math.min(SCREEN_WIDTH - 1, drawEndX | 0);
+        let startCol = max(0, drawStartX | 0);
+        let endCol = min(SCREEN_WIDTH - 1, drawEndX | 0);
         if (endCol < startCol) continue;
 
         let uSpan = tex.u1_ - tex.u0_;
