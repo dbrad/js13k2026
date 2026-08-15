@@ -229,7 +229,7 @@ export let drawControls = (): void => {
         helpText = `dpad / a. ${buttonActions[0]} / b. ${buttonActions[1]}`;
     }
 
-    glPushText(helpText, SCREEN_WIDTH / 2, SCREEN_HEIGHT - 8, 0xffffffff, 1, "center");
+    glPushText(helpText, SCREEN_WIDTH / 2, SCREEN_HEIGHT - 8, 0xffffffff, 1, TEXT_H_ALIGN_CENTER);
 };
 
 export let clearInput = (): void => {

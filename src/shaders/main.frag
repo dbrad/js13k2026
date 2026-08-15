@@ -18,7 +18,7 @@ out vec4 outColor;
 
 const vec3 FOG_COLOR = vec3(0.05f, 0.05f, 0.08f);
 const float FOG_START = 1.0f;
-const float FOG_END = 9.0f;
+const float FOG_END = 20.0f;
 
 void main() {
     if(v_uv.x == 2.0f) {
@@ -42,7 +42,7 @@ void main() {
         }
 
         float scale = 1.0f;
-        float shadeMul = 1.0f;
+        float shadeMul = 0.50f;
         float TEX = 64.0f + 24.0f;// 128.0f + 24.0f;
         float TEX_SIZE = 32.0f;
 

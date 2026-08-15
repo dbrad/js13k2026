@@ -1,17 +1,19 @@
 // entity.ts
 import { glPushColorQuad, glPushQuad } from "./gl";
-import { abs, circleOverlap, cos, floor, max, min, PI, random, sin, sqrt } from "./math";
+import { abs, circleOverlap, cos, max, min, PI, random, sin, sqrt } from "./math";
 import {
     AMBIENT,
     FOG_END,
     FOG_START,
     FOV,
+    lightCalculated,
     lightMap,
+    mapData,
     mapH,
     mapW,
     rayIsSolid,
     rayMove,
-    zBuffer,
+    zBuffer
 } from "./raycast";
 import { TEXTURE_CACHE } from "./texture";
 
@@ -21,12 +23,11 @@ let MAX_VISIBLE = 500;
 let FLAG_ACTIVE = 1 << 0;
 let FLAG_PARTICLE = 1 << 1;
 let FLAG_DUST_MOTE = 1 << 2;
-let FLAG_ORIENTED = 1 << 3;
-let FLAG_BILLBOARD = 1 << 4;
-let FLAG_SOLID = 1 << 5;   // blocks the player
-let FLAG_DAMAGE = 1 << 6;   // damages player on contact
-let FLAG_PROJECTILE = 1 << 7;  // moving damage source (bullets, etc.)
-let FLAG_ENEMY = 1 << 8;   // optional, for AI / scoring
+let FLAG_BILLBOARD = 1 << 3;
+let FLAG_SOLID = 1 << 4;   // blocks the player
+let FLAG_DAMAGE = 1 << 5;   // damages player on contact
+let FLAG_PROJECTILE = 1 << 6;  // moving damage source (bullets, etc.)
+let FLAG_ENEMY = 1 << 7;   // optional, for AI / scoring
 
 let entities: Entity[] = new Array(MAX_ENTITIES);
 let visible: Visible[] = new Array(MAX_VISIBLE);
@@ -66,18 +67,6 @@ let fogFactor = (dist: number): number => {
     let t = (dist - FOG_START) / (FOG_END - FOG_START);
     t = t < 0 ? 0 : t > 1 ? 1 : t;
     return t * t;
-};
-
-let packABGR = (r: number, g: number, b: number, a = 1): number => {
-    let R = (r * 255) | 0;
-    let G = (g * 255) | 0;
-    let B = (b * 255) | 0;
-    let A = (a * 255) | 0;
-    let out = (A & 0xff) << 8 >>> 0;
-    out = (out | (B & 0xff)) << 8 >>> 0;
-    out = (out | (G & 0xff)) << 8 >>> 0;
-    out = (out | (R & 0xff)) >>> 0;
-    return out;
 };
 
 let modulateABGR = (abgr: number, light: number): number => {
@@ -143,14 +132,6 @@ export let entityAddParticle = (
     return id;
 };
 
-export let entityAddOriented = (x: number, y: number,
-    texId: number, facing: number, scale = 1,
-    col: number = 0xffffffff): number => {
-    let id = entityAdd(x, y, texId, scale, FLAG_ORIENTED | FLAG_ACTIVE | FLAG_SOLID, col);
-    if (id >= 0) entities[id].facing_ = facing;
-    return id;
-};
-
 export let entityRemove = (index: number): void => {
     if (index < 0 || index >= entityCount) return;
     let last = entityCount - 1;
@@ -179,7 +160,7 @@ let BEAM_STEP = 0.1;
 
 export let fireRainbowBeam = (px: number, py: number, angle: number): void => {
     for (let i = 0; i < 7; i++) {
-        let t = i / 6;                          // 0 → 1
+        let t = i / 6;
         let rayAngle = angle - BEAM_SPREAD * 0.5 + BEAM_SPREAD * t;
         let dx = cos(rayAngle);
         let dy = sin(rayAngle);
@@ -189,39 +170,93 @@ export let fireRainbowBeam = (px: number, py: number, angle: number): void => {
         for (let d = BEAM_STEP; d < BEAM_RANGE; d += BEAM_STEP) {
             let x = px + dx * d;
             let y = py + dy * d;
+            let mx = x | 0;
+            let my = y | 0;
 
-            if (rayIsSolid(x, y)) {
+            if (mx < 0 || my < 0 || mx >= mapW || my >= mapH) {
                 hitDist = d;
-                // TODO: if this cell is a cracked wall → damage / break it
                 break;
             }
 
-            // optional: also test solid entities here if you want the beam blocked by them
-            // (or do a separate entity pass after all rays)
+            let cell = mapData[my * mapW + mx];
+
+            if (cell === CELL_WALL || cell === CELL_DOOR) {
+                hitDist = d;
+                break;
+            }
+
+            if (cell === CELL_CRACKED) {
+                mapData[my * mapW + mx] = CELL_FLOOR;
+                hitDist = d;
+
+                for (let k = 0; k < 8; k++) {
+                    let id = entityAddParticle(
+                        x + (random() - 0.5) * 0.4,
+                        y + (random() - 0.5) * 0.4,
+                        0.4 + random() * 0.3,
+                        0.9 + random() * 0.8,
+                        0xff6688aa
+                    );
+                    if (id < 0) continue;
+                    let e = entities[id];
+                    e.vx_ = (random() - 0.5) * 2.2;
+                    e.vy_ = (random() - 0.5) * 2.2;
+                    e.vz_ = 0.8 + random() * 1.4;
+                    e.data_ = 0.35 + random() * 0.25;
+                }
+                break;
+            }
         }
 
-        // visual – a few particles along this ray, coloured by rainbow index
-        let count = 30;
-        for (let p = 0; p < count; p++) {
-            let u = p / (count - 1);
+        let sparkCount = 14;
+        for (let p = 0; p < sparkCount; p++) {
+            let u = p / (sparkCount - 1);
             let x = px + dx * hitDist * u;
             let y = py + dy * hitDist * u;
 
-            let id = entityAddParticle(x, y, 0.45, 0.7 + random() * 0.6, RAINBOW[i]);
+            let id = entityAddParticle(x, y, 0.32 + (random() - 0.5) * 0.12, 1.1 + random() * 0.9, RAINBOW[i]);
             if (id < 0) continue;
-
             let e = entities[id];
-            e.colour_ = RAINBOW[i];
-            e.vx_ = dx * .5;
-            e.vy_ = dy * .5;
-            e.vz_ = 0;
-            e.data_ = 0.5;
-            e.size_ = 0.5;
-            // short life handled by your existing particle update / age system
+            e.vx_ = dx * (0.9 + random() * 0.7) + (random() - 0.5) * 0.4;
+            e.vy_ = dy * (0.9 + random() * 0.7) + (random() - 0.5) * 0.4;
+            e.vz_ = (random() - 0.5) * 0.6;
+            e.data_ = 0.12 + random() * 0.10;
+            e.size_ = 0.8 + random() * 0.9;
         }
 
-        // gameplay: collect hits along this ray (enemies, cracked walls, etc.)
-        // you can either do it inside the walk above or do a second lightweight pass
+        for (let p = 0; p < 4; p++) {
+            let u = random() * 0.95;
+            let x = px + dx * hitDist * u;
+            let y = py + dy * hitDist * u;
+
+            let id = entityAddParticle(x, y, 0.3, 2.0 + random(), RAINBOW[i]);
+            if (id < 0) continue;
+            let e = entities[id];
+            e.vx_ = dx * 0.18;
+            e.vy_ = dy * 0.18;
+            e.vz_ = 0;
+            e.data_ = 0.38 + random() * 0.15;
+            e.size_ = 1.6 + random() * 0.8;
+        }
+
+        if (i === 3) {
+            for (let d = 0.3; d < hitDist; d += 0.6) {
+                let mx = (px + dx * d) | 0;
+                let my = (py + dy * d) | 0;
+                if (mx >= 0 && my >= 0 && mx < mapW && my < mapH) {
+                    for (let x = mx - 5; x < mx + 5; x++) {
+                        for (let y = my - 5; y < my + 5; y++) {
+                            if (x < 0 || x >= mapW || y < 0 || y >= mapH) continue;
+                            let idx = y * mapW + x;
+                            let dx = mx - x;
+                            let dy = my - y;
+                            let dist = sqrt(dx * dx + dy * dy);
+                            lightMap[idx] = min(1.5, AMBIENT + max(0, (1.5 - (0.3 * dist))));
+                        }
+                    }
+                }
+            }
+        }
     }
 };
 
@@ -233,7 +268,7 @@ export let entityCountActive = (): number => {
     return entityCount;
 };
 
-let respawnParticle = (e: Entity): void => {
+let respawnDustMote = (e: Entity): void => {
     let nx = 0;
     let ny = 0;
     for (let tries = 0; tries < 30; tries++) {
@@ -254,10 +289,11 @@ let respawnParticle = (e: Entity): void => {
     e.vy_ = e.preferY_ * DRIFT_SPEED * (0.7 + random() * 0.6);
     e.vz_ = (random() - 0.5) * 0.2;
 
+    e.colour_ = 0x00ffffff;
     e.phase_ = random() * PI * 2;
-    e.size_ = 0.25 + random() * 1.0;
-    e.flags_ = FLAG_PARTICLE | FLAG_ACTIVE;
-    e.data_ = 10;
+    e.size_ = 0.1 + random() * 0.75;
+    e.flags_ = FLAG_ACTIVE | FLAG_DUST_MOTE | FLAG_PARTICLE;
+    e.data_ = 20;
 };
 
 export let entitySpawnDust = (px: number, py: number, count = 220): void => {
@@ -265,7 +301,7 @@ export let entitySpawnDust = (px: number, py: number, count = 220): void => {
     for (let i = 0; i < n; i++) {
         let id = entityAddParticle(px, py);
         let e = entities[id];
-        respawnParticle(e);
+        respawnDustMote(e);
     }
 };
 
@@ -279,62 +315,11 @@ export let entityPlayerCollide = (
 
     for (let i = 0; i < entityCount; i++) {
         let e = entities[i];
-        if ((e.flags_ & (FLAG_ACTIVE | FLAG_SOLID)) !== (FLAG_ACTIVE | FLAG_SOLID)) continue;
-
-        if (e.flags_ & FLAG_ORIENTED) {
-            let cx = floor(e.x_);
-            let cy = floor(e.y_);
-
-            let EXPAND = 0.04;
-            let minX = cx - EXPAND;
-            let maxX = cx + 1 + EXPAND;
-            let minY = cy - EXPAND;
-            let maxY = cy + 1 + EXPAND;
-
-            let nearestX = outX < minX ? minX : outX > maxX ? maxX : outX;
-            let nearestY = outY < minY ? minY : outY > maxY ? maxY : outY;
-
-            let dx = outX - nearestX;
-            let dy = outY - nearestY;
-            let d2 = dx * dx + dy * dy;
-            let r = playerRadius;
-
-            if (d2 >= r * r || d2 < 1e-10) continue;
-
-            let d = sqrt(d2);
-            let pen = r - d;
-            outX += (dx / d) * pen;
-            outY += (dy / d) * pen;
-        } else {
-            let er = 0.35 * e.scale_;
-            let dx = outX - e.x_;
-            let dy = outY - e.y_;
-            let d2 = dx * dx + dy * dy;
-            let r = playerRadius + er;
-            if (d2 >= r * r || d2 < 1e-10) continue;
-
-            let d = sqrt(d2);
-            let pen = r - d;
-            outX += (dx / d) * pen;
-            outY += (dy / d) * pen;
-        }
-    }
-
-    [outX, outY] = rayMove(outX, outY, 0, 0, playerRadius);
-
-    for (let i = 0; i < entityCount; i++) {
-        let e = entities[i];
         if ((e.flags_ & (FLAG_ACTIVE | FLAG_DAMAGE)) !== (FLAG_ACTIVE | FLAG_DAMAGE)) continue;
 
         let hit = false;
-        if (e.flags_ & FLAG_ORIENTED) {
-            let cx = e.x_ | 0, cy = e.y_ | 0;
-            hit = outX > cx - playerRadius && outX < cx + 1 + playerRadius &&
-                outY > cy - playerRadius && outY < cy + 1 + playerRadius;
-        } else {
-            let er = (e.flags_ & FLAG_PROJECTILE) ? 0.15 : 0.4 * e.scale_;
-            hit = circleOverlap(outX, outY, playerRadius, e.x_, e.y_, er);
-        }
+        let er = (e.flags_ & FLAG_PROJECTILE) ? 0.15 : 0.4 * e.scale_;
+        hit = circleOverlap(outX, outY, playerRadius, e.x_, e.y_, er);
 
         if (hit && onDamage) {
             onDamage(i, e);
@@ -374,7 +359,7 @@ export let entityUpdate = (dt: number, px: number, py: number): void => {
         let distSq = dx * dx + dy * dy;
 
         if (distSq > MAX_PARTICLE_DIST_SQ * 2.5) {
-            respawnParticle(e);
+            respawnDustMote(e);
             continue;
         }
 
@@ -406,7 +391,7 @@ export let entityUpdate = (dt: number, px: number, py: number): void => {
 
         if (rayIsSolid(e.x_, e.y_) || e.data_ <= 0) {
             if (e.flags_ & FLAG_DUST_MOTE) {
-                respawnParticle(e);
+                respawnDustMote(e);
                 continue;
             } else {
                 entityRemove(i);
@@ -445,55 +430,7 @@ export let entityCollect = (px: number, py: number, angle: number): void => {
             e.scale_ *
             ((e.flags_ & FLAG_PARTICLE) !== 0 ? e.size_ * 0.026 : 1);
 
-        if ((e.flags_ & FLAG_ORIENTED) !== 0) {
-            if (transformY <= -0.5) continue;
-            let halfLen = 0.5 * e.scale_;
-            let nx = cos(e.facing_);
-            let ny = sin(e.facing_);
-            let sx = -ny;
-            let sy = nx;
-
-            let lx = e.x_ - sx * halfLen;
-            let ly = e.y_ - sy * halfLen;
-            let rx = e.x_ + sx * halfLen;
-            let ry = e.y_ + sy * halfLen;
-
-            let ldx = lx - px, ldy = ly - py;
-            let rdx = rx - px, rdy = ry - py;
-
-            let lTX = invDet * (dirY * ldx - dirX * ldy);
-            let lTY = invDet * (-planeY * ldx + planeX * ldy);
-            let rTX = invDet * (dirY * rdx - dirX * rdy);
-            let rTY = invDet * (-planeY * rdx + planeX * rdy);
-            if (lTY <= -0.5 && rTY <= -0.5) continue;
-
-            let NEAR = -0.5;
-            if (lTY < NEAR) {
-                let t = (NEAR - lTY) / (rTY - lTY + 1e-8);
-                lTX += (rTX - lTX) * t;
-                lTY = NEAR;
-            }
-            if (rTY < NEAR) {
-                let t = (NEAR - rTY) / (lTY - rTY + 1e-8);
-                rTX += (lTX - rTX) * t;
-                rTY = NEAR;
-            }
-
-            let lScreen = (SCREEN_WIDTH * 0.5) * (1 + lTX / lTY);
-            let rScreen = (SCREEN_WIDTH * 0.5) * (1 + rTX / rTY);
-
-            if (!isFinite(lScreen) || !isFinite(rScreen)) {
-                if (screenX < -height * 2 || screenX > SCREEN_WIDTH + height * 2) continue;
-            } else {
-                let left = lScreen < rScreen ? lScreen : rScreen;
-                let right = lScreen < rScreen ? rScreen : lScreen;
-                if (right < -2 || left > SCREEN_WIDTH + 2) continue;
-            }
-        } else {
-            if (transformY <= 0.12) continue;
-            if (screenX < -height || screenX > SCREEN_WIDTH + height) continue;
-        }
-
+        if (screenX < -height || screenX > SCREEN_WIDTH + height) continue;
         if (visibleCount >= MAX_VISIBLE) continue;
 
         let cellX = e.x_ | 0;
@@ -508,7 +445,7 @@ export let entityCollect = (px: number, py: number, angle: number): void => {
         slot.dist_ = transformY;
         slot.screenX_ = screenX;
         slot.height_ = height;
-        slot.light_ = min(1.6, cellLight);
+        slot.light_ = min(1.5, cellLight);
     }
 
     for (let i = 1; i < visibleCount; i++) {
@@ -523,11 +460,6 @@ export let entityCollect = (px: number, py: number, angle: number): void => {
 };
 
 export let entityDraw = (px: number, py: number, angle: number, now: number): void => {
-    let dirX = cos(angle);
-    let dirY = sin(angle);
-    let planeX = -dirY * FOV;
-    let planeY = dirX * FOV;
-
     for (let i = 0; i < visibleCount; i++) {
         let s = visible[i];
         let e = entities[s.idx_];
@@ -537,8 +469,6 @@ export let entityDraw = (px: number, py: number, angle: number, now: number): vo
 
         if ((e.flags_ & FLAG_PARTICLE) !== 0) {
             let moteH = s.height_;
-            if (moteH < 1) continue;
-
             let sx = s.screenX_ | 0;
             if (sx < 0 || sx >= SCREEN_WIDTH) continue;
             if (s.dist_ > zBuffer[sx]) continue;
@@ -547,8 +477,11 @@ export let entityDraw = (px: number, py: number, angle: number, now: number): vo
             let drawY = SCREEN_HEIGHT * 0.5 - moteH * 0.5 - vOffset;
 
             let alpha = min(0.38, 0.38 / s.dist_);
+
             let col = ((alpha * 255) | 0) << 24 | e.colour_;
-            glPushColorQuad(s.screenX_ - moteH * 0.5, drawY, moteH, moteH, col);
+            let litColour = modulateABGR(col, s.light_);
+
+            glPushColorQuad(s.screenX_ - moteH * 0.5, drawY, moteH, moteH, litColour);
             continue;
         }
 
@@ -556,56 +489,6 @@ export let entityDraw = (px: number, py: number, angle: number, now: number): vo
         if (!tex) continue;
 
         let litColour = modulateABGR(e.colour_, s.light_);
-
-        if ((e.flags_ & FLAG_ORIENTED) !== 0) {
-            let halfLen = 0.5 * e.scale_;
-            let nx = cos(e.facing_);
-            let ny = sin(e.facing_);
-            let sx = -ny;
-            let sy = nx;
-
-            let startCol = 0;
-            let endCol = SCREEN_WIDTH - 1;
-
-            let uSpan = tex.u1_ - tex.u0_;
-
-            for (let col = startCol; col <= endCol; col++) {
-                let cameraX = (2 * col) / SCREEN_WIDTH - 1;
-                let rayDirX = dirX + planeX * cameraX;
-                let rayDirY = dirY + planeY * cameraX;
-
-                let denom = rayDirX * nx + rayDirY * ny;
-                if (abs(denom) < 1e-6) continue;
-
-                let t = ((e.x_ - px) * nx + (e.y_ - py) * ny) / denom;
-                let dist = abs(t);
-                if (dist <= 0.05) continue;
-
-                let hitX = px + t * rayDirX;
-                let hitY = py + t * rayDirY;
-
-                let sideDist = (hitX - e.x_) * sx + (hitY - e.y_) * sy;
-                if (sideDist < -halfLen || sideDist > halfLen) continue;
-
-                if (dist >= zBuffer[col]) continue;
-
-                let lineHeight = SCREEN_HEIGHT / dist;
-                let drawStart = (-lineHeight * 0.5 + SCREEN_HEIGHT * 0.5) | 0;
-                let drawEnd = (lineHeight * 0.5 + SCREEN_HEIGHT * 0.5) | 0;
-
-                let u = (sideDist + halfLen) / (halfLen * 2);
-                // uncomment if the back face should not mirror
-                // if (t < 0) u = 1 - u;
-
-                let texU = tex.u0_ + uSpan * u;
-                let fog = fogFactor(dist);
-
-                glPushQuad(col, drawStart, 1, drawEnd - drawStart,
-                    texU, tex.v0_, texU, tex.v1_,
-                    litColour, fog);
-            }
-            continue;
-        }
 
         let halfW = s.height_ * 0.5;
         let drawStartX = s.screenX_ - halfW;

@@ -64,28 +64,28 @@ export let drawPerformanceMeter = (px: number, py: number): void => {
     if (DEBUG && showPerformance) {
         glPushColorQuad(0, 0, SCREEN_WIDTH, 100, 0xff000000);
 
-        glPushText(`fps ${fps.toFixed(0).padStart(7, " ")} hz`, col1, 5, 0xffffffff, 1, "right");
-        glPushText(`frame ${displayMs} ms`, col1, 18, 0xffffffff, 1, "right");
-        glPushText(`actual ${displayFrameTime} us`, col1, 31, 0xffffffff, 1, "right");
-        glPushText(`update ${displayUpdateTime} us`, col1, 44, 0xffffffff, 1, "right");
-        // glPushText(`draw ${displayDrawTime} us`, col1, 57, 0xffffffff, 1, "right");
-        glPushText(`render ${displayRenderTime} us`, col1, 70, 0xffffffff, 1, "right");
+        glPushText(`fps ${fps.toFixed(0).padStart(7, " ")} hz`, col1, 5, 0xffffffff, 1, TEXT_H_ALIGN_RIGHT);
+        glPushText(`frame ${displayMs} ms`, col1, 18, 0xffffffff, 1, TEXT_H_ALIGN_RIGHT);
+        glPushText(`actual ${displayFrameTime} us`, col1, 31, 0xffffffff, 1, TEXT_H_ALIGN_RIGHT);
+        glPushText(`update ${displayUpdateTime} us`, col1, 44, 0xffffffff, 1, TEXT_H_ALIGN_RIGHT);
+        // glPushText(`draw ${displayDrawTime} us`, col1, 57, 0xffffffff, 1, TEXT_H_ALIGN_RIGHT);
+        glPushText(`render ${displayRenderTime} us`, col1, 70, 0xffffffff, 1, TEXT_H_ALIGN_RIGHT);
 
-        glPushText(`frame ${displaySpikeMs} ms`, col2, 18, 0xffffffff, 1, "right");
-        glPushText(`actual ${displaySpikeFrameTime} us`, col2, 31, 0xffffffff, 1, "right");
-        glPushText(`update ${displaySpikeUpdateTime} us`, col2, 44, 0xffffffff, 1, "right");
-        // glPushText(`draw ${displaySpikeDrawTime} us`, col2, 57, 0xffffffff, 1, "right");
-        glPushText(`render ${displaySpikeRenderTime} us`, col2, 70, 0xffffffff, 1, "right");
+        glPushText(`frame ${displaySpikeMs} ms`, col2, 18, 0xffffffff, 1, TEXT_H_ALIGN_RIGHT);
+        glPushText(`actual ${displaySpikeFrameTime} us`, col2, 31, 0xffffffff, 1, TEXT_H_ALIGN_RIGHT);
+        glPushText(`update ${displaySpikeUpdateTime} us`, col2, 44, 0xffffffff, 1, TEXT_H_ALIGN_RIGHT);
+        // glPushText(`draw ${displaySpikeDrawTime} us`, col2, 57, 0xffffffff, 1, TEXT_H_ALIGN_RIGHT);
+        glPushText(`render ${displaySpikeRenderTime} us`, col2, 70, 0xffffffff, 1, TEXT_H_ALIGN_RIGHT);
 
         for (let x = 0; x < mapW; x++) {
             for (let y = 0; y < mapH; y++) {
-                if (mapData[y * mapW + x] === 0) {
+                if (mapData[y * mapW + x] === CELL_FLOOR) {
                     glPushColorQuad(x * 2, y * 2, 2, 2, 0xff000066);
                 }
-                if (mapData[y * mapW + x] === 3) {
+                if (mapData[y * mapW + x] === CELL_DOOR) {
                     glPushColorQuad(x * 2, y * 2, 2, 2, 0xff00ffff);
                 }
-                if (mapData[y * mapW + x] === 2) {
+                if (mapData[y * mapW + x] === CELL_CRACKED) {
                     glPushColorQuad(x * 2, y * 2, 2, 2, 0xffffff00);
                 }
                 if (px >= x && px < x + 1 && py >= y && py < y + 1) {

@@ -38,7 +38,7 @@ export let loadTextureAtlas = async (): Promise<HTMLCanvasElement> => {
     assert(IMAGE_WIDTH === imageBitmap.width, `ATLAS IMAGE WIDTH CHANGED (expected: ${IMAGE_WIDTH} actual: ${imageBitmap.width})`);
     assert(IMAGE_HEIGHT === imageBitmap.height, `ATLAS IMAGE HEIGHT CHANGED (expected: ${IMAGE_HEIGHT} actual: ${imageBitmap.height})`);
 
-    let PROC_Y = IMAGE_HEIGHT * 2;        // start of free space
+    let PROC_Y = IMAGE_HEIGHT * 2;
 
     let canvas = document.createElement("canvas",);
     let ctx = canvas.getContext("2d")!!;
@@ -93,20 +93,7 @@ export let loadTextureAtlas = async (): Promise<HTMLCanvasElement> => {
     stampProcedural(ctx, genUnicornHorn, offset, PROC_Y, 24, 48, 0x1337);
     TEXTURE_CACHE[TEXTURE_HORN] = newTexture(24, 48, offset / ATLAS_WIDTH, PROC_Y / ATLAS_HEIGHT, (offset + 24) / ATLAS_WIDTH, (PROC_Y + 48) / ATLAS_HEIGHT);
 
-    offset = 0;
-    // 6 animation frames for the demon
-    // for (let f = 0; f < 6; f++) {
-    //   stampProcedural(ctx, genShadowDemon, 0, PROC_Y + S + 8, S, S, 0xDE302, f);
-    // }
-
     glUploadAtlas(canvas);
-
-    // for (let f = 0; f < 6; f++) {
-    //   TEXTURE_CACHE[TEXTURE_DEMON_0 + f] = newTexture(S, S,
-    //     (f * S) / ATLAS_WIDTH, (PROC_Y + 48) / ATLAS_HEIGHT,
-    //     ((f + 1) * S) / ATLAS_WIDTH, (PROC_Y + 48 + S) / ATLAS_HEIGHT);
-    // }
-    // document.body.appendChild(canvas);
     resolve(canvas);
   });
 };

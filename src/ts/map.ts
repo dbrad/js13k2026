@@ -1,3 +1,4 @@
+import { doorAdd } from "./doors";
 import { abs, floor, max, min, random } from "./math";
 import { AMBIENT } from "./raycast";
 
@@ -5,7 +6,8 @@ export let generateDungeon = (width: number, height: number, minRoomSize: number
     let lightMap = new Float32Array(width * height);
     lightMap.fill(AMBIENT);
 
-    let grid = new Int8Array(width * height).fill(1); // 1 represents wall, 0 represents floor, 2 is cracked wall, 3 is door/gate
+    //  0 represents floor, 1 represents wall, 2 is cracked wall, 3 is door
+    let grid = new Int8Array(width * height).fill(1);
     let rooms: Room[] = [];
 
     let intersects = (r1: Room, r2: Room): boolean => {
@@ -72,8 +74,9 @@ export let generateDungeon = (width: number, height: number, minRoomSize: number
                     isFloor(x, y + 1) &&
                     isFloor(x + 1, y + 1)
                 ) {
-                    setIfFloor(x, y);
-                    // entityAddOriented(x + 0.5, y + 0.5, TEXTURE_D_PAD, PI * 0.5);
+                    doorAdd(x, y, true);
+                    grid[y * width + x] = CELL_DOOR;
+                    // setIfFloor(x, y);
                     continue;
                 }
 
@@ -88,8 +91,9 @@ export let generateDungeon = (width: number, height: number, minRoomSize: number
                     isFloor(x, y - 1) &&
                     isFloor(x + 1, y - 1)
                 ) {
-                    setIfFloor(x, y);
-                    // entityAddOriented(x + 0.5, y + 0.5, TEXTURE_D_PAD, PI * 0.5);
+                    doorAdd(x, y, true);
+                    grid[y * width + x] = CELL_DOOR;
+                    // setIfFloor(x, y);
                     continue;
                 }
 
@@ -104,8 +108,9 @@ export let generateDungeon = (width: number, height: number, minRoomSize: number
                     isFloor(x + 1, y) &&
                     isFloor(x + 1, y + 1)
                 ) {
-                    setIfFloor(x, y);
-                    // entityAddOriented(x + 0.5, y + 0.5, TEXTURE_D_PAD, 0);
+                    doorAdd(x, y, true);
+                    grid[y * width + x] = CELL_DOOR;
+                    // setIfFloor(x, y);
                     continue;
                 }
 
@@ -120,8 +125,9 @@ export let generateDungeon = (width: number, height: number, minRoomSize: number
                     isFloor(x - 1, y) &&
                     isFloor(x - 1, y + 1)
                 ) {
-                    setIfFloor(x, y);
-                    // entityAddOriented(x + 0.5, y + 0.5, TEXTURE_D_PAD, 0);
+                    doorAdd(x, y, true);
+                    grid[y * width + x] = CELL_DOOR;
+                    // setIfFloor(x, y);
                     continue;
                 }
             }
@@ -239,6 +245,7 @@ export let generateDungeon = (width: number, height: number, minRoomSize: number
             }
         }
     }
+
     placeCorridorEntrances(2);
 
     return [grid, lightMap, px, py];

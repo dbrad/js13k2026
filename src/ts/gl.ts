@@ -199,20 +199,20 @@ export let glPushQuad = (x: number, y: number, w: number, h: number, u0: number,
     quadCount++;
 };
 
-export let glPushText = (text: string | number, x: number, y: number, colour: number = 0xffffffff, scale = 1, hAlign: "left" | "center" | "right" = "left", vAlign: "top" | "middle" | "bottom" = "top"): void => {
+export let glPushText = (text: string | number, x: number, y: number, colour: number = 0xffffffff, scale = 1, hAlign: number = TEXT_H_ALIGN_LEFT, vAlign: number = TEXT_V_ALIGN_TOP): void => {
     text = (text + "").toUpperCase();
     let letterSize = FONT_GLYPH_SIZE * scale;
     let lineHeight = letterSize + scale * 2;
 
     let yOffset = 0;
-    if (vAlign === "middle") yOffset = lineHeight / 2;
-    if (vAlign === "bottom") yOffset = lineHeight;
+    if (vAlign === TEXT_V_ALIGN_MIDDLE) yOffset = lineHeight / 2;
+    if (vAlign === TEXT_V_ALIGN_BOTTOM) yOffset = lineHeight;
 
     let lineWidth = text.length * letterSize;
 
     let xOffset = 0;
-    if (hAlign === "center") xOffset = -lineWidth / 2;
-    if (hAlign === "right") xOffset = -lineWidth;
+    if (hAlign === TEXT_H_ALIGN_CENTER) xOffset = -lineWidth / 2;
+    if (hAlign === TEXT_H_ALIGN_RIGHT) xOffset = -lineWidth;
 
     for (let ci = 0; ci < text.length; ci++) {
         let ch = text[ci];

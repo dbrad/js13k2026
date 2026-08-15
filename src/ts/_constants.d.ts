@@ -68,13 +68,13 @@ declare const KEY_IS_UP: 0;
 declare const KEY_WAS_DOWN: 1;
 declare const KEY_IS_DOWN: 2;
 
-declare const TEXT_ALIGN_LEFT: 0;
-declare const TEXT_ALIGN_CENTER: 1;
-declare const TEXT_ALIGN_RIGHT: 2;
+declare const TEXT_H_ALIGN_LEFT: 0;
+declare const TEXT_H_ALIGN_CENTER: 1;
+declare const TEXT_H_ALIGN_RIGHT: 2;
 
-declare const TEXT_ALIGN_TOP: 0;
-declare const TEXT_ALIGN_MIDDLE: 1;
-declare const TEXT_ALIGN_BOTTOM: 2;
+declare const TEXT_V_ALIGN_TOP: 0;
+declare const TEXT_V_ALIGN_MIDDLE: 1;
+declare const TEXT_V_ALIGN_BOTTOM: 2;
 
 declare const TEXTURE_TYPE_SPRITE: 0;
 declare const TEXTURE_TYPE_SPRITE_STRIP: 1;
@@ -96,12 +96,11 @@ declare const TEXTURE_BRICK_CRACK: 13;
 declare const TEXTURE_STONE: 14;
 declare const TEXTURE_WOOD: 15;
 declare const TEXTURE_HORN: 16;
-declare const TEXTURE_DEMON_0: 17;
-declare const TEXTURE_DEMON_01: 18;
-declare const TEXTURE_DEMON_02: 19;
-declare const TEXTURE_DEMON_03: 20;
-declare const TEXTURE_DEMON_04: 21;
-declare const TEXTURE_DEMON_05: 22;
+
+declare const CELL_FLOOR: 0;
+declare const CELL_WALL: 1;
+declare const CELL_CRACKED: 2;
+declare const CELL_DOOR: 3;
 
 declare const GS_PROGRESS: 0;
 declare const GS_RUNCOUNT: 1;

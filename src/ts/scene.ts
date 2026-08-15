@@ -1,7 +1,5 @@
 import { clearInput, updateHardwareInput, updateInputState } from "./input";
 import { lerp } from "./math";
-import { clearParticles, drawParticles, updateParticles } from "./particle";
-
 
 export let TRANSITION_TIME = 300 as const;
 export let TRANSITION_TIME_HALF = 150 as const;
@@ -56,7 +54,6 @@ export let updateScene = (delta: number, dt: number): void => {
             if (!sceneCleared) {
                 sceneCleared = true;
                 clearInput();
-                clearParticles();
                 scenes[targetSceneId].setup_();
             }
             currentSceneId = targetSceneId;
@@ -66,7 +63,6 @@ export let updateScene = (delta: number, dt: number): void => {
     if (sceneCleared) {
         updateHardwareInput();
         updateInputState(delta, dt);
-        updateParticles(delta, dt);
     }
 
     scenes[currentSceneId].update_(delta, dt);
@@ -74,7 +70,6 @@ export let updateScene = (delta: number, dt: number): void => {
 
 export let drawScene = (delta: number, dt: number): void => {
     scenes[currentSceneId].draw_(delta, dt);
-    drawParticles(delta, dt);
 
     if (transitionInProgress) {
         let progress: number = 0;
