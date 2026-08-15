@@ -27,7 +27,16 @@ type GameState = [
     GS_SCREENSHAKE: number,
 ];
 
-type TextureDefinition = [number, number[], number, number, number, number];
+type TextureDefinition = [
+    number,     // Entry Type (TEXTURE_TYPE_SPRITE, TEXTURE_TYPE_SPRITE_STRIP)
+    number[],   // Texture Id(s)
+    number,     // x offset
+    number,     // y offset
+    number,     // sprite width
+    number,     // sprite height
+    number,     // atlas column
+    number      // atlas row
+];
 
 type Texture = {
     w_: number,
@@ -85,15 +94,24 @@ type Mote = {
 type Entity = {
     x_: number;
     y_: number;
+    z_: number;
+    vx_: number;
+    vy_: number;
+    vz_: number;
+    preferX_: number;
+    preferY_: number;
     texId_: number;
     scale_: number;
     colour_: number;
-    active_: boolean;
+    facing_: number;
+    phase_: number;
+    size_: number;
+    flags_: number;
     data_: number;
 };
 
-type VisibleSprite = {
-    entity_: Entity;
+type Visible = {
+    idx_: number;
     dist_: number;
     screenX_: number;
     height_: number;

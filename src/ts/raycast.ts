@@ -2,7 +2,7 @@ import { gl, glPushColorQuad, glPushQuad, uDir, updateLightmap, uPlane, uPlayer 
 import { abs, clamp, cos, floor, max, min, sin, sqrt } from "./math";
 import { TEXTURE_CACHE } from "./texture";
 
-let TEX_SIZE = 16;
+let TEX_SIZE = 32;
 export let FOV = 0.75;
 let MAX_DEPTH = 18;
 
@@ -175,7 +175,7 @@ export let rayRender = (px: number, py: number, angle: number, now: number): voi
         if (side === 0 && rayDirX > 0) texX = TEX_SIZE - texX - 1;
         if (side === 1 && rayDirY < 0) texX = TEX_SIZE - texX - 1;
 
-        let wallTexture = TEXTURE_CACHE[TEXTURE_WALL];
+        let wallTexture = mapData[mapY * mapW + mapX] === 1 ? TEXTURE_CACHE[TEXTURE_BRICK] : TEXTURE_CACHE[TEXTURE_BRICK_CRACK];
         let uBase = wallTexture.u0_;
         let u0 = uBase + (texX / TEX_SIZE) * (wallTexture.u1_ - wallTexture.u0_);
         let u1 = u0;
@@ -213,7 +213,7 @@ export let rayIsSolid = (x: number, y: number): boolean => {
     return mapData[my * mapW + mx] > 0;
 };
 
-export let rayMove = (px: number, py: number, dx: number, dy: number, radius = 0.2): [number, number] => {
+export let rayMove = (px: number, py: number, dx: number, dy: number, radius = 0.25): [number, number] => {
     let nx = px + dx;
     let ny = py + dy;
 

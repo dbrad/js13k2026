@@ -1,2 +1,7 @@
 # js13k 2025 game jam
 ## Theme: Unicorns and Rainbows
+
+Primary game idea: DDA Raycaster FPS
+- Escaping a crazed cult's lair as a captured unicorn.
+- Fight your way to the surface.
+- Fast paced, juiced up, simple combat

@@ -5,7 +5,7 @@ export let generateDungeon = (width: number, height: number, minRoomSize: number
     let lightMap = new Float32Array(width * height);
     lightMap.fill(AMBIENT);
 
-    let grid = new Int8Array(width * height).fill(1); // 1 represents wall, 0 represents floor
+    let grid = new Int8Array(width * height).fill(1); // 1 represents wall, 0 represents floor, 2 is cracked wall, 3 is door/gate
     let rooms: Room[] = [];
 
     let intersects = (r1: Room, r2: Room): boolean => {
@@ -20,9 +20,15 @@ export let generateDungeon = (width: number, height: number, minRoomSize: number
     let carveHorizontalTunnel = (x1: number, x2: number, y: number) => {
         let start = min(x1, x2);
         let end = max(x1, x2);
+        let hitWall = false;
         for (let x = start; x <= end; x++) {
             let index = y * width + x;
-            if (grid[index] === 1) grid[index] = 0;
+            if (grid[index] === 1) {
+                if (!hitWall) {
+                    hitWall = true;
+                }
+                grid[index] = 0;
+            }
         }
     };
 
@@ -31,9 +37,97 @@ export let generateDungeon = (width: number, height: number, minRoomSize: number
         let end = max(y1, y2);
         for (let y = start; y <= end; y++) {
             let index = y * width + x;
-            if (grid[index] === 1) grid[index] = 0;
+            if (grid[index] === 1) {
+                grid[index] = 0;
+            }
         }
     };
+
+    let placeCorridorEntrances = (id: number) => {
+        let isFloor = (x: number, y: number) =>
+            grid[y * width + x] === 0;
+
+        let setIfFloor = (x: number, y: number) => {
+            let idx = y * width + x;
+            if (grid[idx] === 0 && random() > 0.50) {
+                grid[idx] = id;
+            }
+        };
+
+        for (let y = 2; y < height - 2; y++) {
+            for (let x = 2; x < width - 2; x++) {
+
+                if (!isFloor(x, y)) {
+                    continue;
+                }
+
+                // Room below, corridor continues above
+                if (
+                    grid[y * width + (x - 1)] === 1 &&
+                    grid[y * width + (x + 1)] === 1 &&
+
+                    isFloor(x, y - 1) &&
+
+                    isFloor(x - 1, y + 1) &&
+                    isFloor(x, y + 1) &&
+                    isFloor(x + 1, y + 1)
+                ) {
+                    setIfFloor(x, y);
+                    // entityAddOriented(x + 0.5, y + 0.5, TEXTURE_D_PAD, PI * 0.5);
+                    continue;
+                }
+
+                // Room above, corridor continues below
+                if (
+                    grid[y * width + (x - 1)] === 1 &&
+                    grid[y * width + (x + 1)] === 1 &&
+
+                    isFloor(x, y + 1) &&
+
+                    isFloor(x - 1, y - 1) &&
+                    isFloor(x, y - 1) &&
+                    isFloor(x + 1, y - 1)
+                ) {
+                    setIfFloor(x, y);
+                    // entityAddOriented(x + 0.5, y + 0.5, TEXTURE_D_PAD, PI * 0.5);
+                    continue;
+                }
+
+                // Room right, corridor continues left
+                if (
+                    grid[(y - 1) * width + x] === 1 &&
+                    grid[(y + 1) * width + x] === 1 &&
+
+                    isFloor(x - 1, y) &&
+
+                    isFloor(x + 1, y - 1) &&
+                    isFloor(x + 1, y) &&
+                    isFloor(x + 1, y + 1)
+                ) {
+                    setIfFloor(x, y);
+                    // entityAddOriented(x + 0.5, y + 0.5, TEXTURE_D_PAD, 0);
+                    continue;
+                }
+
+                // Room left, corridor continues right
+                if (
+                    grid[(y - 1) * width + x] === 1 &&
+                    grid[(y + 1) * width + x] === 1 &&
+
+                    isFloor(x + 1, y) &&
+
+                    isFloor(x - 1, y - 1) &&
+                    isFloor(x - 1, y) &&
+                    isFloor(x - 1, y + 1)
+                ) {
+                    setIfFloor(x, y);
+                    // entityAddOriented(x + 0.5, y + 0.5, TEXTURE_D_PAD, 0);
+                    continue;
+                }
+            }
+        }
+    };
+
     let connectRooms = (r1: Room, r2: Room) => {
         if (random() < 0.5) {
             carveHorizontalTunnel(r1.centerX_, r2.centerX_, r1.centerY_);
@@ -135,7 +229,6 @@ export let generateDungeon = (width: number, height: number, minRoomSize: number
             let r1 = rooms[i];
             let r2 = rooms[j];
             let edgeKey = getEdgeKey(r1.id_, r2.id_);
-
             if (!connections.has(edgeKey)) {
                 let dist = abs(r1.centerX_ - r2.centerX_) + abs(r1.centerY_ - r2.centerY_);
                 let maxSpread = max(width, height) * 0.4;
@@ -146,6 +239,7 @@ export let generateDungeon = (width: number, height: number, minRoomSize: number
             }
         }
     }
+    placeCorridorEntrances(2);
 
     return [grid, lightMap, px, py];
 };

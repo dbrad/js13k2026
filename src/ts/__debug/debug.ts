@@ -82,6 +82,12 @@ export let drawPerformanceMeter = (px: number, py: number): void => {
                 if (mapData[y * mapW + x] === 0) {
                     glPushColorQuad(x * 2, y * 2, 2, 2, 0xff000066);
                 }
+                if (mapData[y * mapW + x] === 3) {
+                    glPushColorQuad(x * 2, y * 2, 2, 2, 0xff00ffff);
+                }
+                if (mapData[y * mapW + x] === 2) {
+                    glPushColorQuad(x * 2, y * 2, 2, 2, 0xffffff00);
+                }
                 if (px >= x && px < x + 1 && py >= y && py < y + 1) {
                     glPushColorQuad(x * 2, y * 2, 2, 2, 0xff00ff00);
                 }

@@ -24,8 +24,8 @@ declare const SCREEN_HALF_H: 180;
 declare const IMAGE_WIDTH: 256;
 declare const IMAGE_HEIGHT: 32;
 
-declare const ATLAS_WIDTH: 256;
-declare const ATLAS_HEIGHT: 256;
+declare const ATLAS_WIDTH: 512;
+declare const ATLAS_HEIGHT: 512;
 
 declare const GL_TRIANGLES: 4;
 declare const GL_TRIANGLES_FAN: 6;
@@ -91,6 +91,17 @@ declare const TEXTURE_A_BUTTON_UP: 8;
 declare const TEXTURE_B_BUTTON_UP: 9;
 declare const TEXTURE_A_BUTTON_DOWN: 10;
 declare const TEXTURE_B_BUTTON_DOWN: 11;
+declare const TEXTURE_BRICK: 12;
+declare const TEXTURE_BRICK_CRACK: 13;
+declare const TEXTURE_STONE: 14;
+declare const TEXTURE_WOOD: 15;
+declare const TEXTURE_HORN: 16;
+declare const TEXTURE_DEMON_0: 17;
+declare const TEXTURE_DEMON_01: 18;
+declare const TEXTURE_DEMON_02: 19;
+declare const TEXTURE_DEMON_03: 20;
+declare const TEXTURE_DEMON_04: 21;
+declare const TEXTURE_DEMON_05: 22;
 
 declare const GS_PROGRESS: 0;
 declare const GS_RUNCOUNT: 1;

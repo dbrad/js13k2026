@@ -42,14 +42,12 @@ export let lerp = (origin: number, target: number, amount: number): number => {
   return origin + (target - origin) * amount;
 };
 
+export let smooth = (t: number): number => {
+  return t * t * (3 - 2 * t);
+};
+
 export let clamp = (value: number, min: number, max: number): number => {
-  if (value < min) {
-    return min;
-  }
-  if (value > max) {
-    return max;
-  }
-  return value;
+  return value < min ? min : value > max ? max : value;
 };
 
 export let isPointInRect = (x0: number, y0: number, x1: number, y1: number, w: number, h: number): boolean => {
@@ -58,6 +56,37 @@ export let isPointInRect = (x0: number, y0: number, x1: number, y1: number, w: n
 
 export let isPointInCircle = (x0: number, y0: number, x1: number, y1: number, radius: number): boolean => {
   return (((x0 - x1) * (x0 - x1) + (y0 - y1) * (y0 - y1)) < radius * radius);
+};
+
+export let circleOverlap = (
+  ax: number, ay: number, ar: number,
+  bx: number, by: number, br: number
+): boolean => {
+  let dx = ax - bx;
+  let dy = ay - by;
+  let r = ar + br;
+  return dx * dx + dy * dy < r * r;
+};
+
+export let pointSegDistSq = (
+  px: number, py: number,
+  x1: number, y1: number, x2: number, y2: number
+): number => {
+  let dx = x2 - x1;
+  let dy = y2 - y1;
+  let lenSq = dx * dx + dy * dy;
+  if (lenSq < 1e-8) {
+    dx = px - x1;
+    dy = py - y1;
+    return dx * dx + dy * dy;
+  }
+  let t = ((px - x1) * dx + (py - y1) * dy) / lenSq;
+  t = t < 0 ? 0 : t > 1 ? 1 : t;
+  let cx = x1 + t * dx;
+  let cy = y1 + t * dy;
+  dx = px - cx;
+  dy = py - cy;
+  return dx * dx + dy * dy;
 };
 
 // Vector

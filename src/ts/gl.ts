@@ -3,7 +3,7 @@ import mainVertex from "@shaders/main.vert";
 import { assert } from "./__debug/debug";
 import { TEXTURE_CACHE } from "./texture";
 
-let MAX_QUADS = 4096;
+let MAX_QUADS = 8192;
 let FLOATS_PER_VERTEX = 6; // x, y, u, v, colour, fog
 let VERTICES_PER_QUAD = 6;
 let VERTEX_FLOATS = MAX_QUADS * VERTICES_PER_QUAD * FLOATS_PER_VERTEX;

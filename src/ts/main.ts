@@ -1,10 +1,9 @@
 import version from "../../VERSION.txt";
 import { drawPerformanceMeter, initPerformanceMeter, performanceMark, tickPerformanceMeter, togglePerformanceDisplay } from "./__debug/debug";
 import { initCanvas } from "./canvas";
-import { moteAdd, moteDraw, moteUpdate } from "./dust";
-import { entityAdd, entityCollect, entityDraw } from "./entity";
-import { gl, glClear, glFlush, glInit, glPushColorQuad, glPushText, uShake } from "./gl";
-import { A_IS_DOWN, DOWN_IS_DOWN, drawControls, initializeInput, isTouchEvent, LEFT_IS_DOWN, RIGHT_IS_DOWN, UP_IS_DOWN, updateHardwareInput, updateInputState } from "./input";
+import { entityAdd, entityClear, entityCollect, entityDraw, entityPlayerCollide, entitySpawnDust, entityUpdate, fireRainbowBeam } from "./entity";
+import { gl, glClear, glFlush, glInit, glPushColorQuad, glPushText, glPushTexture, uShake } from "./gl";
+import { A_IS_DOWN, B_IS_DOWN, B_PRESSED, DOWN_IS_DOWN, drawControls, initializeInput, isTouchEvent, LEFT_IS_DOWN, RIGHT_IS_DOWN, UP_IS_DOWN, updateHardwareInput, updateInputState } from "./input";
 import { generateDungeon } from "./map";
 import { cos, PI, sin } from "./math";
 import { FOG_B, FOG_G, FOG_R, rayMove, rayRender, rayRenderFloorCeiling, raySetMap } from "./raycast";
@@ -17,6 +16,8 @@ window.addEventListener("load", async (): Promise<void> => {
     glInit(canvas);
     await loadTextureAtlas();
 
+    entityClear();
+
     let px = 2.5, py = 2.5, angle = 0;
 
     let mapW = 50, mapH = 50;
@@ -26,18 +27,17 @@ window.addEventListener("load", async (): Promise<void> => {
 
     raySetMap(mapW, mapH, map, lightMap);
 
-    entityAdd(5.5, 3.5, TEXTURE_BAT, 1, 1, 1, 1, 1);
-    entityAdd(7.5, 4.5, TEXTURE_BAT, 1, 1, 1, 1, 1);
-    entityAdd(3.5, 12.5, TEXTURE_BAT, 1, 1, 1, 1, 1);
-    entityAdd(10.5, 10.5, TEXTURE_BAT, 1, 1, 1, 1, 1);
-    entityAdd(12.5, 12.5, TEXTURE_BAT, 1, 1, 1, 1, 1);
-    entityAdd(15.5, 15.5, TEXTURE_BAT, 1, 1, 1, 1, 1);
-    entityAdd(20.5, 20.5, TEXTURE_BAT, 1, 1, 1, 1, 1);
-    entityAdd(25.5, 25.5, TEXTURE_BAT, 1, 1, 1, 1, 1);
-    entityAdd(28.5, 28.5, TEXTURE_BAT, 1, 1, 1, 1, 1);
+    entityAdd(5.5, 3.5, TEXTURE_A_BUTTON_UP, 1);
+    entityAdd(7.5, 4.5, TEXTURE_A_BUTTON_UP, 1);
+    entityAdd(3.5, 12.5, TEXTURE_A_BUTTON_UP, 1);
+    entityAdd(10.5, 10.5, TEXTURE_A_BUTTON_UP, 1);
+    entityAdd(12.5, 12.5, TEXTURE_A_BUTTON_UP, 1);
+    entityAdd(15.5, 15.5, TEXTURE_A_BUTTON_UP, 1);
+    entityAdd(20.5, 20.5, TEXTURE_A_BUTTON_UP, 1);
+    entityAdd(25.5, 25.5, TEXTURE_A_BUTTON_UP, 1);
+    entityAdd(28.5, 28.5, TEXTURE_A_BUTTON_UP, 1);
 
-    moteAdd(px, py);
-
+    entitySpawnDust(px, py, 220);
     initPerformanceMeter();
 
     let playing = false;
@@ -97,6 +97,10 @@ window.addEventListener("load", async (): Promise<void> => {
                     speed = 4 * dt;
                 }
 
+                if (B_PRESSED) {
+                    fireRainbowBeam(px, py, angle);
+                }
+
                 if (UP_IS_DOWN) {
                     [px, py] = rayMove(px, py, dirX * speed, dirY * speed);
                     moving = true;
@@ -109,23 +113,29 @@ window.addEventListener("load", async (): Promise<void> => {
                 } else if (RIGHT_IS_DOWN) {
                     angle = (angle + 2 * dt) % (PI * 2);
                 }
+
+                [px, py] = entityPlayerCollide(px, py, 0.25, (idx, e) => {
+                    // your damage logic
+                    // playerHealth -= (e.flags_ & FLAG_PROJECTILE) ? 10 : 5;
+                    // play sound, flash, etc.
+                });
                 updateHeadbob(delta, moving, speed);
                 shakeUpdate(delta);
                 getShakeSum();
                 gl.uniform2f(uShake, shakeX, shakeY);
-
-                moteUpdate(dt, px, py, angle);
+                entityUpdate(dt, px, py);
             }
             performanceMark("update_end");
 
             performanceMark("render_start");
             {
                 glClear(FOG_R, FOG_G, FOG_B);
+                glClear(0, 0, 0);
                 rayRenderFloorCeiling(px, py, angle);
                 rayRender(px, py, angle, now * 0.0001);
                 entityCollect(px, py, angle);
-                entityDraw(now * 0.001);
-                moteDraw(px, py, angle);
+                entityDraw(px, py, angle, now * 0.001);
+                glPushTexture(TEXTURE_HORN, SCREEN_HALF_W - 36, SCREEN_HEIGHT - 128, 3);
                 glFlush();
 
                 zeroShake();

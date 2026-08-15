@@ -1,0 +1,25 @@
+Day 02 - 2026-08-14
+
+---
+
+Idea is sorted out for the most part.
+Space will be tight.
+Proc-gen textures, a bunch of entity system work, first stab at main combat mechanic.
+
+---
+
+`-Zab0 -Zlr930 -Zmc4 -Zmd10 -S0,1,2,3,7,13,25,30,42,69,142,449`
+
+-------------------------------------------------------------------------------
+Language                     files          blank        comment           code
+-------------------------------------------------------------------------------
+TypeScript                      21            529             91           2780
+GLSL                             2             19              1             81
+HTML                             1              2              0              6
+-------------------------------------------------------------------------------
+SUM:                            24            550             92           2867
+-------------------------------------------------------------------------------
+
+The file is under the limit.
+USED: 70.97% |  9447 BYTES
+LEFT: 29.03% |  3865 BYTES
