@@ -180,7 +180,7 @@ export let fireRainbowBeam = (px: number, py: number, angle: number): void => {
 
             let cell = mapData[my * mapW + mx];
 
-            if (cell === CELL_WALL || cell === CELL_DOOR) {
+            if (cell === CELL_WALL || cell === CELL_HORIZONTAL_DOOR || cell === CELL_VERTICAL_DOOR) {
                 hitDist = d;
                 break;
             }

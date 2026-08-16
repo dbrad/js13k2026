@@ -85,9 +85,11 @@ export let loadTextureAtlas = async (): Promise<HTMLCanvasElement> => {
 
     offset += S + 8;
     stampProcedural(ctx, genStone, offset, PROC_Y, S, S, randInt(0, 100000));
+    TEXTURE_CACHE[TEXTURE_STONE] = newTexture(S, S, offset / ATLAS_WIDTH, PROC_Y / ATLAS_HEIGHT, (offset + S) / ATLAS_WIDTH, (PROC_Y + S) / ATLAS_HEIGHT);
 
     offset += S + 8;
     stampProcedural(ctx, genWood, offset, PROC_Y, S, S, randInt(0, 100000));
+    TEXTURE_CACHE[TEXTURE_WOOD] = newTexture(S, S, offset / ATLAS_WIDTH, PROC_Y / ATLAS_HEIGHT, (offset + S) / ATLAS_WIDTH, (PROC_Y + S) / ATLAS_HEIGHT);
 
     offset += S + 8;
     stampProcedural(ctx, genUnicornHorn, offset, PROC_Y, 24, 48, 0x1337);

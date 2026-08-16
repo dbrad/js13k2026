@@ -68,6 +68,41 @@ export let circleOverlap = (
   return dx * dx + dy * dy < r * r;
 };
 
+export let raySegmentIntersection = (
+  ox: number, oy: number,
+  dx: number, dy: number,
+  ax: number, ay: number,
+  bx: number, by: number
+): number => {
+  // v2 = end - start
+  let v2x = bx - ax;
+  let v2y = by - ay;
+
+  // v3 = perpendicular to ray direction
+  let v3x = -dy;
+  let v3y = dx;
+
+  // d = dot(v2, v3)
+  let d = v2x * v3x + v2y * v3y;
+
+  // parallel (or almost)
+  if (d > -1e-6 && d < 1e-6) return -1;
+
+  // v1 = origin - start
+  let v1x = ox - ax;
+  let v1y = oy - ay;
+
+  // t1 = cross(v2, v1) / d
+  // cross(a,b) = a.x*b.y - a.y*b.x
+  let t1 = (v2x * v1y - v2y * v1x) / d;
+
+  // t2 = dot(v1, v3) / d
+  let t2 = (v1x * v3x + v1y * v3y) / d;
+
+  if (t1 >= 0 && t2 >= 0 && t2 <= 1) return t1;
+  return -1;
+};
+
 export let pointSegDistSq = (
   px: number, py: number,
   x1: number, y1: number, x2: number, y2: number

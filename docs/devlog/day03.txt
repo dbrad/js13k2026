@@ -1,0 +1,35 @@
+Day 03 - 2026-08-15
+
+---
+
+Only had a few good chunks of time to work today, hopefully more tomorrow.
+Better projectiles, breakable walls, doors started but not done.
+Lighting system is much better.
+    - Add flash on shoot, and light now decays,
+Getting close to an MVP.
+Need enemy sprite, hp, attack, ai, etc.
+Need player health
+Need to add charging mechanic for rainbow beam.
+Need to place an exit to the floor.
+Refine inputs to support turning and strading. 
+    - Add mouse suppose and secondary controls on mobile
+Might add rgb lighting support.
+Need to add boss encounter to floor end.
+
+---
+
+`-Zab0 -Zlr930 -Zmc4 -Zmd9 -Zpr14 -S0,1,2,3,6,7,13,21,42,145,208,214`
+
+-------------------------------------------------------------------------------
+Language                     files          blank        comment           code
+-------------------------------------------------------------------------------
+TypeScript                      22            513             83           2742
+GLSL                             2             19              1             81
+HTML                             1              2              0              6
+-------------------------------------------------------------------------------
+SUM:                            25            534             84           2829
+-------------------------------------------------------------------------------
+
+The file is under the limit.
+USED: 70.40% |  9372 BYTES
+LEFT: 29.60% |  3940 BYTES

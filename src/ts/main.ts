@@ -4,7 +4,7 @@ import { initCanvas } from "./canvas";
 import { doorClear, doorTryToggle, doorUpdate } from "./doors";
 import { entityAdd, entityClear, entityCollect, entityDraw, entityPlayerCollide, entitySpawnDust, entityUpdate, fireRainbowBeam } from "./entity";
 import { gl, glClear, glFlush, glInit, glPushColorQuad, glPushText, glPushTexture, uShake } from "./gl";
-import { A_IS_DOWN, A_PRESSED, B_PRESSED, DOWN_IS_DOWN, drawControls, initializeInput, isTouchEvent, LEFT_IS_DOWN, RIGHT_IS_DOWN, UP_IS_DOWN, updateHardwareInput, updateInputState } from "./input";
+import { A_PRESSED, B_PRESSED, DOWN_IS_DOWN, drawControls, initializeInput, isTouchEvent, LEFT_IS_DOWN, RIGHT_IS_DOWN, UP_IS_DOWN, updateHardwareInput, updateInputState } from "./input";
 import { generateDungeon } from "./map";
 import { cos, PI, sin } from "./math";
 import { FOG_B, FOG_G, FOG_R, lightCalculated, rayMove, rayRender, rayRenderFloorCeiling, raySetMap } from "./raycast";
@@ -86,7 +86,7 @@ window.addEventListener("load", async (): Promise<void> => {
 
             performanceMark("update_start");
             {
-                let speed = 2 * dt;
+                let speed = 3 * dt;
                 let moving = false;
 
                 let dirX = cos(angle);

@@ -100,7 +100,8 @@ declare const TEXTURE_HORN: 16;
 declare const CELL_FLOOR: 0;
 declare const CELL_WALL: 1;
 declare const CELL_CRACKED: 2;
-declare const CELL_DOOR: 3;
+declare const CELL_HORIZONTAL_DOOR: 3;
+declare const CELL_VERTICAL_DOOR: 4;
 
 declare const GS_PROGRESS: 0;
 declare const GS_RUNCOUNT: 1;

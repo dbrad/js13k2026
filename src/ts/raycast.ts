@@ -10,7 +10,7 @@ export let lightMap: Float32Array;
 export let lightCalculated: Int8Array;
 export let LIGHT_DECAY = 6.5;
 
-export let AMBIENT = 0.15;
+export let AMBIENT = 0.25;
 export let PLAYER_TORCH_INTENSITY = 0.5;
 
 export let FOG_R = 0.05;
@@ -23,7 +23,7 @@ export let FOG_END = 20;
 
 export let mapW = 0;
 export let mapH = 0;
-export let mapData: Int8Array = new Int8Array(0);
+export let mapData: Int8Array;
 export let mapOffsetData: Float32Array;
 
 export let zBuffer = new Float32Array(SCREEN_WIDTH);
@@ -46,6 +46,7 @@ export let raySetMap = (w: number, h: number, data: Int8Array, lights?: Float32A
     mapW = w;
     mapH = h;
     mapData = data;
+    mapOffsetData = new Float32Array(w * h).fill(0);
     lightMap = lights && lights.length === w * h
         ? lights
         : new Float32Array(w * h).fill(AMBIENT);
@@ -102,6 +103,8 @@ export let rayRender = (px: number, py: number, angle: number, now: number, dt: 
         let rayDepth = 0;
         let idx = rayMapY * mapW + rayMapX;
         let cell = mapData[idx];
+        let doorHitDist = -1;
+        let doorWallX = 0;
         while (hit === 0 && rayDepth < MAX_RAY_DEPTH) {
             if (sideDistX < sideDistY) {
                 sideDistX += deltaDistX;
@@ -118,12 +121,10 @@ export let rayRender = (px: number, py: number, angle: number, now: number, dt: 
                 hit = 1;
                 break;
             }
+
             idx = rayMapY * mapW + rayMapX;
             cell = mapData[idx];
 
-            if (cell > CELL_FLOOR) {
-                hit = 1;
-            }
             if (lightCalculated[idx] === 0) {
                 let dx = rayMapX - playerX;
                 let dy = rayMapY - playerY;
@@ -131,6 +132,39 @@ export let rayRender = (px: number, py: number, angle: number, now: number, dt: 
                 let targetLightLevel = clamp(PLAYER_TORCH_INTENSITY - (0.1 * dist) - fading, AMBIENT, 1);
                 lightMap[idx] += (targetLightLevel - lightMap[idx]) * min(1, LIGHT_DECAY * dt);
                 lightCalculated[idx] = 1;
+            }
+
+            if (cell === CELL_HORIZONTAL_DOOR) {
+                let doorY = rayMapY + 0.5;
+                let t = (doorY - py) / (rayDirY || 1e-10);
+                if (t > 0 && t < sideDistX && t < sideDistY) {
+                    let hitX = px + rayDirX * t;
+                    if (hitX >= rayMapX + mapOffsetData[idx] && hitX < rayMapX + 1) {
+                        side = 1;
+                        doorHitDist = t;                     // ← exact distance
+                        doorWallX = hitX - rayMapX;          // 0..1 across the cell
+                        // optional: shift by offset for sliding texture look
+                        // doorWallX = (hitX - (rayMapX + offset)) / (1 - offset);
+                        hit = 1;
+                        hit = 1;
+                        break;
+                    }
+                }
+            } else if (cell === CELL_VERTICAL_DOOR) {
+                let doorX = rayMapX + 0.5;
+                let t = (doorX - px) / (rayDirX || 1e-10);
+                if (t > 0 && t < sideDistX && t < sideDistY) {
+                    let hitY = py + rayDirY * t;
+                    if (hitY >= rayMapY && hitY < rayMapY + (1 - mapOffsetData[idx])) {
+                        side = 0;
+                        doorHitDist = t;
+                        doorWallX = hitY - rayMapY;
+                        hit = 1;
+                        break;
+                    }
+                }
+            } else if (cell > CELL_FLOOR) {
+                hit = 1;
             }
         }
 
@@ -147,12 +181,18 @@ export let rayRender = (px: number, py: number, angle: number, now: number, dt: 
 
         let perpWallDist: number;
         let wallX: number;
-        if (side === 0) {
-            perpWallDist = (rayMapX - px + (1 - stepX) / 2) / rayDirX;
-            wallX = py + perpWallDist * rayDirY;
+        if (doorHitDist > 0) {
+            perpWallDist = doorHitDist;
+            wallX = doorWallX;
         } else {
-            perpWallDist = (rayMapY - py + (1 - stepY) / 2) / rayDirY;
-            wallX = px + perpWallDist * rayDirX;
+            if (side === 0) {
+                perpWallDist = (rayMapX - px + (1 - stepX) / 2) / rayDirX;
+                wallX = py + perpWallDist * rayDirY;
+            } else {
+                perpWallDist = (rayMapY - py + (1 - stepY) / 2) / rayDirY;
+                wallX = px + perpWallDist * rayDirX;
+            }
+            wallX -= floor(wallX);
         }
         perpWallDist = max(perpWallDist, 1e-4);
         wallX -= floor(wallX);
@@ -171,11 +211,13 @@ export let rayRender = (px: number, py: number, angle: number, now: number, dt: 
         let vStart = (drawStart - fullStart) / lineHeight;
         let vEnd = (drawEnd - fullStart) / lineHeight;
 
-        let textureX = (wallX * TEXTURE_SIZE) | 0;
-        if (side === 0 && rayDirX > 0) textureX = TEXTURE_SIZE - textureX - 1;
-        if (side === 1 && rayDirY < 0) textureX = TEXTURE_SIZE - textureX - 1;
+        if (cell < CELL_HORIZONTAL_DOOR && ((side === 0 && rayDirX > 0) || (side === 1 && rayDirY < 0))) wallX = 1 - wallX;
+        let textureX = floor(wallX * TEXTURE_SIZE);
 
-        let wallTexture = cell === 1 ? TEXTURE_CACHE[TEXTURE_BRICK] : TEXTURE_CACHE[TEXTURE_BRICK_CRACK];
+        let wallTexture =
+            cell === CELL_WALL ? TEXTURE_CACHE[TEXTURE_BRICK] :
+                cell === CELL_CRACKED ? TEXTURE_CACHE[TEXTURE_BRICK_CRACK] :
+                    TEXTURE_CACHE[TEXTURE_WOOD];
         let u0 = wallTexture.u0_ + (textureX / TEXTURE_SIZE) * (wallTexture.u1_ - wallTexture.u0_);
 
         let cellLighting = lightMap[rayMapY * mapW + rayMapX];
@@ -186,7 +228,7 @@ export let rayRender = (px: number, py: number, angle: number, now: number, dt: 
         let textureV1 = wallTexture.v0_ + vEnd * (wallTexture.v1_ - wallTexture.v0_);
 
         glPushQuad(x, drawStart, 1, drawEnd - drawStart, u0, textureV0, u0, textureV1, shadeFogABGR(finalShade), fogFactor(distForFog));
-    }
+    };
 
     for (let i = 0; i < lightCalculated.length; i++) {
         if (lightCalculated[i] === 1) continue;

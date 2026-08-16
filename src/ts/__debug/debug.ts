@@ -79,13 +79,14 @@ export let drawPerformanceMeter = (px: number, py: number): void => {
 
         for (let x = 0; x < mapW; x++) {
             for (let y = 0; y < mapH; y++) {
-                if (mapData[y * mapW + x] === CELL_FLOOR) {
+                let idx = y * mapW + x;
+                if (mapData[idx] === CELL_FLOOR) {
                     glPushColorQuad(x * 2, y * 2, 2, 2, 0xff000066);
                 }
-                if (mapData[y * mapW + x] === CELL_DOOR) {
+                if (mapData[idx] === CELL_HORIZONTAL_DOOR || mapData[idx] === CELL_VERTICAL_DOOR) {
                     glPushColorQuad(x * 2, y * 2, 2, 2, 0xff00ffff);
                 }
-                if (mapData[y * mapW + x] === CELL_CRACKED) {
+                if (mapData[idx] === CELL_CRACKED) {
                     glPushColorQuad(x * 2, y * 2, 2, 2, 0xffffff00);
                 }
                 if (px >= x && px < x + 1 && py >= y && py < y + 1) {
