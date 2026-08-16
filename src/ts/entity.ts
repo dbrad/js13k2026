@@ -90,10 +90,7 @@ export let entityClear = (): void => {
     activeCount = 0;
 };
 
-export let entityAdd = (x: number, y: number,
-    texId: number, scale = 1, flags = FLAG_BILLBOARD | FLAG_ACTIVE,
-    colour = 0xffffffff, z = 0.5
-): number => {
+export let entityAdd = (x: number, y: number, texId: number, scale = 1, flags = FLAG_BILLBOARD | FLAG_ACTIVE, colour = 0xffffffff, z = 0.5): number => {
     if (activeCount >= MAX_ENTITIES) return -1;
 
     let slot = -1;
@@ -147,16 +144,16 @@ export let entityRemove = (activeIdx: number): void => {
     activeCount = last;
 };
 
-export let fireRainbowBeam = (px: number, py: number, angle: number): void => {
+export let fireRainbowBeam = (px: number, py: number, angle: number, charge: number = 1.0): void => {
     for (let i = 0; i < 7; i++) {
         let t = i / 6;
         let rayAngle = angle - BEAM_SPREAD * 0.5 + BEAM_SPREAD * t;
         let dx = cos(rayAngle);
         let dy = sin(rayAngle);
 
-        let hitDist = BEAM_RANGE;
+        let hitDist = BEAM_RANGE * charge;
 
-        for (let d = BEAM_STEP; d < BEAM_RANGE; d += BEAM_STEP) {
+        for (let d = BEAM_STEP; d < hitDist; d += BEAM_STEP) {
             let x = px + dx * d;
             let y = py + dy * d;
             let mx = floor(x);
@@ -168,7 +165,6 @@ export let fireRainbowBeam = (px: number, py: number, angle: number): void => {
             }
 
             let cell = mapData[my * mapW + mx];
-
             if (cell === CELL_WALL || cell === CELL_HORIZONTAL_DOOR || cell === CELL_VERTICAL_DOOR) {
                 hitDist = d;
                 break;
@@ -198,8 +194,8 @@ export let fireRainbowBeam = (px: number, py: number, angle: number): void => {
             }
         }
 
-        for (let p = 0; p < 14; p++) {
-            let u = p / (14 - 1);
+        for (let p = 0; p < 14 + floor(charge * 10); p++) {
+            let u = p / ((14 + floor(charge * 10)) - 1);
             let x = px + dx * hitDist * u;
             let y = py + dy * hitDist * u;
 
@@ -228,19 +224,20 @@ export let fireRainbowBeam = (px: number, py: number, angle: number): void => {
             size_[s] = 1.6 + random() * 0.8;
         }
 
+        let range = floor(3 + (2 * charge));
         if (i === 3) {
             for (let d = -1; d < hitDist; d += 1) {
                 let mx = floor(px + dx * d);
                 let my = floor(py + dy * d);
                 if (mx >= 0 && my >= 0 && mx < mapW && my < mapH) {
-                    for (let lx = mx - 5; lx < mx + 5; lx++) {
-                        for (let ly = my - 5; ly < my + 5; ly++) {
+                    for (let lx = mx - range; lx < mx + range; lx++) {
+                        for (let ly = my - range; ly < my + range; ly++) {
                             if (lx < 0 || lx >= mapW || ly < 0 || ly >= mapH) continue;
                             let idx = ly * mapW + lx;
                             let ddx = mx - lx;
                             let ddy = my - ly;
                             let dist = sqrt(ddx * ddx + ddy * ddy);
-                            lightMap[idx] = max(lightMap[idx], min(1.5, AMBIENT + max(0, 1.5 - 0.3 * dist)));
+                            lightMap[idx] = max(lightMap[idx], min(0.5 + (charge), AMBIENT + max(0, 1.5 - 0.3 * dist)));
                         }
                     }
                 }

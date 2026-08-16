@@ -1,29 +1,29 @@
 # TODO
-[ ] Beam charging mechanic
-- charging meter on screen
-- increase brightness and damage at higher charge levels
-- hold to charge on desktop, 2-tap system to charge then fire on mobile
-[ ] Improved controls (Desktop and Mobile)
-- Add support for mouse look and click to fire.
-- Full keyboard mode (WASD + left/right arrows to move and look)
-- Need to add extra control(s) on right side of mobile so player can strafe and look
-[ ] Enemy Sprites
-- Need pro-gen sprites for enemies
-[ ] Enemy spawning, stats, systems and ai
-- Need logic to spawn enemies in most rooms, add tweakable hp, dmg, movespeed and some simple combat ai
-[ ] Exit placement
-- need to make sure the player and exit are spawned far away from eachother
-[ ] Boss spawning
-- Boss will spawn in the final room to guard the exit (drop a key maybe)
-[ ] Boss mechanics
-- On screen hp bar for boss, more complex / dangerous fight ai
-[ ] Sound effects
-- Use audio.ts and https://killedbyapixel.github.io/ZzFX/ to generate sound effects
-[ ] Music
-- Program some EDM / drum and bass music using zzfx and timing loops
-[ ] Power ups? Leveling? progression?
-- Think about pickups, levels, stats, added charge levels, or something to give player sense of progression
-[ ] Juice
-- screen shake on hit
-- enemies and walls flash white on hit
-- particles on death of enemies
+- [x] Beam charging mechanic
+    - charging meter on screen
+    - increase brightness and damage at higher charge levels
+    - hold to charge on desktop, 2-tap system to charge then fire on mobile
+- [ ] Improved controls (Desktop and Mobile)
+    - Add support for mouse look and click to fire.
+    - Full keyboard mode (WASD + left/right arrows to move and look)
+    - Need to add extra control(s) on right side of mobile so player can strafe and look
+- [ ] Enemy Sprites
+    - Need pro-gen sprites for enemies
+- [ ] Enemy spawning, stats, systems and ai
+    - Need logic to spawn enemies in most rooms, add tweakable hp, dmg, movespeed and some simple combat ai
+- [ ] Exit placement
+    - need to make sure the player and exit are spawned far away from eachother
+- [ ] Boss spawning
+    - Boss will spawn in the final room to guard the exit (drop a key maybe)
+- [ ] Boss mechanics
+    - On screen hp bar for boss, more complex / dangerous fight ai
+- [ ] Sound effects
+    - Use audio.ts and https://killedbyapixel.github.io/ZzFX/ to generate sound effects
+- [ ] Music
+    - Program some EDM / drum and bass music using zzfx and timing loops
+- [ ] Power ups? Leveling? progression?
+    - Think about pickups, levels, stats, added charge levels, or something to give player sense of progression
+- [ ] Juice
+    - screen shake on hit
+    - enemies and walls flash white on hit
+    - particles on death of enemies

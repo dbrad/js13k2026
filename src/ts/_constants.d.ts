@@ -120,3 +120,5 @@ declare const GS_PROGRESS: 0;
 declare const GS_RUNCOUNT: 1;
 declare const GS_MUTEMUSIC: 2;
 declare const GS_SCREENSHAKE: 3;
+
+declare const MAX_CHARGE: 1;

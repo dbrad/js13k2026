@@ -4,9 +4,9 @@ import { initCanvas } from "./canvas";
 import { entityAdd, entityClear, entityCollect, entityDraw, entityPlayerCollide, entitySpawnDust, entityUpdate, fireRainbowBeam } from "./entity";
 import { eventProcess } from "./event";
 import { gl, glClear, glFlush, glInit, glPushColorQuad, glPushText, glPushTexture, uShake } from "./gl";
-import { A_PRESSED, B_PRESSED, DOWN_IS_DOWN, drawControls, initializeInput, isTouchEvent, LEFT_IS_DOWN, RIGHT_IS_DOWN, UP_IS_DOWN, updateHardwareInput, updateInputState } from "./input";
+import { A_PRESSED, B_IS_DOWN, B_PRESSED, DOWN_IS_DOWN, drawControls, initializeInput, isTouch, isTouchEvent, LEFT_IS_DOWN, RIGHT_IS_DOWN, UP_IS_DOWN, updateHardwareInput, updateInputState } from "./input";
 import { generateDungeon, mapOffsetData } from "./map";
-import { cos, PI, sin } from "./math";
+import { cos, min, PI, sin } from "./math";
 import { FOG_B, FOG_G, FOG_R, interactionId, rayMove, rayRender, rayRenderFloorCeiling } from "./raycast";
 import { getShakeSum, shakeUpdate, shakeX, shakeY, updateHeadbob, zeroShake } from "./shake";
 import { loadTextureAtlas } from "./texture";
@@ -21,8 +21,14 @@ window.addEventListener("load", async (): Promise<void> => {
     entityClear();
 
     let px = 2.5, py = 2.5, angle = 0;
-
     let mapW = 50, mapH = 50;
+
+    let charge = 0;
+    let chargeSpeed = 1.5;
+    let lastBPressTime = 0;
+    let isCharging = false;
+    let wasBPressed = false;
+
     [px, py] = generateDungeon(mapW, mapH, 4, 7, 50);
 
     entityAdd(5.5, 3.5, TEXTURE_A_BUTTON_UP, 1);
@@ -99,8 +105,30 @@ window.addEventListener("load", async (): Promise<void> => {
                     }
                 }
 
-                if (B_PRESSED) {
-                    fireRainbowBeam(px, py, angle);
+                if (B_PRESSED && isTouch) {
+                    if (!isCharging) {
+                        isCharging = true;
+                        lastBPressTime = now;
+                    } else {
+                        fireRainbowBeam(px, py, angle, charge);
+                        charge = 0;
+                        isCharging = false;
+                    }
+                } else if (B_IS_DOWN && !isTouch && !isCharging) {
+                    isCharging = true;
+                    wasBPressed = true;
+                } else if (wasBPressed && !B_IS_DOWN) {
+                    if (!isTouch && isCharging && charge > 0) {
+                        fireRainbowBeam(px, py, angle, charge);
+                        charge = 0;
+                        isCharging = false;
+                    } else {
+                        isCharging = false;
+                    }
+                    wasBPressed = false;
+                }
+                if (isCharging) {
+                    charge = min(charge + chargeSpeed * dt, MAX_CHARGE);
                 }
 
                 if (UP_IS_DOWN) {
@@ -144,7 +172,10 @@ window.addEventListener("load", async (): Promise<void> => {
                 if (interactionId > -1) {
                     glPushText("A to open", SCREEN_HALF_W, SCREEN_HALF_H, 0xffffffff, 1, TEXT_H_ALIGN_CENTER);
                 }
-                glPushColorQuad(0, SCREEN_HEIGHT - 16, SCREEN_WIDTH + 1, 16, 0xff000000);
+
+                glPushColorQuad(0, SCREEN_HEIGHT - 32, SCREEN_WIDTH, 16, 0xff333333);
+                glPushColorQuad(0, SCREEN_HEIGHT - 32, SCREEN_WIDTH * charge, 16, 0xff00ff00);
+
                 drawControls();
                 if (DEBUG) {
                     drawPerformanceMeter(px, py);
