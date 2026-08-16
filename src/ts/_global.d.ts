@@ -59,14 +59,6 @@ type V4f = Float32Array;
 
 type TimedFunction = (delta: number, dt: number) => void;
 
-type Scene = {
-    id_: number,
-    setup_: VoidFunction,
-    update_: TimedFunction,
-    draw_: TimedFunction,
-    drawGUI_: VoidFunction,
-};
-
 type Room = {
     id_: number;
     x_: number;
@@ -75,45 +67,4 @@ type Room = {
     h_: number;
     centerX_: number;
     centerY_: number;
-};
-
-type Mote = {
-    x_: number;
-    y_: number;
-    z_: number;
-    vx_: number;
-    vy_: number;
-    vz_: number;
-    preferX_: number;
-    preferY_: number;
-    phase_: number;
-    size_: number;
-    active_: boolean;
-};
-
-type Entity = {
-    x_: number;
-    y_: number;
-    z_: number;
-    vx_: number;
-    vy_: number;
-    vz_: number;
-    preferX_: number;
-    preferY_: number;
-    texId_: number;
-    scale_: number;
-    colour_: number;
-    facing_: number;
-    phase_: number;
-    size_: number;
-    flags_: number;
-    data_: number;
-};
-
-type Visible = {
-    idx_: number;
-    dist_: number;
-    screenX_: number;
-    height_: number;
-    light_: number;
 };

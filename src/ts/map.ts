@@ -1,12 +1,26 @@
-import { doorAdd } from "./doors";
 import { abs, floor, max, min, random } from "./math";
-import { AMBIENT } from "./raycast";
 
-export let generateDungeon = (width: number, height: number, minRoomSize: number, maxRoomSize: number, maxRooms: number, loopChance: number = 0.15, deadEndChance: number = 0.20): [Int8Array, Float32Array, number, number] => {
-    let lightMap = new Float32Array(width * height);
+export let mapW = 0;
+export let mapH = 0;
+export let mapData: Int8Array;
+export let mapOffsetData: Float32Array;
+
+export let lightMap: Float32Array;
+export let lightCalculated: Int8Array;
+export let LIGHT_DECAY = 6.5;
+
+export let AMBIENT = 0.20;
+export let PLAYER_TORCH_INTENSITY = 1.0;
+
+export let generateDungeon = (width: number, height: number, minRoomSize: number, maxRoomSize: number, maxRooms: number, loopChance: number = 0.15, deadEndChance: number = 0.20): [number, number] => {
+    mapW = width;
+    mapH = height;
+    lightMap = new Float32Array(width * height);
+    lightCalculated = new Int8Array(width * height);
     lightMap.fill(AMBIENT);
 
-    let grid = new Int8Array(width * height).fill(1);
+    mapData = new Int8Array(width * height).fill(1);
+    mapOffsetData = new Float32Array(width * height);
     let rooms: Room[] = [];
 
     let intersects = (r1: Room, r2: Room): boolean => {
@@ -24,11 +38,11 @@ export let generateDungeon = (width: number, height: number, minRoomSize: number
         let hitWall = false;
         for (let x = start; x <= end; x++) {
             let index = y * width + x;
-            if (grid[index] === 1) {
+            if (mapData[index] === 1) {
                 if (!hitWall) {
                     hitWall = true;
                 }
-                grid[index] = 0;
+                mapData[index] = 0;
             }
         }
     };
@@ -38,20 +52,20 @@ export let generateDungeon = (width: number, height: number, minRoomSize: number
         let end = max(y1, y2);
         for (let y = start; y <= end; y++) {
             let index = y * width + x;
-            if (grid[index] === 1) {
-                grid[index] = 0;
+            if (mapData[index] === 1) {
+                mapData[index] = 0;
             }
         }
     };
 
     let placeCorridorEntrances = (id: number) => {
         let isFloor = (x: number, y: number) =>
-            grid[y * width + x] === 0;
+            mapData[y * width + x] === 0;
 
         let setIfFloor = (x: number, y: number) => {
             let idx = y * width + x;
-            if (grid[idx] === 0 && random() > 0.50) {
-                grid[idx] = id;
+            if (mapData[idx] === 0 && random() > 0.50) {
+                mapData[idx] = id;
             }
         };
 
@@ -64,8 +78,8 @@ export let generateDungeon = (width: number, height: number, minRoomSize: number
 
                 // Room below, corridor continues above
                 if (
-                    grid[y * width + (x - 1)] === 1 &&
-                    grid[y * width + (x + 1)] === 1 &&
+                    mapData[y * width + (x - 1)] === 1 &&
+                    mapData[y * width + (x + 1)] === 1 &&
 
                     isFloor(x, y - 1) &&
 
@@ -73,16 +87,15 @@ export let generateDungeon = (width: number, height: number, minRoomSize: number
                     isFloor(x, y + 1) &&
                     isFloor(x + 1, y + 1)
                 ) {
-                    doorAdd(x, y, true);
-                    grid[y * width + x] = CELL_HORIZONTAL_DOOR;
+                    mapData[y * width + x] = CELL_HORIZONTAL_DOOR;
                     // setIfFloor(x, y);
                     continue;
                 }
 
                 // Room above, corridor continues below
                 if (
-                    grid[y * width + (x - 1)] === 1 &&
-                    grid[y * width + (x + 1)] === 1 &&
+                    mapData[y * width + (x - 1)] === 1 &&
+                    mapData[y * width + (x + 1)] === 1 &&
 
                     isFloor(x, y + 1) &&
 
@@ -90,16 +103,15 @@ export let generateDungeon = (width: number, height: number, minRoomSize: number
                     isFloor(x, y - 1) &&
                     isFloor(x + 1, y - 1)
                 ) {
-                    doorAdd(x, y, true);
-                    grid[y * width + x] = CELL_HORIZONTAL_DOOR;
+                    mapData[y * width + x] = CELL_HORIZONTAL_DOOR;
                     // setIfFloor(x, y);
                     continue;
                 }
 
                 // Room right, corridor continues left
                 if (
-                    grid[(y - 1) * width + x] === 1 &&
-                    grid[(y + 1) * width + x] === 1 &&
+                    mapData[(y - 1) * width + x] === 1 &&
+                    mapData[(y + 1) * width + x] === 1 &&
 
                     isFloor(x - 1, y) &&
 
@@ -107,16 +119,15 @@ export let generateDungeon = (width: number, height: number, minRoomSize: number
                     isFloor(x + 1, y) &&
                     isFloor(x + 1, y + 1)
                 ) {
-                    doorAdd(x, y, true);
-                    grid[y * width + x] = CELL_VERTICAL_DOOR;
+                    mapData[y * width + x] = CELL_VERTICAL_DOOR;
                     // setIfFloor(x, y);
                     continue;
                 }
 
                 // Room left, corridor continues right
                 if (
-                    grid[(y - 1) * width + x] === 1 &&
-                    grid[(y + 1) * width + x] === 1 &&
+                    mapData[(y - 1) * width + x] === 1 &&
+                    mapData[(y + 1) * width + x] === 1 &&
 
                     isFloor(x + 1, y) &&
 
@@ -124,8 +135,7 @@ export let generateDungeon = (width: number, height: number, minRoomSize: number
                     isFloor(x - 1, y) &&
                     isFloor(x - 1, y + 1)
                 ) {
-                    doorAdd(x, y, true);
-                    grid[y * width + x] = CELL_VERTICAL_DOOR;
+                    mapData[y * width + x] = CELL_VERTICAL_DOOR;
                     // setIfFloor(x, y);
                     continue;
                 }
@@ -171,7 +181,7 @@ export let generateDungeon = (width: number, height: number, minRoomSize: number
         if (!overlap) {
             for (let ry = newRoom.y_; ry < newRoom.y_ + newRoom.h_; ry++) {
                 for (let rx = newRoom.x_; rx < newRoom.x_ + newRoom.w_; rx++) {
-                    grid[ry * width + rx] = 0;
+                    mapData[ry * width + rx] = 0;
                 }
             }
             if (px === 0 && py === 0) {
@@ -183,7 +193,7 @@ export let generateDungeon = (width: number, height: number, minRoomSize: number
         }
     }
 
-    if (rooms.length < 2) return [grid, lightMap, px, py];
+    if (rooms.length < 2) return [px, py];
 
     // 2. Proximity Graph Generation
     let connections = new Set<string>();
@@ -245,7 +255,7 @@ export let generateDungeon = (width: number, height: number, minRoomSize: number
         }
     }
 
-    // placeCorridorEntrances(2);
+    placeCorridorEntrances(2);
 
-    return [grid, lightMap, px, py];
+    return [px, py];
 };

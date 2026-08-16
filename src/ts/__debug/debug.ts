@@ -1,5 +1,5 @@
 import { glPushColorQuad, glPushText } from "../gl";
-import { mapData, mapH, mapW } from "../raycast";
+import { mapData, mapH, mapW } from "../map";
 
 let frameCount = 0;
 let fps = 60;

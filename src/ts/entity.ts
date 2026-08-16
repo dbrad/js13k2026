@@ -1,39 +1,20 @@
-// entity.ts
 import { glPushColorQuad, glPushQuad } from "./gl";
-import { abs, circleOverlap, cos, max, min, PI, random, sin, sqrt } from "./math";
-import {
-    AMBIENT,
-    FOG_END,
-    FOG_START,
-    FOV,
-    lightCalculated,
-    lightMap,
-    mapData,
-    mapH,
-    mapW,
-    rayIsSolid,
-    rayMove,
-    zBuffer
-} from "./raycast";
+import { AMBIENT, lightMap, mapData, mapH, mapW } from "./map";
+import { abs, circleOverlap, cos, floor, max, min, PI, random, sin, sqrt } from "./math";
+import { FOG_END, FOG_START, FOV, rayIsSolid, rayMove, zBuffer } from "./raycast";
 import { TEXTURE_CACHE } from "./texture";
 
-let MAX_ENTITIES = 5000;
-let MAX_VISIBLE = 500;
+export let MAX_ENTITIES = 5000;
+export let MAX_VISIBLE = 500;
 
-let FLAG_ACTIVE = 1 << 0;
-let FLAG_PARTICLE = 1 << 1;
-let FLAG_DUST_MOTE = 1 << 2;
-let FLAG_BILLBOARD = 1 << 3;
-let FLAG_SOLID = 1 << 4;   // blocks the player
-let FLAG_DAMAGE = 1 << 5;   // damages player on contact
-let FLAG_PROJECTILE = 1 << 6;  // moving damage source (bullets, etc.)
-let FLAG_ENEMY = 1 << 7;   // optional, for AI / scoring
-
-let entities: Entity[] = new Array(MAX_ENTITIES);
-let visible: Visible[] = new Array(MAX_VISIBLE);
-let entityCount = 0;
-let visibleCount = 0;
-let particleTime = 0;
+export let FLAG_ACTIVE = 1 << 0;
+export let FLAG_PARTICLE = 1 << 1;
+export let FLAG_DUST_MOTE = 1 << 2;
+export let FLAG_BILLBOARD = 1 << 3;
+export let FLAG_SOLID = 1 << 4;
+export let FLAG_DAMAGE = 1 << 5;
+export let FLAG_PROJECTILE = 1 << 6;
+export let FLAG_ENEMY = 1 << 7;
 
 let DRIFT_SPEED = 0.15;
 let STEER_STRENGTH = 1.25;
@@ -42,26 +23,48 @@ let MAX_PARTICLE_DIST_SQ = MAX_PARTICLE_DIST * MAX_PARTICLE_DIST;
 let Z_MIN = -0.10;
 let Z_MAX = 1.35;
 
-for (let i = 0; i < MAX_ENTITIES; i++) {
-    entities[i] = {
-        x_: 0, y_: 0, z_: 0.5,
-        vx_: 0, vy_: 0, vz_: 0,
-        preferX_: 1, preferY_: 0,
-        texId_: 0, scale_: 1, colour_: 0xffffffff,
-        facing_: 0, phase_: 0, size_: 1,
-        flags_: 0, data_: 0,
-    };
-}
+let RAINBOW = [
+    0xff0000ff,
+    0xff0080ff,
+    0xff00ffff,
+    0xff00ff00,
+    0xffffff00,
+    0xffff0000,
+    0xffff00ff,
+];
 
-for (let i = 0; i < MAX_VISIBLE; i++) {
-    visible[i] = {
-        idx_: 0,
-        dist_: 0,
-        screenX_: 0,
-        height_: 0,
-        light_: 1,
-    };
-}
+let BEAM_SPREAD = 0.12;
+let BEAM_RANGE = 20;
+let BEAM_STEP = 0.1;
+
+let x_ = new Float32Array(MAX_ENTITIES);
+let y_ = new Float32Array(MAX_ENTITIES);
+let z_ = new Float32Array(MAX_ENTITIES);
+let vx_ = new Float32Array(MAX_ENTITIES);
+let vy_ = new Float32Array(MAX_ENTITIES);
+let vz_ = new Float32Array(MAX_ENTITIES);
+let preferX_ = new Float32Array(MAX_ENTITIES);
+let preferY_ = new Float32Array(MAX_ENTITIES);
+let scale_ = new Float32Array(MAX_ENTITIES);
+let size_ = new Float32Array(MAX_ENTITIES);
+let phase_ = new Float32Array(MAX_ENTITIES);
+let data_ = new Float32Array(MAX_ENTITIES);
+let colour_ = new Uint32Array(MAX_ENTITIES);
+let texId_ = new Int16Array(MAX_ENTITIES);
+let flags_ = new Uint16Array(MAX_ENTITIES);
+let facing_ = new Float32Array(MAX_ENTITIES);
+
+let active = new Int16Array(MAX_ENTITIES);
+let activeCount = 0;
+
+let visIdx_ = new Int16Array(MAX_VISIBLE);
+let visDist_ = new Float32Array(MAX_VISIBLE);
+let visScreenX_ = new Float32Array(MAX_VISIBLE);
+let visHeight_ = new Float32Array(MAX_VISIBLE);
+let visLight_ = new Float32Array(MAX_VISIBLE);
+let visibleCount = 0;
+
+let particleTime = 0;
 
 let fogFactor = (dist: number): number => {
     let t = (dist - FOG_START) / (FOG_END - FOG_START);
@@ -81,82 +84,68 @@ let modulateABGR = (abgr: number, light: number): number => {
 };
 
 export let entityClear = (): void => {
-    for (let i = 0; i < entityCount; i++) {
-        entities[i].flags_ = 0;
+    for (let i = 0; i < activeCount; i++) {
+        flags_[active[i]] = 0;
     }
-    entityCount = 0;
+    activeCount = 0;
 };
 
-export let entityAdd = (
-    x: number,
-    y: number,
-    texId: number,
-    scale = 1,
-    flags = FLAG_BILLBOARD | FLAG_ACTIVE,
-    colour = 0xffffffff,
-    z = 0.5
+export let entityAdd = (x: number, y: number,
+    texId: number, scale = 1, flags = FLAG_BILLBOARD | FLAG_ACTIVE,
+    colour = 0xffffffff, z = 0.5
 ): number => {
-    if (entityCount >= MAX_ENTITIES) return -1;
-    let e = entities[entityCount];
-    e.x_ = x;
-    e.y_ = y;
-    e.z_ = z;
-    e.vx_ = 0;
-    e.vy_ = 0;
-    e.vz_ = 0;
-    e.preferX_ = 1;
-    e.preferY_ = 0;
-    e.texId_ = texId;
-    e.scale_ = scale;
-    e.colour_ = colour;
-    e.facing_ = 0;
-    e.phase_ = random() * PI * 2;
-    e.size_ = 1;
-    e.flags_ = flags | FLAG_ACTIVE;
-    e.data_ = 0;
-    return entityCount++;
+    if (activeCount >= MAX_ENTITIES) return -1;
+
+    let slot = -1;
+    for (let i = 0; i < MAX_ENTITIES; i++) {
+        if ((flags_[i] & FLAG_ACTIVE) === 0) {
+            slot = i;
+            break;
+        }
+    }
+    if (slot < 0) return -1;
+
+    x_[slot] = x;
+    y_[slot] = y;
+    z_[slot] = z;
+    vx_[slot] = 0;
+    vy_[slot] = 0;
+    vz_[slot] = 0;
+    preferX_[slot] = 1;
+    preferY_[slot] = 0;
+    texId_[slot] = texId;
+    scale_[slot] = scale;
+    colour_[slot] = colour;
+    facing_[slot] = 0;
+    phase_[slot] = random() * PI * 2;
+    size_[slot] = 1;
+    flags_[slot] = flags | FLAG_ACTIVE;
+    data_[slot] = 0;
+
+    active[activeCount] = slot;
+    return activeCount++;
 };
 
-export let entityAddParticle = (
-    x: number,
-    y: number,
-    z = 0.5,
-    size = 1,
-    col: number = 0xffffffff
-): number => {
+export let entityAddParticle = (x: number, y: number, z = 0.5, size = 1, col = 0xffffffff): number => {
     let id = entityAdd(x, y, 0, 1, FLAG_PARTICLE | FLAG_ACTIVE, col, z);
     if (id < 0) return -1;
-    let e = entities[id];
-    e.size_ = size;
-    e.colour_ = col;
+    let slot = active[id];
+    size_[slot] = size;
+    colour_[slot] = col;
     return id;
 };
 
-export let entityRemove = (index: number): void => {
-    if (index < 0 || index >= entityCount) return;
-    let last = entityCount - 1;
-    if (index !== last) {
-        let tmp = entities[index];
-        entities[index] = entities[last];
-        entities[last] = tmp;
+export let entityRemove = (activeIdx: number): void => {
+    if (activeIdx < 0 || activeIdx >= activeCount) return;
+    let slot = active[activeIdx];
+    flags_[slot] = 0;
+
+    let last = activeCount - 1;
+    if (activeIdx !== last) {
+        active[activeIdx] = active[last];
     }
-    entities[last].flags_ = 0;
-    entityCount = last;
+    activeCount = last;
 };
-
-let RAINBOW = [
-    0xff0000ff, // R
-    0xff0080ff, // O
-    0xff00ffff, // Y
-    0xff00ff00, // G
-    0xffffff00, // C
-    0xffff0000, // B
-    0xffff00ff, // V
-];
-
-let BEAM_SPREAD = 0.12;   // total angle in radians (~11°)
-let BEAM_RANGE = 20;
-let BEAM_STEP = 0.1;
 
 export let fireRainbowBeam = (px: number, py: number, angle: number): void => {
     for (let i = 0; i < 7; i++) {
@@ -170,8 +159,8 @@ export let fireRainbowBeam = (px: number, py: number, angle: number): void => {
         for (let d = BEAM_STEP; d < BEAM_RANGE; d += BEAM_STEP) {
             let x = px + dx * d;
             let y = py + dy * d;
-            let mx = x | 0;
-            let my = y | 0;
+            let mx = floor(x);
+            let my = floor(y);
 
             if (mx < 0 || my < 0 || mx >= mapW || my >= mapH) {
                 hitDist = d;
@@ -186,6 +175,7 @@ export let fireRainbowBeam = (px: number, py: number, angle: number): void => {
             }
 
             if (cell === CELL_CRACKED) {
+                // TODO: Better wall destruction
                 mapData[my * mapW + mx] = CELL_FLOOR;
                 hitDist = d;
 
@@ -198,30 +188,29 @@ export let fireRainbowBeam = (px: number, py: number, angle: number): void => {
                         0xff6688aa
                     );
                     if (id < 0) continue;
-                    let e = entities[id];
-                    e.vx_ = (random() - 0.5) * 2.2;
-                    e.vy_ = (random() - 0.5) * 2.2;
-                    e.vz_ = 0.8 + random() * 1.4;
-                    e.data_ = 0.35 + random() * 0.25;
+                    let s = active[id];
+                    vx_[s] = (random() - 0.5) * 2.2;
+                    vy_[s] = (random() - 0.5) * 2.2;
+                    vz_[s] = 0.8 + random() * 1.4;
+                    data_[s] = 0.35 + random() * 0.25;
                 }
                 break;
             }
         }
 
-        let sparkCount = 14;
-        for (let p = 0; p < sparkCount; p++) {
-            let u = p / (sparkCount - 1);
+        for (let p = 0; p < 14; p++) {
+            let u = p / (14 - 1);
             let x = px + dx * hitDist * u;
             let y = py + dy * hitDist * u;
 
             let id = entityAddParticle(x, y, 0.32 + (random() - 0.5) * 0.12, 1.1 + random() * 0.9, RAINBOW[i]);
             if (id < 0) continue;
-            let e = entities[id];
-            e.vx_ = dx * (0.9 + random() * 0.7) + (random() - 0.5) * 0.4;
-            e.vy_ = dy * (0.9 + random() * 0.7) + (random() - 0.5) * 0.4;
-            e.vz_ = (random() - 0.5) * 0.6;
-            e.data_ = 0.12 + random() * 0.10;
-            e.size_ = 0.8 + random() * 0.9;
+            let s = active[id];
+            vx_[s] = dx * (0.9 + random() * 0.7) + (random() - 0.5) * 0.4;
+            vy_[s] = dy * (0.9 + random() * 0.7) + (random() - 0.5) * 0.4;
+            vz_[s] = (random() - 0.5) * 0.6;
+            data_[s] = 0.12 + random() * 0.10;
+            size_[s] = 0.8 + random() * 0.9;
         }
 
         for (let p = 0; p < 4; p++) {
@@ -231,27 +220,27 @@ export let fireRainbowBeam = (px: number, py: number, angle: number): void => {
 
             let id = entityAddParticle(x, y, 0.3, 2.0 + random(), RAINBOW[i]);
             if (id < 0) continue;
-            let e = entities[id];
-            e.vx_ = dx * 0.18;
-            e.vy_ = dy * 0.18;
-            e.vz_ = 0;
-            e.data_ = 0.38 + random() * 0.15;
-            e.size_ = 1.6 + random() * 0.8;
+            let s = active[id];
+            vx_[s] = dx * 0.18;
+            vy_[s] = dy * 0.18;
+            vz_[s] = 0;
+            data_[s] = 0.38 + random() * 0.15;
+            size_[s] = 1.6 + random() * 0.8;
         }
 
         if (i === 3) {
-            for (let d = 0.3; d < hitDist; d += 0.6) {
-                let mx = (px + dx * d) | 0;
-                let my = (py + dy * d) | 0;
+            for (let d = -1; d < hitDist; d += 1) {
+                let mx = floor(px + dx * d);
+                let my = floor(py + dy * d);
                 if (mx >= 0 && my >= 0 && mx < mapW && my < mapH) {
-                    for (let x = mx - 5; x < mx + 5; x++) {
-                        for (let y = my - 5; y < my + 5; y++) {
-                            if (x < 0 || x >= mapW || y < 0 || y >= mapH) continue;
-                            let idx = y * mapW + x;
-                            let dx = mx - x;
-                            let dy = my - y;
-                            let dist = sqrt(dx * dx + dy * dy);
-                            lightMap[idx] = min(1.5, AMBIENT + max(0, (1.5 - (0.3 * dist))));
+                    for (let lx = mx - 5; lx < mx + 5; lx++) {
+                        for (let ly = my - 5; ly < my + 5; ly++) {
+                            if (lx < 0 || lx >= mapW || ly < 0 || ly >= mapH) continue;
+                            let idx = ly * mapW + lx;
+                            let ddx = mx - lx;
+                            let ddy = my - ly;
+                            let dist = sqrt(ddx * ddx + ddy * ddy);
+                            lightMap[idx] = max(lightMap[idx], min(1.5, AMBIENT + max(0, 1.5 - 0.3 * dist)));
                         }
                     }
                 }
@@ -260,70 +249,56 @@ export let fireRainbowBeam = (px: number, py: number, angle: number): void => {
     }
 };
 
-export let entityAt = (index: number): Entity => {
-    return entities[index];
-};
-
-export let entityCountActive = (): number => {
-    return entityCount;
-};
-
-let respawnDustMote = (e: Entity): void => {
-    let nx = 0;
-    let ny = 0;
+let respawnDustMote = (slot: number): void => {
+    let nx = 0, ny = 0;
     for (let tries = 0; tries < 30; tries++) {
         nx = 1 + random() * (mapW - 2);
         ny = 1 + random() * (mapH - 2);
         if (!rayIsSolid(nx, ny)) break;
     }
 
-    e.x_ = nx;
-    e.y_ = ny;
-    e.z_ = Z_MIN + random() * (Z_MAX - Z_MIN);
+    x_[slot] = nx;
+    y_[slot] = ny;
+    z_[slot] = Z_MIN + random() * (Z_MAX - Z_MIN);
 
     let ang = random() * PI * 2;
-    e.preferX_ = cos(ang);
-    e.preferY_ = sin(ang);
+    preferX_[slot] = cos(ang);
+    preferY_[slot] = sin(ang);
 
-    e.vx_ = e.preferX_ * DRIFT_SPEED * (0.7 + random() * 0.6);
-    e.vy_ = e.preferY_ * DRIFT_SPEED * (0.7 + random() * 0.6);
-    e.vz_ = (random() - 0.5) * 0.2;
+    vx_[slot] = preferX_[slot] * DRIFT_SPEED * (0.7 + random() * 0.6);
+    vy_[slot] = preferY_[slot] * DRIFT_SPEED * (0.7 + random() * 0.6);
+    vz_[slot] = (random() - 0.5) * 0.2;
 
-    e.colour_ = 0x00ffffff;
-    e.phase_ = random() * PI * 2;
-    e.size_ = 0.1 + random() * 0.75;
-    e.flags_ = FLAG_ACTIVE | FLAG_DUST_MOTE | FLAG_PARTICLE;
-    e.data_ = 20;
+    colour_[slot] = 0x00ffffff;
+    phase_[slot] = random() * PI * 2;
+    size_[slot] = 0.1 + random() * 0.75;
+    flags_[slot] = FLAG_ACTIVE | FLAG_DUST_MOTE | FLAG_PARTICLE;
+    data_[slot] = 20;
 };
 
 export let entitySpawnDust = (px: number, py: number, count = 220): void => {
-    let n = min(count, MAX_ENTITIES - entityCount);
+    let n = min(count, MAX_ENTITIES - activeCount);
     for (let i = 0; i < n; i++) {
         let id = entityAddParticle(px, py);
-        let e = entities[id];
-        respawnDustMote(e);
+        if (id < 0) break;
+        respawnDustMote(active[id]);
     }
 };
 
-export let entityPlayerCollide = (
-    px: number, py: number,
-    playerRadius = 0.25,
-    onDamage?: (entityIndex: number, e: Entity) => void
-): [number, number] => {
+export let entityPlayerCollide = (px: number, py: number, playerRadius = 0.25, onDamage?: (activeIdx: number) => void): [number, number] => {
     let outX = px;
     let outY = py;
 
-    for (let i = 0; i < entityCount; i++) {
-        let e = entities[i];
-        if ((e.flags_ & (FLAG_ACTIVE | FLAG_DAMAGE)) !== (FLAG_ACTIVE | FLAG_DAMAGE)) continue;
+    for (let i = 0; i < activeCount; i++) {
+        let s = active[i];
+        if ((flags_[s] & (FLAG_ACTIVE | FLAG_DAMAGE)) !== (FLAG_ACTIVE | FLAG_DAMAGE)) continue;
 
-        let hit = false;
-        let er = (e.flags_ & FLAG_PROJECTILE) ? 0.15 : 0.4 * e.scale_;
-        hit = circleOverlap(outX, outY, playerRadius, e.x_, e.y_, er);
-
-        if (hit && onDamage) {
-            onDamage(i, e);
-            if (e.flags_ & FLAG_PROJECTILE) e.flags_ = 0;
+        let er = (flags_[s] & FLAG_PROJECTILE) ? 0.15 : 0.4 * scale_[s];
+        if (circleOverlap(outX, outY, playerRadius, x_[s], y_[s], er)) {
+            if (onDamage) {
+                onDamage(i);
+                if (flags_[s] & FLAG_PROJECTILE) flags_[s] = 0;
+            }
         }
     }
 
@@ -333,73 +308,81 @@ export let entityPlayerCollide = (
 export let entityUpdate = (dt: number, px: number, py: number): void => {
     particleTime += dt;
 
-    for (let i = 0; i < entityCount; i++) {
-        let e = entities[i];
-        if ((e.flags_ & FLAG_ACTIVE) === 0) continue;
-
-        if (e.flags_ & (FLAG_ENEMY | FLAG_PROJECTILE)) {
-            let dx = e.vx_ * dt;
-            let dy = e.vy_ * dt;
-
-            let [nx, ny] = rayMove(e.x_, e.y_, dx, dy, 0.2);
-            e.x_ = nx;
-            e.y_ = ny;
-
-            if (nx === e.x_ - dx && ny === e.y_ - dy) {
-                if (e.flags_ & FLAG_PROJECTILE) e.flags_ = 0;
-            }
-        }
-
-        if ((e.flags_ & FLAG_PARTICLE) === 0) continue;
-
-        e.data_ -= dt;
-
-        let dx = e.x_ - px;
-        let dy = e.y_ - py;
-        let distSq = dx * dx + dy * dy;
-
-        if (distSq > MAX_PARTICLE_DIST_SQ * 2.5) {
-            respawnDustMote(e);
+    for (let i = activeCount - 1; i >= 0; i--) {
+        let s = active[i];
+        if ((flags_[s] & FLAG_ACTIVE) === 0) {
+            entityRemove(i);
             continue;
         }
 
-        if (e.flags_ & FLAG_DUST_MOTE) {
-            e.vx_ += (e.preferX_ * DRIFT_SPEED - e.vx_) * STEER_STRENGTH * dt;
-            e.vy_ += (e.preferY_ * DRIFT_SPEED - e.vy_) * STEER_STRENGTH * dt;
+
+        if (flags_[s] & (FLAG_ENEMY | FLAG_PROJECTILE)) {
+            let dx = vx_[s] * dt;
+            let dy = vy_[s] * dt;
+            let [nx, ny] = rayMove(x_[s], y_[s], dx, dy, 0.2);
+            x_[s] = nx;
+            y_[s] = ny;
+
+
+            if (nx === x_[s] - dx && ny === y_[s] - dy) {
+                if (flags_[s] & FLAG_PROJECTILE) {
+                    flags_[s] = 0;
+                    entityRemove(i);
+                    continue;
+                }
+            }
+        }
+
+        if ((flags_[s] & FLAG_PARTICLE) === 0) continue;
+
+        data_[s] -= dt;
+
+        let dx = x_[s] - px;
+        let dy = y_[s] - py;
+        let distSq = dx * dx + dy * dy;
+
+        if (distSq > MAX_PARTICLE_DIST_SQ * 2.5) {
+            respawnDustMote(s);
+            continue;
+        }
+
+        if (flags_[s] & FLAG_DUST_MOTE) {
+            vx_[s] += (preferX_[s] * DRIFT_SPEED - vx_[s]) * STEER_STRENGTH * dt;
+            vy_[s] += (preferY_[s] * DRIFT_SPEED - vy_[s]) * STEER_STRENGTH * dt;
 
             if (random() < 0.003) {
                 let ang = random() * PI * 2;
-                e.preferX_ = cos(ang);
-                e.preferY_ = sin(ang);
+                preferX_[s] = cos(ang);
+                preferY_[s] = sin(ang);
             }
 
-            let drive1 = sin(particleTime * 0.85 + e.phase_) * 0.22;
-            let drive2 = cos(particleTime * 1.35 + e.phase_ * 0.7) * 0.18;
-            e.vz_ += (drive1 + drive2) * dt;
+            let drive1 = sin(particleTime * 0.85 + phase_[s]) * 0.22;
+            let drive2 = cos(particleTime * 1.35 + phase_[s] * 0.7) * 0.18;
+            vz_[s] += (drive1 + drive2) * dt;
 
-            if (e.z_ < Z_MIN) e.vz_ += (Z_MIN - e.z_) * 2.5 * dt;
-            if (e.z_ > Z_MAX) e.vz_ += (Z_MAX - e.z_) * 2.5 * dt;
+            if (z_[s] < Z_MIN) vz_[s] += (Z_MIN - z_[s]) * 2.5 * dt;
+            if (z_[s] > Z_MAX) vz_[s] += (Z_MAX - z_[s]) * 2.5 * dt;
 
-            e.vx_ *= 1.0 - 0.9 * dt;
-            e.vy_ *= 1.0 - 0.9 * dt;
-            e.vz_ *= 1.0 - 1.3 * dt;
+            vx_[s] *= 1.0 - 0.9 * dt;
+            vy_[s] *= 1.0 - 0.9 * dt;
+            vz_[s] *= 1.0 - 1.3 * dt;
         }
 
-        e.x_ += e.vx_ * dt;
-        e.y_ += e.vy_ * dt;
-        e.z_ += e.vz_ * dt;
+        x_[s] += vx_[s] * dt;
+        y_[s] += vy_[s] * dt;
+        z_[s] += vz_[s] * dt;
 
-        if (rayIsSolid(e.x_, e.y_) || e.data_ <= 0) {
-            if (e.flags_ & FLAG_DUST_MOTE) {
-                respawnDustMote(e);
-                continue;
+        if (rayIsSolid(x_[s], y_[s]) || data_[s] <= 0) {
+            if (flags_[s] & FLAG_DUST_MOTE) {
+                respawnDustMote(s);
             } else {
+                flags_[s] = 0;
                 entityRemove(i);
-                continue;
             }
+            continue;
         }
 
-        e.phase_ += dt * (1.2 + e.size_ * 0.4);
+        phase_[s] += dt * (1.2 + size_[s] * 0.4);
     }
 };
 
@@ -412,12 +395,12 @@ export let entityCollect = (px: number, py: number, angle: number): void => {
     let planeY = dirX * FOV;
     let invDet = 1.0 / (planeX * dirY - dirX * planeY);
 
-    for (let i = 0; i < entityCount; i++) {
-        let e = entities[i];
-        if ((e.flags_ & FLAG_ACTIVE) === 0) continue;
+    for (let i = 0; i < activeCount; i++) {
+        let s = active[i];
+        if ((flags_[s] & FLAG_ACTIVE) === 0) continue;
 
-        let dx = e.x_ - px;
-        let dy = e.y_ - py;
+        let dx = x_[s] - px;
+        let dy = y_[s] - py;
 
         let transformX = invDet * (dirY * dx - dirX * dy);
         let transformY = invDet * (-planeY * dx + planeX * dy);
@@ -427,86 +410,118 @@ export let entityCollect = (px: number, py: number, angle: number): void => {
         let screenX = (SCREEN_WIDTH * 0.5) * (1 + transformX / transformY);
         let height =
             abs(SCREEN_HEIGHT / transformY) *
-            e.scale_ *
-            ((e.flags_ & FLAG_PARTICLE) !== 0 ? e.size_ * 0.026 : 1);
+            scale_[s] *
+            ((flags_[s] & FLAG_PARTICLE) !== 0 ? size_[s] * 0.026 : 1);
 
         if (screenX < -height || screenX > SCREEN_WIDTH + height) continue;
         if (visibleCount >= MAX_VISIBLE) continue;
 
-        let cellX = e.x_ | 0;
-        let cellY = e.y_ | 0;
+        let cellX = x_[s] | 0;
+        let cellY = y_[s] | 0;
         let cellLight = AMBIENT;
         if (cellX >= 0 && cellY >= 0 && cellX < mapW && cellY < mapH) {
             cellLight = lightMap[cellY * mapW + cellX];
         }
 
-        let slot = visible[visibleCount++];
-        slot.idx_ = i;
-        slot.dist_ = transformY;
-        slot.screenX_ = screenX;
-        slot.height_ = height;
-        slot.light_ = min(1.5, cellLight);
+        visIdx_[visibleCount] = s;
+        visDist_[visibleCount] = transformY;
+        visScreenX_[visibleCount] = screenX;
+        visHeight_[visibleCount] = height;
+        visLight_[visibleCount] = min(1.5, cellLight);
+        visibleCount++;
     }
 
     for (let i = 1; i < visibleCount; i++) {
-        let tmp = visible[i];
+        let tIdx = visIdx_[i];
+        let tDist = visDist_[i];
+        let tSX = visScreenX_[i];
+        let tH = visHeight_[i];
+        let tL = visLight_[i];
+
         let j = i - 1;
-        while (j >= 0 && visible[j].dist_ < tmp.dist_) {
-            visible[j + 1] = visible[j];
+        while (j >= 0 && visDist_[j] < tDist) {
+            visIdx_[j + 1] = visIdx_[j];
+            visDist_[j + 1] = visDist_[j];
+            visScreenX_[j + 1] = visScreenX_[j];
+            visHeight_[j + 1] = visHeight_[j];
+            visLight_[j + 1] = visLight_[j];
             j--;
         }
-        visible[j + 1] = tmp;
+        visIdx_[j + 1] = tIdx;
+        visDist_[j + 1] = tDist;
+        visScreenX_[j + 1] = tSX;
+        visHeight_[j + 1] = tH;
+        visLight_[j + 1] = tL;
     }
 };
 
 export let entityDraw = (px: number, py: number, angle: number, now: number): void => {
     for (let i = 0; i < visibleCount; i++) {
-        let s = visible[i];
-        let e = entities[s.idx_];
-        if ((e.flags_ & FLAG_ACTIVE) === 0) continue;
+        let s = visIdx_[i];
+        if ((flags_[s] & FLAG_ACTIVE) === 0) continue;
 
-        let fog = fogFactor(s.dist_);
+        let dist = visDist_[i];
+        let screenX = visScreenX_[i];
+        let height = visHeight_[i];
+        let light = visLight_[i];
+        let fog = fogFactor(dist);
 
-        if ((e.flags_ & FLAG_PARTICLE) !== 0) {
-            let moteH = s.height_;
-            let sx = s.screenX_ | 0;
+        if ((flags_[s] & FLAG_PARTICLE) !== 0) {
+            let moteH = height;
+            let sx = screenX | 0;
             if (sx < 0 || sx >= SCREEN_WIDTH) continue;
-            if (s.dist_ > zBuffer[sx]) continue;
+            if (dist > zBuffer[sx]) continue;
 
-            let vOffset = ((e.z_ - 0.5) / s.dist_) * (SCREEN_HEIGHT * 0.5);
+            let vOffset = ((z_[s] - 0.5) / dist) * (SCREEN_HEIGHT * 0.5);
             let drawY = SCREEN_HEIGHT * 0.5 - moteH * 0.5 - vOffset;
 
-            let alpha = min(0.38, 0.38 / s.dist_);
+            let alpha = min(0.38, 0.38 / dist);
+            let col = ((alpha * 255) | 0) << 24 | colour_[s];
+            let lit = modulateABGR(col, light);
 
-            let col = ((alpha * 255) | 0) << 24 | e.colour_;
-            let litColour = modulateABGR(col, s.light_);
-
-            glPushColorQuad(s.screenX_ - moteH * 0.5, drawY, moteH, moteH, litColour);
+            glPushColorQuad(screenX - moteH * 0.5, drawY, moteH, moteH, lit);
             continue;
         }
 
-        let tex = TEXTURE_CACHE[e.texId_];
+        let tex = TEXTURE_CACHE[texId_[s]];
         if (!tex) continue;
 
-        let litColour = modulateABGR(e.colour_, s.light_);
+        let litColour = modulateABGR(colour_[s], light);
 
-        let halfW = s.height_ * 0.5;
-        let drawStartX = s.screenX_ - halfW;
-        let drawEndX = s.screenX_ + halfW;
-        let bob = sin(now * 3 + e.phase_) * (s.height_ * 0.04);
-        let drawStartY = (SCREEN_HEIGHT - s.height_) * 0.5 + bob;
+        let halfW = height * 0.5;
+        let drawStartX = screenX - halfW;
+        let drawEndX = screenX + halfW;
+        let bob = sin(now * 3 + phase_[s]) * (height * 0.04);
+        let drawStartY = (SCREEN_HEIGHT - height) * 0.5 + bob;
 
         let startCol = max(0, drawStartX | 0);
         let endCol = min(SCREEN_WIDTH - 1, drawEndX | 0);
         if (endCol < startCol) continue;
 
         let uSpan = tex.u1_ - tex.u0_;
-        let invW = 1 / s.height_;
+        let invW = 1 / height;
 
         for (let col = startCol; col <= endCol; col++) {
-            if (s.dist_ >= zBuffer[col]) continue;
+            if (dist >= zBuffer[col]) continue;
             let texU = tex.u0_ + uSpan * ((col - drawStartX) * invW);
-            glPushQuad(col, drawStartY, 1, s.height_, texU, tex.v0_, texU, tex.v1_, litColour, fog);
+            glPushQuad(col, drawStartY, 1, height, texU, tex.v0_, texU, tex.v1_, litColour, fog);
         }
     }
 };
+
+export let entityCountActive = (): number => activeCount;
+
+export let entityGetX = (activeIdx: number) => x_[active[activeIdx]];
+export let entityGetY = (activeIdx: number) => y_[active[activeIdx]];
+export let entityGetZ = (activeIdx: number) => z_[active[activeIdx]];
+export let entityGetFlags = (activeIdx: number) => flags_[active[activeIdx]];
+export let entityGetScale = (activeIdx: number) => scale_[active[activeIdx]];
+export let entityGetColour = (activeIdx: number) => colour_[active[activeIdx]];
+export let entityGetData = (activeIdx: number) => data_[active[activeIdx]];
+
+export let entitySetVX = (activeIdx: number, v: number) => { vx_[active[activeIdx]] = v; };
+export let entitySetVY = (activeIdx: number, v: number) => { vy_[active[activeIdx]] = v; };
+export let entitySetVZ = (activeIdx: number, v: number) => { vz_[active[activeIdx]] = v; };
+export let entitySetData = (activeIdx: number, v: number) => { data_[active[activeIdx]] = v; };
+export let entitySetFlags = (activeIdx: number, f: number) => { flags_[active[activeIdx]] = f; };
+export let entitySetColour = (activeIdx: number, c: number) => { colour_[active[activeIdx]] = c; };

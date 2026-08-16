@@ -16,7 +16,7 @@ uniform vec2 u_plane;
 
 out vec4 outColor;
 
-const vec3 FOG_COLOR = vec3(0.05f, 0.05f, 0.08f);
+const vec3 FOG_COLOR = vec3(0, 0, 0);//vec3(0.05f, 0.05f, 0.08f);
 const float FOG_START = 1.0f;
 const float FOG_END = 20.0f;
 

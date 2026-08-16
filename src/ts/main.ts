@@ -1,15 +1,16 @@
 import version from "../../VERSION.txt";
 import { drawPerformanceMeter, initPerformanceMeter, performanceMark, tickPerformanceMeter, togglePerformanceDisplay } from "./__debug/debug";
 import { initCanvas } from "./canvas";
-import { doorClear, doorTryToggle, doorUpdate } from "./doors";
 import { entityAdd, entityClear, entityCollect, entityDraw, entityPlayerCollide, entitySpawnDust, entityUpdate, fireRainbowBeam } from "./entity";
+import { eventProcess } from "./event";
 import { gl, glClear, glFlush, glInit, glPushColorQuad, glPushText, glPushTexture, uShake } from "./gl";
 import { A_PRESSED, B_PRESSED, DOWN_IS_DOWN, drawControls, initializeInput, isTouchEvent, LEFT_IS_DOWN, RIGHT_IS_DOWN, UP_IS_DOWN, updateHardwareInput, updateInputState } from "./input";
-import { generateDungeon } from "./map";
+import { generateDungeon, mapOffsetData } from "./map";
 import { cos, PI, sin } from "./math";
-import { FOG_B, FOG_G, FOG_R, lightCalculated, rayMove, rayRender, rayRenderFloorCeiling, raySetMap } from "./raycast";
+import { FOG_B, FOG_G, FOG_R, interactionId, rayMove, rayRender, rayRenderFloorCeiling } from "./raycast";
 import { getShakeSum, shakeUpdate, shakeX, shakeY, updateHeadbob, zeroShake } from "./shake";
 import { loadTextureAtlas } from "./texture";
+import { tweenTo, tweenUpdate } from "./tween";
 
 window.addEventListener("load", async (): Promise<void> => {
     let VERSION = version;
@@ -17,17 +18,12 @@ window.addEventListener("load", async (): Promise<void> => {
     glInit(canvas);
     await loadTextureAtlas();
 
-    doorClear();
     entityClear();
 
     let px = 2.5, py = 2.5, angle = 0;
 
     let mapW = 50, mapH = 50;
-    let map: Int8Array;
-    let lightMap: Float32Array;
-    [map, lightMap, px, py] = generateDungeon(mapW, mapH, 4, 7, 50);
-
-    raySetMap(mapW, mapH, map, lightMap);
+    [px, py] = generateDungeon(mapW, mapH, 4, 7, 50);
 
     entityAdd(5.5, 3.5, TEXTURE_A_BUTTON_UP, 1);
     entityAdd(7.5, 4.5, TEXTURE_A_BUTTON_UP, 1);
@@ -94,10 +90,13 @@ window.addEventListener("load", async (): Promise<void> => {
 
                 updateHardwareInput();
                 updateInputState(delta, dt);
-                lightCalculated.fill(0);
+                tweenUpdate(dt);
+                eventProcess();
 
                 if (A_PRESSED) {
-                    doorTryToggle(px, py, angle);
+                    if (interactionId > -1) {
+                        tweenTo(mapOffsetData, interactionId, 1, 0.6, EASE_SMOOTHSTEP, EVENT_DOOR_OPEN, interactionId);
+                    }
                 }
 
                 if (B_PRESSED) {
@@ -117,8 +116,8 @@ window.addEventListener("load", async (): Promise<void> => {
                     angle = (angle + 2 * dt) % (PI * 2);
                 }
 
-                [px, py] = entityPlayerCollide(px, py, 0.25, (idx, e) => {
-                    // your damage logic
+                [px, py] = entityPlayerCollide(px, py, 0.25, (idx) => {
+                    // damage logic
                     // playerHealth -= (e.flags_ & FLAG_PROJECTILE) ? 10 : 5;
                     // play sound, flash, etc.
                 });
@@ -126,7 +125,6 @@ window.addEventListener("load", async (): Promise<void> => {
                 shakeUpdate(delta);
                 getShakeSum();
                 gl.uniform2f(uShake, shakeX, shakeY);
-                doorUpdate(dt);
                 entityUpdate(dt, px, py);
             }
             performanceMark("update_end");
@@ -143,6 +141,9 @@ window.addEventListener("load", async (): Promise<void> => {
                 glFlush();
 
                 zeroShake();
+                if (interactionId > -1) {
+                    glPushText("A to open", SCREEN_HALF_W, SCREEN_HALF_H, 0xffffffff, 1, TEXT_H_ALIGN_CENTER);
+                }
                 glPushColorQuad(0, SCREEN_HEIGHT - 16, SCREEN_WIDTH + 1, 16, 0xff000000);
                 drawControls();
                 if (DEBUG) {
@@ -155,7 +156,7 @@ window.addEventListener("load", async (): Promise<void> => {
             tickPerformanceMeter(delta);
         } else {
             glClear(0, 0, 0);
-            glPushText("new game 2026", SCREEN_HALF_W, SCREEN_HALF_H - 28, 0xffffffff, 3, TEXT_H_ALIGN_CENTER);
+            glPushText("Children of the Horn", SCREEN_HALF_W, SCREEN_HALF_H - 28, 0xffffffff, 3, TEXT_H_ALIGN_CENTER);
             glPushText("js13k 2026 entry by david brad", SCREEN_HALF_W, SCREEN_HALF_H, 0xffffffff, 1, TEXT_H_ALIGN_CENTER);
             glPushText("tap to start", SCREEN_HALF_W, SCREEN_HALF_H + 35, 0xffffffff, 1, TEXT_H_ALIGN_CENTER);
             glPushText(VERSION, SCREEN_WIDTH, SCREEN_HEIGHT, 0xffffffff, 1, TEXT_H_ALIGN_RIGHT, TEXT_V_ALIGN_BOTTOM);

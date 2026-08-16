@@ -1,30 +1,20 @@
 import { gl, glPushColorQuad, glPushQuad, uDir, updateLightmap, uPlane, uPlayer } from "./gl";
+import { PLAYER_TORCH_INTENSITY, lightMap, LIGHT_DECAY, lightCalculated, AMBIENT, mapW, mapData, mapH, mapOffsetData } from "./map";
 import { abs, clamp, cos, floor, max, min, sin, sqrt } from "./math";
 import { TEXTURE_CACHE } from "./texture";
 
 let TEXTURE_SIZE = 32;
 export let FOV = 0.75;
 let MAX_RAY_DEPTH = 50;
+let INTERACTION_DISTANCE = 1.5;
+export let interactionId = -1;
 
-export let lightMap: Float32Array;
-export let lightCalculated: Int8Array;
-export let LIGHT_DECAY = 6.5;
-
-export let AMBIENT = 0.25;
-export let PLAYER_TORCH_INTENSITY = 0.5;
-
-export let FOG_R = 0.05;
-export let FOG_G = 0.05;
-export let FOG_B = 0.08;
-export let FOG_ABGR = 0xff140D0D;
-
+export let FOG_R = 0;//0.05;
+export let FOG_G = 0;//0.05;
+export let FOG_B = 0;//0.08;
+export let FOG_ABGR = 0xff000000;//0xff140D0D;
 export let FOG_START = 1;
 export let FOG_END = 20;
-
-export let mapW = 0;
-export let mapH = 0;
-export let mapData: Int8Array;
-export let mapOffsetData: Float32Array;
 
 export let zBuffer = new Float32Array(SCREEN_WIDTH);
 
@@ -42,18 +32,10 @@ let shadeFogABGR = (shade: number): number => {
     return out;
 };
 
-export let raySetMap = (w: number, h: number, data: Int8Array, lights?: Float32Array): void => {
-    mapW = w;
-    mapH = h;
-    mapData = data;
-    mapOffsetData = new Float32Array(w * h).fill(0);
-    lightMap = lights && lights.length === w * h
-        ? lights
-        : new Float32Array(w * h).fill(AMBIENT);
-    lightCalculated = new Int8Array(w * h).fill(0);
-};
-
 export let rayRender = (px: number, py: number, angle: number, now: number, dt: number): void => {
+    lightCalculated.fill(0);
+    interactionId = -1;
+
     let dirX = cos(angle);
     let dirY = sin(angle);
     let planeX = -dirY * FOV;
@@ -61,7 +43,7 @@ export let rayRender = (px: number, py: number, angle: number, now: number, dt: 
     let playerX = floor(px);
     let playerY = floor(py);
 
-    let phase = sin(now * 30);
+    let phase = sin(now * 40);
     let fading = 0.05 * phase;
 
     let playerIdx = playerY * mapW + playerX;
@@ -129,7 +111,7 @@ export let rayRender = (px: number, py: number, angle: number, now: number, dt: 
                 let dx = rayMapX - playerX;
                 let dy = rayMapY - playerY;
                 let dist = sqrt(dx * dx + dy * dy);
-                let targetLightLevel = clamp(PLAYER_TORCH_INTENSITY - (0.1 * dist) - fading, AMBIENT, 1);
+                let targetLightLevel = clamp(PLAYER_TORCH_INTENSITY - (0.3 * dist) - fading, AMBIENT, 1);
                 lightMap[idx] += (targetLightLevel - lightMap[idx]) * min(1, LIGHT_DECAY * dt);
                 lightCalculated[idx] = 1;
             }
@@ -141,10 +123,8 @@ export let rayRender = (px: number, py: number, angle: number, now: number, dt: 
                     let hitX = px + rayDirX * t;
                     if (hitX >= rayMapX + mapOffsetData[idx] && hitX < rayMapX + 1) {
                         side = 1;
-                        doorHitDist = t;                     // ← exact distance
-                        doorWallX = hitX - rayMapX;          // 0..1 across the cell
-                        // optional: shift by offset for sliding texture look
-                        // doorWallX = (hitX - (rayMapX + offset)) / (1 - offset);
+                        doorHitDist = t;
+                        doorWallX = hitX - (rayMapX + mapOffsetData[idx]);
                         hit = 1;
                         hit = 1;
                         break;
@@ -158,7 +138,7 @@ export let rayRender = (px: number, py: number, angle: number, now: number, dt: 
                     if (hitY >= rayMapY && hitY < rayMapY + (1 - mapOffsetData[idx])) {
                         side = 0;
                         doorHitDist = t;
-                        doorWallX = hitY - rayMapY;
+                        doorWallX = hitY + (rayMapY + mapOffsetData[idx]);
                         hit = 1;
                         break;
                     }
@@ -197,6 +177,12 @@ export let rayRender = (px: number, py: number, angle: number, now: number, dt: 
         perpWallDist = max(perpWallDist, 1e-4);
         wallX -= floor(wallX);
         zBuffer[x] = perpWallDist;
+
+        if (x >= 315 && x <= 325 && (cell === CELL_HORIZONTAL_DOOR || cell == CELL_VERTICAL_DOOR) && perpWallDist <= INTERACTION_DISTANCE) {
+            if (mapOffsetData[idx] === 0) {
+                interactionId = idx;
+            }
+        }
 
         let distForFog = min(perpWallDist, FOG_END);
 

@@ -103,6 +103,19 @@ declare const CELL_CRACKED: 2;
 declare const CELL_HORIZONTAL_DOOR: 3;
 declare const CELL_VERTICAL_DOOR: 4;
 
+declare const EASE_LINEAR: 0;
+declare const EASE_SMOOTHSTEP: 1;
+
+declare const EVENT_NONE: 0;
+declare const EVENT_DOOR_OPEN: 1;
+declare const EVENT_DOOR_CLOSE: 2;
+declare const EVENT_WALL_DESTROY: 3;
+declare const EVENT_WALL_FLASH: 4;
+declare const EVENT_BOSS_SPAWN: 5;
+declare const EVENT_BOSS_DIED: 6;
+declare const EVENT_SPAWN_PARTICLES: 7;
+declare const EVENT_DELAY: 8;
+
 declare const GS_PROGRESS: 0;
 declare const GS_RUNCOUNT: 1;
 declare const GS_MUTEMUSIC: 2;
