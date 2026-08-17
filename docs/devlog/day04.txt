@@ -1,0 +1,28 @@
+Day 04 - 2026-08-16
+
+---
+
+Added tweening system.
+Added event system.
+Doors fully working now.
+Added basic attack charging.
+Made input more robust (mouse look, strafing)
+Fleshed out todo list with remaining core items
+
+---
+
+`-Zab0 -Zlr930 -Zmc4 -Zmd9 -S0,1,2,3,7,13,21,42,74,87,148,481`
+
+-------------------------------------------------------------------------------
+Language                     files          blank        comment           code
+-------------------------------------------------------------------------------
+TypeScript                      18            526             86           2652
+GLSL                             2             19              1             81
+HTML                             1              2              0              6
+-------------------------------------------------------------------------------
+SUM:                            21            547             87           2739
+-------------------------------------------------------------------------------
+
+The file is under the limit.
+USED: 75.24% | 10016 BYTES
+LEFT: 24.76% |  3296 BYTES

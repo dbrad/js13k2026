@@ -3,7 +3,7 @@
     - charging meter on screen
     - increase brightness and damage at higher charge levels
     - hold to charge on desktop, 2-tap system to charge then fire on mobile
-- [ ] Improved controls (Desktop and Mobile)
+- [x] Improved controls (Desktop and Mobile)
     - Add support for mouse look and click to fire.
     - Full keyboard mode (WASD + left/right arrows to move and look)
     - Need to add extra control(s) on right side of mobile so player can strafe and look

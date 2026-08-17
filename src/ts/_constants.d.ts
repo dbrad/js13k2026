@@ -61,8 +61,10 @@ declare const D_LEFT: 0;
 declare const D_UP: 1;
 declare const D_RIGHT: 2;
 declare const D_DOWN: 3;
-declare const A_BUTTON: 4;
-declare const B_BUTTON: 5;
+declare const LOOK_LEFT: 4;
+declare const LOOK_RIGHT: 5;
+declare const A_BUTTON: 6;
+declare const B_BUTTON: 7;
 
 declare const KEY_IS_UP: 0;
 declare const KEY_WAS_DOWN: 1;

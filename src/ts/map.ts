@@ -62,12 +62,12 @@ export let generateDungeon = (width: number, height: number, minRoomSize: number
         let isFloor = (x: number, y: number) =>
             mapData[y * width + x] === 0;
 
-        let setIfFloor = (x: number, y: number) => {
-            let idx = y * width + x;
-            if (mapData[idx] === 0 && random() > 0.50) {
-                mapData[idx] = id;
-            }
-        };
+        // let setIfFloor = (x: number, y: number) => {
+        //     let idx = y * width + x;
+        //     if (mapData[idx] === 0 && random() > 0.50) {
+        //         mapData[idx] = id;
+        //     }
+        // };
 
         for (let y = 2; y < height - 2; y++) {
             for (let x = 2; x < width - 2; x++) {

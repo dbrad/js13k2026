@@ -37,8 +37,7 @@ export const eventProcess = (): void => {
                 const cx = (cell % mapW) + 0.5;
                 const cy = (cell / mapW | 0) + 0.5;
                 for (let k = 0; k < 10; k++) {
-                    const id = entityAddParticle(cx, cy, 0.4 + random() * 0.4, 1.2, 0xff6688aa);
-
+                    entityAddParticle(cx, cy, 0.4 + random() * 0.4, 1.2, 0xff6688aa);
                 }
                 break;
             }

@@ -4,9 +4,9 @@ import { initCanvas } from "./canvas";
 import { entityAdd, entityClear, entityCollect, entityDraw, entityPlayerCollide, entitySpawnDust, entityUpdate, fireRainbowBeam } from "./entity";
 import { eventProcess } from "./event";
 import { gl, glClear, glFlush, glInit, glPushColorQuad, glPushText, glPushTexture, uShake } from "./gl";
-import { A_PRESSED, B_IS_DOWN, B_PRESSED, DOWN_IS_DOWN, drawControls, initializeInput, isTouch, isTouchEvent, LEFT_IS_DOWN, RIGHT_IS_DOWN, UP_IS_DOWN, updateHardwareInput, updateInputState } from "./input";
+import { A_PRESSED, B_IS_DOWN, B_PRESSED, DOWN_IS_DOWN, drawControls, initializeInput, isTouch, isTouchEvent, LEFT_IS_DOWN, lookDeltaX, RIGHT_IS_DOWN, UP_IS_DOWN, updateHardwareInput, updateInputState } from "./input";
 import { generateDungeon, mapOffsetData } from "./map";
-import { cos, min, PI, sin } from "./math";
+import { cos, min, sin } from "./math";
 import { FOG_B, FOG_G, FOG_R, interactionId, rayMove, rayRender, rayRenderFloorCeiling } from "./raycast";
 import { getShakeSum, shakeUpdate, shakeX, shakeY, updateHeadbob, zeroShake } from "./shake";
 import { loadTextureAtlas } from "./texture";
@@ -59,7 +59,7 @@ window.addEventListener("load", async (): Promise<void> => {
 
             if (DEBUG) {
                 document.addEventListener("keyup", (e: KeyboardEvent): void => {
-                    if (e.code === "KeyD") {
+                    if (e.code === "F2") {
                         togglePerformanceDisplay();
                     };
                 });
@@ -131,17 +131,36 @@ window.addEventListener("load", async (): Promise<void> => {
                     charge = min(charge + chargeSpeed * dt, MAX_CHARGE);
                 }
 
+                let moveX = 0;
+                let moveY = 0;
+
                 if (UP_IS_DOWN) {
-                    [px, py] = rayMove(px, py, dirX * speed, dirY * speed);
-                    moving = true;
-                } else if (DOWN_IS_DOWN) {
-                    [px, py] = rayMove(px, py, -dirX * speed, -dirY * speed);
-                    moving = true;
+                    moveX += dirX;
+                    moveY += dirY;
+                }
+                if (DOWN_IS_DOWN) {
+                    moveX -= dirX;
+                    moveY -= dirY;
                 }
                 if (LEFT_IS_DOWN) {
-                    angle = (angle - 2 * dt) % (PI * 2);
-                } else if (RIGHT_IS_DOWN) {
-                    angle = (angle + 2 * dt) % (PI * 2);
+                    moveX += dirY;
+                    moveY += -dirX;
+                }
+                if (RIGHT_IS_DOWN) {
+                    moveX += -dirY;
+                    moveY += dirX;
+                }
+
+                let len2 = moveX * moveX + moveY * moveY;
+                if (len2 > 1) {
+                    let inv = 1 / Math.sqrt(len2);
+                    moveX *= inv;
+                    moveY *= inv;
+                }
+
+                if (moveX !== 0 || moveY !== 0) {
+                    [px, py] = rayMove(px, py, moveX * speed, moveY * speed);
+                    moving = true;
                 }
 
                 [px, py] = entityPlayerCollide(px, py, 0.25, (idx) => {
@@ -149,6 +168,9 @@ window.addEventListener("load", async (): Promise<void> => {
                     // playerHealth -= (e.flags_ & FLAG_PROJECTILE) ? 10 : 5;
                     // play sound, flash, etc.
                 });
+
+                angle += lookDeltaX;
+
                 updateHeadbob(delta, moving, speed);
                 shakeUpdate(delta);
                 getShakeSum();
