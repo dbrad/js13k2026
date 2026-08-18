@@ -502,20 +502,3 @@ export let entityDraw = (px: number, py: number, angle: number, now: number): vo
         }
     }
 };
-
-export let entityCountActive = (): number => activeCount;
-
-export let entityGetX = (activeIdx: number) => x_[active[activeIdx]];
-export let entityGetY = (activeIdx: number) => y_[active[activeIdx]];
-export let entityGetZ = (activeIdx: number) => z_[active[activeIdx]];
-export let entityGetFlags = (activeIdx: number) => flags_[active[activeIdx]];
-export let entityGetScale = (activeIdx: number) => scale_[active[activeIdx]];
-export let entityGetColour = (activeIdx: number) => colour_[active[activeIdx]];
-export let entityGetData = (activeIdx: number) => data_[active[activeIdx]];
-
-export let entitySetVX = (activeIdx: number, v: number) => { vx_[active[activeIdx]] = v; };
-export let entitySetVY = (activeIdx: number, v: number) => { vy_[active[activeIdx]] = v; };
-export let entitySetVZ = (activeIdx: number, v: number) => { vz_[active[activeIdx]] = v; };
-export let entitySetData = (activeIdx: number, v: number) => { data_[active[activeIdx]] = v; };
-export let entitySetFlags = (activeIdx: number, f: number) => { flags_[active[activeIdx]] = f; };
-export let entitySetColour = (activeIdx: number, c: number) => { colour_[active[activeIdx]] = c; };

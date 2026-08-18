@@ -62,13 +62,6 @@ export let generateDungeon = (width: number, height: number, minRoomSize: number
         let isFloor = (x: number, y: number) =>
             mapData[y * width + x] === 0;
 
-        // let setIfFloor = (x: number, y: number) => {
-        //     let idx = y * width + x;
-        //     if (mapData[idx] === 0 && random() > 0.50) {
-        //         mapData[idx] = id;
-        //     }
-        // };
-
         for (let y = 2; y < height - 2; y++) {
             for (let x = 2; x < width - 2; x++) {
 
@@ -77,66 +70,50 @@ export let generateDungeon = (width: number, height: number, minRoomSize: number
                 }
 
                 // Room below, corridor continues above
-                if (
-                    mapData[y * width + (x - 1)] === 1 &&
+                if (mapData[y * width + (x - 1)] === 1 &&
                     mapData[y * width + (x + 1)] === 1 &&
-
                     isFloor(x, y - 1) &&
-
                     isFloor(x - 1, y + 1) &&
                     isFloor(x, y + 1) &&
                     isFloor(x + 1, y + 1)
                 ) {
                     mapData[y * width + x] = CELL_HORIZONTAL_DOOR;
-                    // setIfFloor(x, y);
                     continue;
                 }
 
                 // Room above, corridor continues below
-                if (
-                    mapData[y * width + (x - 1)] === 1 &&
+                if (mapData[y * width + (x - 1)] === 1 &&
                     mapData[y * width + (x + 1)] === 1 &&
-
                     isFloor(x, y + 1) &&
-
                     isFloor(x - 1, y - 1) &&
                     isFloor(x, y - 1) &&
                     isFloor(x + 1, y - 1)
                 ) {
                     mapData[y * width + x] = CELL_HORIZONTAL_DOOR;
-                    // setIfFloor(x, y);
                     continue;
                 }
 
                 // Room right, corridor continues left
-                if (
-                    mapData[(y - 1) * width + x] === 1 &&
+                if (mapData[(y - 1) * width + x] === 1 &&
                     mapData[(y + 1) * width + x] === 1 &&
-
                     isFloor(x - 1, y) &&
-
                     isFloor(x + 1, y - 1) &&
                     isFloor(x + 1, y) &&
                     isFloor(x + 1, y + 1)
                 ) {
                     mapData[y * width + x] = CELL_VERTICAL_DOOR;
-                    // setIfFloor(x, y);
                     continue;
                 }
 
                 // Room left, corridor continues right
-                if (
-                    mapData[(y - 1) * width + x] === 1 &&
+                if (mapData[(y - 1) * width + x] === 1 &&
                     mapData[(y + 1) * width + x] === 1 &&
-
                     isFloor(x + 1, y) &&
-
                     isFloor(x - 1, y - 1) &&
                     isFloor(x - 1, y) &&
                     isFloor(x - 1, y + 1)
                 ) {
                     mapData[y * width + x] = CELL_VERTICAL_DOOR;
-                    // setIfFloor(x, y);
                     continue;
                 }
             }
@@ -192,7 +169,6 @@ export let generateDungeon = (width: number, height: number, minRoomSize: number
             roomIdCounter++;
         }
     }
-
     if (rooms.length < 2) return [px, py];
 
     // 2. Proximity Graph Generation
@@ -256,6 +232,5 @@ export let generateDungeon = (width: number, height: number, minRoomSize: number
     }
 
     placeCorridorEntrances(2);
-
     return [px, py];
 };

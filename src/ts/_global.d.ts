@@ -27,17 +27,6 @@ type GameState = [
     GS_SCREENSHAKE: number,
 ];
 
-type TextureDefinition = [
-    number,     // Entry Type (TEXTURE_TYPE_SPRITE, TEXTURE_TYPE_SPRITE_STRIP)
-    number[],   // Texture Id(s)
-    number,     // x offset
-    number,     // y offset
-    number,     // sprite width
-    number,     // sprite height
-    number,     // atlas column
-    number      // atlas row
-];
-
 type Texture = {
     w_: number,
     h_: number,
@@ -56,8 +45,6 @@ type V4 = [number, number, number, number];
 type V2f = Float32Array;
 type V3f = Float32Array;
 type V4f = Float32Array;
-
-type TimedFunction = (delta: number, dt: number) => void;
 
 type Room = {
     id_: number;

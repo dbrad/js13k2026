@@ -22,7 +22,7 @@ declare const SCREEN_HALF_W: 320;
 declare const SCREEN_HALF_H: 180;
 
 declare const IMAGE_WIDTH: 256;
-declare const IMAGE_HEIGHT: 32;
+declare const IMAGE_HEIGHT: 16;
 
 declare const ATLAS_WIDTH: 512;
 declare const ATLAS_HEIGHT: 512;
@@ -86,21 +86,14 @@ declare const TEXTURE_WALL: 1;
 declare const TEXTURE_FLOOR: 2;
 declare const TEXTURE_CEILING: 3;
 declare const TEXTURE_BAT: 4;
-declare const TEXTURE_D_PAD: 5;
-declare const TEXTURE_D_PAD_UP: 6;
-declare const TEXTURE_D_PAD_RIGHT: 7;
-declare const TEXTURE_A_BUTTON_UP: 8;
-declare const TEXTURE_B_BUTTON_UP: 9;
-declare const TEXTURE_A_BUTTON_DOWN: 10;
-declare const TEXTURE_B_BUTTON_DOWN: 11;
-declare const TEXTURE_BRICK: 12;
-declare const TEXTURE_BRICK_CRACK: 13;
-declare const TEXTURE_STONE: 14;
-declare const TEXTURE_WOOD: 15;
-declare const TEXTURE_HORN: 16;
-declare const TEXTURE_DEMON: 17;
-declare const TEXTURE_DEMON_MEDIUM: 18;
-declare const TEXTURE_DEMON_LARGE: 19;
+declare const TEXTURE_BRICK: 5;
+declare const TEXTURE_BRICK_CRACK: 6;
+declare const TEXTURE_STONE: 7;
+declare const TEXTURE_WOOD: 8;
+declare const TEXTURE_HORN: 9;
+declare const TEXTURE_DEMON: 10;
+declare const TEXTURE_DEMON_MEDIUM: 11;
+declare const TEXTURE_DEMON_LARGE: 12;
 
 declare const CELL_FLOOR: 0;
 declare const CELL_WALL: 1;

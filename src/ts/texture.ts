@@ -4,10 +4,6 @@ import { characterCodeMap, glUploadAtlas } from "./gl";
 import { floor, randInt } from "./math";
 import { genBrick, genShadowCreature, genStone, genUnicornHorn, genWood } from "./procedural-textures";
 
-let textureDefinitions: TextureDefinition[] = [
-  [TEXTURE_TYPE_SPRITE_STRIP, [TEXTURE_D_PAD, TEXTURE_D_PAD_UP, TEXTURE_D_PAD_RIGHT, TEXTURE_A_BUTTON_UP, TEXTURE_B_BUTTON_UP, TEXTURE_A_BUTTON_DOWN, TEXTURE_B_BUTTON_DOWN, TEXTURE_BAT], 0, 16, 16, 16, 0, 2],
-];
-
 export let TEXTURE_CACHE: TextureCache = [];
 
 let procBuf: ImageDataArray | null = null;
@@ -56,23 +52,6 @@ export let loadTextureAtlas = async (): Promise<HTMLCanvasElement> => {
       ctx.drawImage(imageBitmap, sx, sy, 8, 8, dx, dy, 8, 8);
       TEXTURE_CACHE[100 + i] = newTexture(8, 8, dx / ATLAS_WIDTH, dy / ATLAS_HEIGHT, (dx + 8) / ATLAS_WIDTH, (dy + 8) / ATLAS_HEIGHT);
     };
-
-    for (let texture of textureDefinitions) {
-      let [defType, id, x, y, w, h, col, row] = texture;
-      if (defType === TEXTURE_TYPE_SPRITE) {
-        let dx = col * (16 + 2) + 2;
-        let dy = row * (16 + 2) + 2;
-        ctx.drawImage(imageBitmap, x, y, w, h, dx, dy, w, h);
-        TEXTURE_CACHE[id[0]] = newTexture(w, h, dx / ATLAS_WIDTH, dy / ATLAS_HEIGHT, (dx + w) / ATLAS_WIDTH, (dy + h) / ATLAS_HEIGHT);
-      } else { // === TEXTURE_TYPE_SPRITE_STRIP
-        let dy = row * (16 + 2) + 2;
-        for (let offsetX: number = x; offsetX < ATLAS_WIDTH; offsetX += w) {
-          let dx = col * (w + 2) + 2;
-          ctx.drawImage(imageBitmap, offsetX, y, w, h, dx, dy, w, h);
-          TEXTURE_CACHE[id[col++]] = newTexture(w, h, dx / ATLAS_WIDTH, dy / ATLAS_HEIGHT, (dx + w) / ATLAS_WIDTH, (dy + h) / ATLAS_HEIGHT);
-        }
-      }
-    }
 
     let S = 32;
     let offset = 8;

@@ -7,7 +7,7 @@ import { gl, glClear, glFlush, glInit, glPushColorQuad, glPushText, glPushTextur
 import { A_PRESSED, B_IS_DOWN, B_PRESSED, DOWN_IS_DOWN, drawControls, initializeInput, isTouch, isTouchEvent, LEFT_IS_DOWN, lookDeltaX, RIGHT_IS_DOWN, UP_IS_DOWN, updateHardwareInput, updateInputState } from "./input";
 import { generateDungeon, mapOffsetData } from "./map";
 import { cos, min, sin } from "./math";
-import { FOG_B, FOG_G, FOG_R, interactionId, rayMove, rayRender, rayRenderFloorCeiling } from "./raycast";
+import { interactionId, rayMove, rayRender, rayRenderFloorCeiling } from "./raycast";
 import { getShakeSum, shakeUpdate, shakeX, shakeY, updateHeadbob, zeroShake } from "./shake";
 import { loadTextureAtlas } from "./texture";
 import { tweenTo, tweenUpdate } from "./tween";
@@ -33,13 +33,6 @@ window.addEventListener("load", async (): Promise<void> => {
     entityAdd(px, py, TEXTURE_DEMON_MEDIUM, 1);
     entityAdd(px + 1, py + 1, TEXTURE_DEMON, 1);
     entityAdd(px - 1, py - 1, TEXTURE_DEMON_LARGE, 1);
-    entityAdd(3.5, 12.5, TEXTURE_DEMON, 1);
-    entityAdd(10.5, 10.5, TEXTURE_DEMON, 1);
-    entityAdd(12.5, 12.5, TEXTURE_DEMON, 1);
-    entityAdd(15.5, 15.5, TEXTURE_DEMON, 1);
-    entityAdd(20.5, 20.5, TEXTURE_DEMON, 1);
-    entityAdd(25.5, 25.5, TEXTURE_DEMON, 1);
-    entityAdd(28.5, 28.5, TEXTURE_DEMON, 1);
 
     entitySpawnDust(px, py, 220);
     initPerformanceMeter();
@@ -76,7 +69,6 @@ window.addEventListener("load", async (): Promise<void> => {
 
         let delta = now - then;
         let dt = delta * 0.001;
-
         then = now;
 
         if (playing) {
@@ -164,8 +156,6 @@ window.addEventListener("load", async (): Promise<void> => {
 
                 [px, py] = entityPlayerCollide(px, py, 0.25, (idx) => {
                     // damage logic
-                    // playerHealth -= (e.flags_ & FLAG_PROJECTILE) ? 10 : 5;
-                    // play sound, flash, etc.
                 });
 
                 angle += lookDeltaX;
@@ -180,7 +170,6 @@ window.addEventListener("load", async (): Promise<void> => {
 
             performanceMark("render_start");
             {
-                glClear(FOG_R, FOG_G, FOG_B);
                 glClear(0, 0, 0);
                 rayRenderFloorCeiling(px, py, angle);
                 rayRender(px, py, angle, now * 0.0001, dt);

@@ -76,19 +76,19 @@ export let glInit = (canvas: HTMLCanvasElement): void => {
     program = createProgram(mainVertex, mainFragment);
     gl.useProgram(program);
 
-    aPos = gl.getAttribLocation(program, "a_pos");
-    aUV = gl.getAttribLocation(program, "a_uv");
-    aColor = gl.getAttribLocation(program, "a_color");
-    aFog = gl.getAttribLocation(program, "a_fog");
+    aPos = gl.getAttribLocation(program, "p");
+    aUV = gl.getAttribLocation(program, "u");
+    aColor = gl.getAttribLocation(program, "c");
+    aFog = gl.getAttribLocation(program, "f");
 
-    uRes = gl.getUniformLocation(program, "u_res");
-    uPlayer = gl.getUniformLocation(program, "u_player");
-    uDir = gl.getUniformLocation(program, "u_dir");
-    uPlane = gl.getUniformLocation(program, "u_plane");
-    uShake = gl.getUniformLocation(program, "u_shake");
+    uRes = gl.getUniformLocation(program, "r");
+    uPlayer = gl.getUniformLocation(program, "pl");
+    uDir = gl.getUniformLocation(program, "d");
+    uPlane = gl.getUniformLocation(program, "pn");
+    uShake = gl.getUniformLocation(program, "s");
 
-    uTexture = gl.getUniformLocation(program, "u_texture");
-    uLight = gl.getUniformLocation(program, "u_light");
+    uTexture = gl.getUniformLocation(program, "tx");
+    uLight = gl.getUniformLocation(program, "l");
 
     vbo = gl.createBuffer()!;
     gl.bindBuffer(GL_ARRAY_BUFFER, vbo);
@@ -127,6 +127,10 @@ export let glClear = (r: number, g: number, b: number): void => {
 
 export let glPushColorQuad = (x: number, y: number, w: number, h: number, colour: number): void => {
     glPushQuad(x, y, w, h, 2.0, 0.0, 2.0, 0.0, colour);
+};
+
+export let glPushColorCircle = (x: number, y: number, d: number, colour: number): void => {
+    glPushQuad(x, y, d, d, 3.0, 3.0, 4.0, 4.0, colour);
 };
 
 export let glPushTexture = (texId: number, x: number, y: number, scale = 1, colour: number = 0xffffffff, hFlip: boolean = false, vFlip: boolean = false, fog: number = 0): void => {

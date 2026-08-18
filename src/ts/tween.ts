@@ -2,19 +2,19 @@ import { eventPush } from "./event";
 
 let MAX_TWEENS = 48;
 
-let tActive = new Uint8Array(MAX_TWEENS);
-let tIndex = new Int16Array(MAX_TWEENS);
+let tActive = new Uint32Array(MAX_TWEENS);
+let tIndex = new Uint32Array(MAX_TWEENS);
 let tStart = new Float32Array(MAX_TWEENS);
 let tEnd = new Float32Array(MAX_TWEENS);
 let tDuration = new Float32Array(MAX_TWEENS);
 let tElapsed = new Float32Array(MAX_TWEENS);
-let tEase = new Uint8Array(MAX_TWEENS);
+let tEase = new Uint32Array(MAX_TWEENS);
 
 let tTarget: Float32Array[] = new Array(MAX_TWEENS);
-let tAction = new Uint8Array(MAX_TWEENS);
+let tAction = new Uint32Array(MAX_TWEENS);
 let tPayload = new Uint32Array(MAX_TWEENS);
 
-let tActiveList = new Int16Array(MAX_TWEENS);
+let tActiveList = new Uint32Array(MAX_TWEENS);
 let tCount = 0;
 
 export let tweenClear = (): void => {

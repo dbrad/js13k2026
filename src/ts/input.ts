@@ -1,6 +1,9 @@
-import { floor, isPointInCircle, isPointInRect } from "./math";
 import { requestFullscreen } from "./canvas";
-import { glPushText, glPushTexture } from "./gl";
+import { glPushColorCircle, glPushText } from "./gl";
+import { floor, isPointInCircle } from "./math";
+
+let canvasRef: HTMLCanvasElement;
+let pointerLocked = false;
 
 let hardwareKeyState = [0, 0, 0, 0, 0, 0, 0, 0];
 let keyState = [0, 0, 0, 0, 0, 0, 0, 0];
@@ -18,13 +21,31 @@ export let LOOK_RIGHT_PRESSED = false, LOOK_RIGHT_IS_DOWN = false;
 export let lookDeltaX = 0;
 export let lookDeltaY = 0;
 
-export let buttonActions: string[] = ["fire", "cancel"];
 export let isTouch = false;
-export let fullKeyboardMode = false;
 
-let canvasRef: HTMLCanvasElement;
-let gamepad: Gamepad | null = null;
-let pointerLocked = false;
+let STICK_RADIUS = 50;
+let STICK_DEADZONE = 0.01;
+let LOOK_STICK_SENS = 0.035;
+
+let LEFT_BASE_X = 72;
+let LEFT_BASE_Y = SCREEN_HEIGHT - 96;
+let RIGHT_BASE_X = SCREEN_WIDTH - 72;
+let RIGHT_BASE_Y = SCREEN_HEIGHT - 96;
+
+let leftActive = false;
+let leftOriginX = 0, leftOriginY = 0;
+let leftX = 0, leftY = 0;
+
+let rightActive = false;
+let rightOriginX = 0, rightOriginY = 0;
+let rightX = 0, rightY = 0;
+
+let buttonScale = 3;
+let buttonSize = 16 * buttonScale;
+let halfButtonSize = buttonSize / 2;
+
+let [aButtonX, aButtonY] = [SCREEN_WIDTH - 140, SCREEN_HEIGHT - buttonSize - 160];
+let [bButtonX, bButtonY] = [SCREEN_WIDTH - 60, SCREEN_HEIGHT - buttonSize - 180];
 
 let mouseButtons = 0;
 let mouseWasDown = false;
@@ -56,7 +77,6 @@ export let initializeInput = (canvas: HTMLCanvasElement): void => {
             e.preventDefault();
             hardwareKeyState[key] = KEY_IS_DOWN;
         }
-
         if (e.code === "KeyF" && !pointerLocked) requestPointerLock();
     });
     document.addEventListener("keyup", (e: KeyboardEvent): void => {
@@ -85,13 +105,6 @@ export let initializeInput = (canvas: HTMLCanvasElement): void => {
     document.addEventListener("pointerlockchange", (): void => {
         pointerLocked = document.pointerLockElement === canvasRef;
     });
-
-    // window.addEventListener("gamepadconnected", (): void => {
-    //     gamepad = navigator.getGamepads()[0];
-    // });
-    // window.addEventListener("gamepaddisconnected", (): void => {
-    //     gamepad = null;
-    // });
 };
 
 let requestPointerLock = (): void => {
@@ -123,34 +136,16 @@ let setTouchPosition = (e: TouchEvent): void => {
     }
 };
 
-let dpadScale = 7;
-let dpadSize = 16 * dpadScale;
-let dpadTouchCenter = floor(dpadSize / 3);
-let [dpadX, dpadY] = [20, SCREEN_HEIGHT - dpadSize - 80];
-
-let buttonScale = 3;
-let buttonSize = 16 * buttonScale;
-let halfButtonSize = buttonSize / 2;
-
-let [aButtonX, aButtonY] = [SCREEN_WIDTH - 140, SCREEN_HEIGHT - buttonSize - 140];
-let [bButtonX, bButtonY] = [SCREEN_WIDTH - 60, SCREEN_HEIGHT - buttonSize - 160];
-
-let lookBtnSize = 48;
-let lookBtnY = SCREEN_HEIGHT - 120;
-let lookLeftX = SCREEN_WIDTH - 140;
-let lookRightX = SCREEN_WIDTH - 60;
-
 export let updateHardwareInput = (): void => {
     lookDeltaX = 0;
     lookDeltaY = 0;
-    if (gamepad || isTouch) {
+
+    if (isTouch) {
         hardwareKeyState[LOOK_LEFT] = KEY_IS_UP;
         hardwareKeyState[LOOK_RIGHT] = KEY_IS_UP;
         hardwareKeyState[A_BUTTON] = KEY_IS_UP;
         hardwareKeyState[B_BUTTON] = KEY_IS_UP;
-
-        hardwareKeyState[D_UP] = hardwareKeyState[D_DOWN] =
-            hardwareKeyState[D_LEFT] = hardwareKeyState[D_RIGHT] = KEY_IS_UP;
+        hardwareKeyState[D_UP] = hardwareKeyState[D_DOWN] = hardwareKeyState[D_LEFT] = hardwareKeyState[D_RIGHT] = KEY_IS_UP;
     }
 
     if (mouseButtons & 1) {
@@ -167,50 +162,66 @@ export let updateHardwareInput = (): void => {
     rawMouseDY = 0;
 
     if (isTouch) {
+        let leftFound = false;
+        let rightFound = false;
+
         for (let i = 0; i < 6; i++) {
             let x = touches[i][X];
             let y = touches[i][Y];
             if (x === 0 && y === 0) continue;
 
-            if (isPointInRect(x, y, dpadX - 20, dpadY - 20, dpadSize + 40, dpadTouchCenter + 20))
-                hardwareKeyState[D_UP] = KEY_IS_DOWN;
-            if (isPointInRect(x, y, dpadX - 20, dpadY + dpadTouchCenter * 2 + 1, dpadSize + 40, dpadTouchCenter + 20))
-                hardwareKeyState[D_DOWN] = KEY_IS_DOWN;
-            if (isPointInRect(x, y, dpadX - 20, dpadY - 20, dpadTouchCenter + 20, dpadSize + 40))
-                hardwareKeyState[D_LEFT] = KEY_IS_DOWN;
-            if (isPointInRect(x, y, dpadX + dpadTouchCenter * 2 + 1, dpadY - 20, dpadTouchCenter + 20, dpadSize + 40))
-                hardwareKeyState[D_RIGHT] = KEY_IS_DOWN;
+            if (!leftFound && x < SCREEN_WIDTH * 0.5) {
+                if (!leftActive) {
+                    leftOriginX = x;
+                    leftOriginY = y;
+                    leftActive = true;
+                }
+                leftX = (x - leftOriginX) / STICK_RADIUS;
+                leftY = (y - leftOriginY) / STICK_RADIUS;
+                leftFound = true;
+            }
 
-            if (isPointInRect(x, y, lookLeftX, lookBtnY, lookBtnSize, lookBtnSize))
-                hardwareKeyState[LOOK_LEFT] = KEY_IS_DOWN;
-            if (isPointInRect(x, y, lookRightX, lookBtnY, lookBtnSize, lookBtnSize))
-                hardwareKeyState[LOOK_RIGHT] = KEY_IS_DOWN;
+            else if (!rightFound && x >= SCREEN_WIDTH * 0.5) {
+                if (!rightActive) {
+                    rightOriginX = x;
+                    rightOriginY = y;
+                    rightActive = true;
+                }
+                rightX = (x - rightOriginX) / STICK_RADIUS;
+                rightY = (y - rightOriginY) / STICK_RADIUS;
+                rightFound = true;
+            }
 
             if (isPointInCircle(x, y, aButtonX + halfButtonSize, aButtonY + halfButtonSize, halfButtonSize))
                 hardwareKeyState[A_BUTTON] = KEY_IS_DOWN;
             if (isPointInCircle(x, y, bButtonX + halfButtonSize, bButtonY + halfButtonSize, halfButtonSize))
                 hardwareKeyState[B_BUTTON] = KEY_IS_DOWN;
         }
-    }
 
-    // if (gamepad) {
-    //     let buttons = gamepad.buttons;
-    //     let axes = gamepad.axes;
+        if (!leftFound) {
+            leftActive = false;
+            leftX = leftY = 0;
+        }
+        if (!rightFound) {
+            rightActive = false;
+            rightX = rightY = 0;
+        }
 
-    //     if (axes[1] < -0.25 || buttons[12]?.pressed) hardwareKeyState[D_UP] = KEY_IS_DOWN;
-    //     if (axes[1] > 0.25 || buttons[13]?.pressed) hardwareKeyState[D_DOWN] = KEY_IS_DOWN;
-    //     if (axes[0] < -0.25 || buttons[14]?.pressed) hardwareKeyState[D_LEFT] = KEY_IS_DOWN;
-    //     if (axes[0] > 0.25 || buttons[15]?.pressed) hardwareKeyState[D_RIGHT] = KEY_IS_DOWN;
+        let len = Math.hypot(leftX, leftY);
+        if (len > 1) { leftX /= len; leftY /= len; }
+        if (len < STICK_DEADZONE) { leftX = leftY = 0; }
 
-    //     lookDeltaX += axes[2] * 0.04;
-    //     lookDeltaY += axes[3] * 0.04;
+        len = Math.hypot(rightX, rightY);
+        if (len > 1) { rightX /= len; rightY /= len; }
+        if (len < STICK_DEADZONE) { rightX = rightY = 0; }
 
-    //     if (buttons[0]?.pressed) hardwareKeyState[A_BUTTON] = KEY_IS_DOWN;
-    //     if (buttons[1]?.pressed) hardwareKeyState[B_BUTTON] = KEY_IS_DOWN;
-    // }
+        if (leftY < -0.35) hardwareKeyState[D_UP] = KEY_IS_DOWN;
+        if (leftY > 0.35) hardwareKeyState[D_DOWN] = KEY_IS_DOWN;
+        if (leftX < -0.35) hardwareKeyState[D_LEFT] = KEY_IS_DOWN;
+        if (leftX > 0.35) hardwareKeyState[D_RIGHT] = KEY_IS_DOWN;
 
-
-    if (fullKeyboardMode) {
+        lookDeltaX += rightX * LOOK_STICK_SENS;
+        lookDeltaY += rightY * LOOK_STICK_SENS;
     }
 };
 
@@ -253,27 +264,33 @@ export let updateInputState = (delta: number, _dt: number): void => {
     if (LOOK_RIGHT_IS_DOWN) lookDeltaX += 0.0027 * delta;
 };
 
-let getButtonTexture = (key: number, base: number): number =>
-    keyState[key] === KEY_IS_UP ? base : base + 2;
-
 export let drawControls = (): void => {
     if (isTouch) {
-        glPushTexture(TEXTURE_D_PAD, dpadX, dpadY, dpadScale);
-        if (keyState[D_UP] !== KEY_IS_UP) glPushTexture(TEXTURE_D_PAD_UP, dpadX, dpadY, dpadScale);
-        if (keyState[D_DOWN] !== KEY_IS_UP) glPushTexture(TEXTURE_D_PAD_UP, dpadX, dpadY, dpadScale, 0xffffffff, false, true);
-        if (keyState[D_LEFT] !== KEY_IS_UP) glPushTexture(TEXTURE_D_PAD_RIGHT, dpadX, dpadY, dpadScale, 0xffffffff, true);
-        if (keyState[D_RIGHT] !== KEY_IS_UP) glPushTexture(TEXTURE_D_PAD_RIGHT, dpadX, dpadY, dpadScale);
-        glPushTexture(getButtonTexture(A_BUTTON, TEXTURE_A_BUTTON_UP), aButtonX, aButtonY, buttonScale);
-        glPushTexture(getButtonTexture(B_BUTTON, TEXTURE_B_BUTTON_UP), bButtonX, bButtonY, buttonScale);
-        glPushTexture(TEXTURE_D_PAD_RIGHT, lookLeftX, lookBtnY, 3, 0xffffffff, true);
-        glPushTexture(TEXTURE_D_PAD_RIGHT, lookRightX, lookBtnY, 3);
+        glPushColorCircle(
+            LEFT_BASE_X - STICK_RADIUS, LEFT_BASE_Y - STICK_RADIUS,
+            STICK_RADIUS * 2, 0x55ffffff
+        );
+        let nubX = LEFT_BASE_X + leftX * STICK_RADIUS * 0.7;
+        let nubY = LEFT_BASE_Y + leftY * STICK_RADIUS * 0.7;
+        glPushColorCircle(nubX - 18, nubY - 18, 36, 0xaaffffff);
+
+        glPushColorCircle(
+            RIGHT_BASE_X - STICK_RADIUS, RIGHT_BASE_Y - STICK_RADIUS,
+            STICK_RADIUS * 2, 0x55ffffff
+        );
+        nubX = RIGHT_BASE_X + rightX * STICK_RADIUS * 0.7;
+        nubY = RIGHT_BASE_Y + rightY * STICK_RADIUS * 0.7;
+        glPushColorCircle(nubX - 18, nubY - 18, 36, 0xaaffffff);
+
+        glPushColorCircle(aButtonX, aButtonY, buttonSize, 0x88ffffff);
+        glPushText("a", aButtonX + halfButtonSize - 2, aButtonY + halfButtonSize + 4, 0xff000000, 3, TEXT_H_ALIGN_CENTER, TEXT_V_ALIGN_MIDDLE);
+        glPushColorCircle(bButtonX, bButtonY, buttonSize, 0x88ffffff);
+        glPushText("b", bButtonX + halfButtonSize - 0, bButtonY + halfButtonSize + 4, 0xff000000, 3, TEXT_H_ALIGN_CENTER, TEXT_V_ALIGN_MIDDLE);
     }
 
-    let help = !gamepad && !isTouch
-        ? (fullKeyboardMode
-            ? `wasd move / arrows look / x|space fire / c cancel`
-            : `wasd move / mouse look / click fire / c cancel`)
-        : `stick move / look / a fire / b cancel`;
+    let help = !isTouch
+        ? `wasd move / arrows or mouse look / click fire / c cancel`
+        : `left stick move / right stick look / a fire / b cancel`;
 
     glPushText(help, SCREEN_WIDTH / 2, SCREEN_HEIGHT - 8, 0xffffffff, 1, TEXT_H_ALIGN_CENTER);
 };

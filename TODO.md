@@ -24,7 +24,7 @@
 - [ ] Charge levels for attack
 - [ ] Power ups? Leveling? progression?
     - Think about pickups, levels, stats, added charge levels, or something to give player sense of progression
-- [ ] Cleanup shader files
+- [x] Cleanup shader files
     - shorten all param and uniform names
 - [ ] Cleanup / Simplify Proc-gen Textures
 - [ ] Cleanup / Simplify Map Generation
