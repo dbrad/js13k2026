@@ -2,7 +2,7 @@ import { assert } from "@debug";
 import textureAltas from "@res/sheet.webp";
 import { characterCodeMap, glUploadAtlas } from "./gl";
 import { floor, randInt } from "./math";
-import { genBrick, genCultist, genShadowCreature, genStone, genUnicornHorn, genWood } from "./procedural-textures";
+import { genBrick, genShadowCreature, genStone, genUnicornHorn, genWood } from "./procedural-textures";
 
 let textureDefinitions: TextureDefinition[] = [
   [TEXTURE_TYPE_SPRITE_STRIP, [TEXTURE_D_PAD, TEXTURE_D_PAD_UP, TEXTURE_D_PAD_RIGHT, TEXTURE_A_BUTTON_UP, TEXTURE_B_BUTTON_UP, TEXTURE_A_BUTTON_DOWN, TEXTURE_B_BUTTON_DOWN, TEXTURE_BAT], 0, 16, 16, 16, 0, 2],
@@ -13,13 +13,13 @@ export let TEXTURE_CACHE: TextureCache = [];
 let procBuf: ImageDataArray | null = null;
 let procBufCapacity = 0;
 
-let stampProcedural = (ctx: CanvasRenderingContext2D, gen: (w: number, h: number, seed: number, out: Uint8Array, offset?: number, mod?: boolean, frame?: number) => void, x: number, y: number, w: number, h: number, seed: number, mod = false, frame = 0): void => {
+let stampProcedural = (ctx: CanvasRenderingContext2D, gen: (w: number, h: number, seed: number, out: Uint8Array, mod?: boolean) => void, x: number, y: number, w: number, h: number, seed: number, mod = false, frame = 0): void => {
   let needed = w * h * 4;
   if (!procBuf || procBufCapacity < needed) {
     procBuf = new Uint8ClampedArray(needed);
     procBufCapacity = needed;
   }
-  gen(w, h, seed, procBuf as unknown as Uint8Array, 0, mod, frame);
+  gen(w, h, seed, procBuf as unknown as Uint8Array, mod);
   let view = procBuf.subarray(0, needed);
   let img = new ImageData(view, w, h);
   ctx.putImageData(img, x, y);
@@ -77,6 +77,7 @@ export let loadTextureAtlas = async (): Promise<HTMLCanvasElement> => {
     let S = 32;
     let offset = 8;
     let seed = randInt(0, 100000);
+
     stampProcedural(ctx, genBrick, offset, PROC_Y, S, S, seed);
     TEXTURE_CACHE[TEXTURE_BRICK] = newTexture(S, S, offset / ATLAS_WIDTH, PROC_Y / ATLAS_HEIGHT, (offset + S) / ATLAS_WIDTH, (PROC_Y + S) / ATLAS_HEIGHT);
 
@@ -96,15 +97,21 @@ export let loadTextureAtlas = async (): Promise<HTMLCanvasElement> => {
     stampProcedural(ctx, genUnicornHorn, offset, PROC_Y, 24, 48, seed);
     TEXTURE_CACHE[TEXTURE_HORN] = newTexture(24, 48, offset / ATLAS_WIDTH, PROC_Y / ATLAS_HEIGHT, (offset + 24) / ATLAS_WIDTH, (PROC_Y + 48) / ATLAS_HEIGHT);
 
-    offset += 0;
+    offset = 0;
     PROC_Y += 64;
     S = 16;
     stampProcedural(ctx, genShadowCreature, offset, PROC_Y, S, S, seed);
     TEXTURE_CACHE[TEXTURE_DEMON] = newTexture(S, S, offset / ATLAS_WIDTH, PROC_Y / ATLAS_HEIGHT, (offset + S) / ATLAS_WIDTH, (PROC_Y + S) / ATLAS_HEIGHT);
 
     offset += S + 8;
-    stampProcedural(ctx, genCultist, offset, PROC_Y, S, S, seed);
-    TEXTURE_CACHE[TEXTURE_CULTIST] = newTexture(S, S, offset / ATLAS_WIDTH, PROC_Y / ATLAS_HEIGHT, (offset + S) / ATLAS_WIDTH, (PROC_Y + S) / ATLAS_HEIGHT);
+    S = 24;
+    stampProcedural(ctx, genShadowCreature, offset, PROC_Y, S, S, seed);
+    TEXTURE_CACHE[TEXTURE_DEMON_MEDIUM] = newTexture(S, S, offset / ATLAS_WIDTH, PROC_Y / ATLAS_HEIGHT, (offset + S) / ATLAS_WIDTH, (PROC_Y + S) / ATLAS_HEIGHT);
+
+    offset += S + 8;
+    S = 32;
+    stampProcedural(ctx, genShadowCreature, offset, PROC_Y, S, S, seed);
+    TEXTURE_CACHE[TEXTURE_DEMON_LARGE] = newTexture(S, S, offset / ATLAS_WIDTH, PROC_Y / ATLAS_HEIGHT, (offset + S) / ATLAS_WIDTH, (PROC_Y + S) / ATLAS_HEIGHT);
 
     glUploadAtlas(canvas);
     resolve(canvas);

@@ -1,33 +1,33 @@
 import { eventPush } from "./event";
 
-const MAX_TWEENS = 48;
+let MAX_TWEENS = 48;
 
-const tActive = new Uint8Array(MAX_TWEENS);
-const tIndex = new Int16Array(MAX_TWEENS);
-const tStart = new Float32Array(MAX_TWEENS);
-const tEnd = new Float32Array(MAX_TWEENS);
-const tDuration = new Float32Array(MAX_TWEENS);
-const tElapsed = new Float32Array(MAX_TWEENS);
-const tEase = new Uint8Array(MAX_TWEENS);
+let tActive = new Uint8Array(MAX_TWEENS);
+let tIndex = new Int16Array(MAX_TWEENS);
+let tStart = new Float32Array(MAX_TWEENS);
+let tEnd = new Float32Array(MAX_TWEENS);
+let tDuration = new Float32Array(MAX_TWEENS);
+let tElapsed = new Float32Array(MAX_TWEENS);
+let tEase = new Uint8Array(MAX_TWEENS);
 
-const tTarget: Float32Array[] = new Array(MAX_TWEENS);
-const tAction = new Uint8Array(MAX_TWEENS);
-const tPayload = new Uint32Array(MAX_TWEENS);
+let tTarget: Float32Array[] = new Array(MAX_TWEENS);
+let tAction = new Uint8Array(MAX_TWEENS);
+let tPayload = new Uint32Array(MAX_TWEENS);
 
-const tActiveList = new Int16Array(MAX_TWEENS);
+let tActiveList = new Int16Array(MAX_TWEENS);
 let tCount = 0;
 
-export const tweenClear = (): void => {
+export let tweenClear = (): void => {
     for (let i = 0; i < tCount; i++) tActive[tActiveList[i]] = 0;
     tCount = 0;
 };
 
-export const tweenTo = (arr: Float32Array, idx: number, target: number, duration: number, ease: number = EASE_LINEAR, actionId: number = -1, actionPayload: number = -1): number => {
+export let tweenTo = (arr: Float32Array, idx: number, target: number, duration: number, ease: number = EASE_LINEAR, actionId: number = -1, actionPayload: number = -1): number => {
     for (let i = tCount - 1; i >= 0; i--) {
-        const s = tActiveList[i];
+        let s = tActiveList[i];
         if (tTarget[s] === arr && tIndex[s] === idx) {
             tActive[s] = 0;
-            const last = tCount - 1;
+            let last = tCount - 1;
             if (i !== last) tActiveList[i] = tActiveList[last];
             tCount = last;
         }
@@ -56,9 +56,9 @@ export const tweenTo = (arr: Float32Array, idx: number, target: number, duration
     return slot;
 };
 
-export const tweenUpdate = (dt: number): void => {
+export let tweenUpdate = (dt: number): void => {
     for (let i = tCount - 1; i >= 0; i--) {
-        const s = tActiveList[i];
+        let s = tActiveList[i];
         tElapsed[s] += dt;
 
         let t = tElapsed[s] / tDuration[s];
@@ -69,7 +69,7 @@ export const tweenUpdate = (dt: number): void => {
             }
             tTarget[s][tIndex[s]] = tEnd[s];
             tActive[s] = 0;
-            const last = tCount - 1;
+            let last = tCount - 1;
             if (i !== last) tActiveList[i] = tActiveList[last];
             tCount = last;
             continue;
@@ -84,5 +84,5 @@ export const tweenUpdate = (dt: number): void => {
     }
 };
 
-export const tweenIsActive = (slot: number): boolean => slot >= 0 && !!tActive[slot];
-export const tweenCount = (): number => tCount;
+export let tweenIsActive = (slot: number): boolean => slot >= 0 && !!tActive[slot];
+export let tweenCount = (): number => tCount;

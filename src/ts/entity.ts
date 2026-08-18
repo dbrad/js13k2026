@@ -199,7 +199,7 @@ export let fireRainbowBeam = (px: number, py: number, angle: number, charge: num
             let x = px + dx * hitDist * u;
             let y = py + dy * hitDist * u;
 
-            let id = entityAddParticle(x, y, 0.32 + (random() - 0.5) * 0.12, 1.1 + random() * 0.9, RAINBOW[i]);
+            let id = entityAddParticle(x, y, 0.42 + (random() - 0.5) * 0.12, 1.1 + random() * 0.9, RAINBOW[i]);
             if (id < 0) continue;
             let s = active[id];
             vx_[s] = dx * (0.9 + random() * 0.7) + (random() - 0.5) * 0.4;
@@ -304,7 +304,6 @@ export let entityPlayerCollide = (px: number, py: number, playerRadius = 0.25, o
 
 export let entityUpdate = (dt: number, px: number, py: number): void => {
     particleTime += dt;
-
     for (let i = activeCount - 1; i >= 0; i--) {
         let s = active[i];
         if ((flags_[s] & FLAG_ACTIVE) === 0) {
@@ -312,14 +311,12 @@ export let entityUpdate = (dt: number, px: number, py: number): void => {
             continue;
         }
 
-
         if (flags_[s] & (FLAG_ENEMY | FLAG_PROJECTILE)) {
             let dx = vx_[s] * dt;
             let dy = vy_[s] * dt;
             let [nx, ny] = rayMove(x_[s], y_[s], dx, dy, 0.2);
             x_[s] = nx;
             y_[s] = ny;
-
 
             if (nx === x_[s] - dx && ny === y_[s] - dy) {
                 if (flags_[s] & FLAG_PROJECTILE) {

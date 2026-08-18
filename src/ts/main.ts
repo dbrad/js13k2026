@@ -25,14 +25,14 @@ window.addEventListener("load", async (): Promise<void> => {
 
     let charge = 0;
     let chargeSpeed = 1.5;
-    let lastBPressTime = 0;
     let isCharging = false;
     let wasBPressed = false;
 
     [px, py] = generateDungeon(mapW, mapH, 4, 7, 50);
 
-    entityAdd(px, py, TEXTURE_CULTIST, 1);
+    entityAdd(px, py, TEXTURE_DEMON_MEDIUM, 1);
     entityAdd(px + 1, py + 1, TEXTURE_DEMON, 1);
+    entityAdd(px - 1, py - 1, TEXTURE_DEMON_LARGE, 1);
     entityAdd(3.5, 12.5, TEXTURE_DEMON, 1);
     entityAdd(10.5, 10.5, TEXTURE_DEMON, 1);
     entityAdd(12.5, 12.5, TEXTURE_DEMON, 1);
@@ -108,7 +108,6 @@ window.addEventListener("load", async (): Promise<void> => {
                 if (B_PRESSED && isTouch) {
                     if (!isCharging) {
                         isCharging = true;
-                        lastBPressTime = now;
                     } else {
                         fireRainbowBeam(px, py, angle, charge);
                         charge = 0;

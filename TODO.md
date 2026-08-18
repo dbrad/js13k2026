@@ -7,7 +7,7 @@
     - Add support for mouse look and click to fire.
     - Full keyboard mode (WASD + left/right arrows to move and look)
     - Need to add extra control(s) on right side of mobile so player can strafe and look
-- [ ] Enemy Sprites
+- [x] Enemy Sprites
     - Need pro-gen sprites for enemies
 - [ ] Enemy spawning, stats, systems and ai
     - Need logic to spawn enemies in most rooms, add tweakable hp, dmg, movespeed and some simple combat ai
@@ -24,6 +24,10 @@
 - [ ] Charge levels for attack
 - [ ] Power ups? Leveling? progression?
     - Think about pickups, levels, stats, added charge levels, or something to give player sense of progression
+- [ ] Cleanup shader files
+    - shorten all param and uniform names
+- [ ] Cleanup / Simplify Proc-gen Textures
+- [ ] Cleanup / Simplify Map Generation
 - [ ] Juice
     - screen shake on hit
     - enemies and walls flash white on hit

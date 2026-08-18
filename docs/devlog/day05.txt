@@ -1,0 +1,25 @@
+Day 05 - 2026-08-17
+
+---
+
+Add proc-gen sprite generation for enemies.
+Attempted to convert webp altas to a 1 bit pack string import.
+    Ended up using 150 bytes more than just inlining the webp b64 string.
+
+---
+
+`-Zab0 -Zlr1017 -Zmc4 -Zmd10 -Zpr15 -S0,1,2,3,6,7,13,21,42,168,193,386`
+
+-------------------------------------------------------------------------------
+Language                     files          blank        comment           code
+-------------------------------------------------------------------------------
+TypeScript                      18            534             86           2717
+GLSL                             2             19              1             81
+HTML                             1              2              0              6
+-------------------------------------------------------------------------------
+SUM:                            21            555             87           2804
+-------------------------------------------------------------------------------
+
+The file is under the limit.
+USED: 77.29% | 10289 BYTES
+LEFT: 22.71% |  3023 BYTES

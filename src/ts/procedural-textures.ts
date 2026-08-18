@@ -25,7 +25,7 @@ let put = (out: Uint8Array, i: number, r: number, g: number, b: number, a = 255)
   out[i + 3] = a;
 };
 
-export let genBrick = (w: number, h: number, seed: number, out: Uint8Array, offset: number = 0, cracked: boolean = false): void => {
+export let genBrick = (w: number, h: number, seed: number, out: Uint8Array, cracked: boolean = false): void => {
   let brickW = Math.max(6, (w / 4) | 0);
   let brickH = Math.max(3, (h / 8) | 0);
   let mortar = 1;
@@ -91,12 +91,12 @@ export let genBrick = (w: number, h: number, seed: number, out: Uint8Array, offs
         }
       }
 
-      put(out, offset + (y * w + x) * 4, r, g, b);
+      put(out, (y * w + x) * 4, r, g, b);
     }
   }
 };
 
-export let genStone = (w: number, h: number, seed: number, out: Uint8Array, offset = 0): void => {
+export let genStone = (w: number, h: number, seed: number, out: Uint8Array,): void => {
   // Choose tile counts that divide the dimensions evenly so the texture
   // repeats without cutting a tile in half.
   let tilesX = Math.max(2, Math.round(w / 9));
@@ -180,12 +180,12 @@ export let genStone = (w: number, h: number, seed: number, out: Uint8Array, offs
         b = clamp(b + grit, 0, 255);
       }
 
-      put(out, offset + (y * w + x) * 4, r, g, b);
+      put(out, (y * w + x) * 4, r, g, b);
     }
   }
 };
 
-export let genWood = (w: number, h: number, seed: number, out: Uint8Array, offset = 0): void => {
+export let genWood = (w: number, h: number, seed: number, out: Uint8Array,): void => {
   // plank height (thickness of each board)
   let plankH = 8;//Math.max(6, Math.round(h / 8));
   // average plank length – longer than brick, scales with width
@@ -258,12 +258,12 @@ export let genWood = (w: number, h: number, seed: number, out: Uint8Array, offse
         b = (b * (1 - 0.38 * k)) | 0;
       }
 
-      put(out, offset + (y * w + x) * 4, r, g, b);
+      put(out, (y * w + x) * 4, r, g, b);
     }
   }
 };
 
-export let genUnicornHorn = (w: number, h: number, seed: number, out: Uint8Array, offset = 0): void => {
+export let genUnicornHorn = (w: number, h: number, seed: number, out: Uint8Array,): void => {
   let cx = (w - 1) * 0.5;
   let maxR = w * 0.42;               // base radius
   let tipY = h * 0.08;               // tip starts a little below top
@@ -273,7 +273,7 @@ export let genUnicornHorn = (w: number, h: number, seed: number, out: Uint8Array
     if (t < 0) {
       // above tip – fully transparent
       for (let x = 0; x < w; x++) {
-        put(out, offset + (y * w + x) * 4, 0, 0, 0, 0);
+        put(out, (y * w + x) * 4, 0, 0, 0, 0);
       }
       continue;
     }
@@ -288,7 +288,7 @@ export let genUnicornHorn = (w: number, h: number, seed: number, out: Uint8Array
       let dist = Math.abs(dx);
 
       if (dist > radius + 0.6) {
-        put(out, offset + (y * w + x) * 4, 0, 0, 0, 0);
+        put(out, (y * w + x) * 4, 0, 0, 0, 0);
         continue;
       }
 
@@ -313,13 +313,13 @@ export let genUnicornHorn = (w: number, h: number, seed: number, out: Uint8Array
       let edge = clamp(1 - (dist - radius + 0.8), 0, 1);
       let a = (edge * 255) | 0;
 
-      put(out, offset + (y * w + x) * 4, r, g, b, a);
+      put(out, (y * w + x) * 4, r, g, b, a);
     }
   }
 };
 
-export let genShadowCreature = (outputW: number, outputH: number, seed: number, out: Uint8Array, offset = 0): void => {
-  let rng = floor(seed);
+export let genShadowCreature = (outputW: number, outputH: number, seed: number, out: Uint8Array,): void => {
+  let rng = seed;
   let rnd = (max: number = 1, min: number = 0): number => {
     rng ^= rng << 13;
     rng ^= rng >>> 17;
@@ -330,40 +330,40 @@ export let genShadowCreature = (outputW: number, outputH: number, seed: number, 
   let size = outputW;
 
   for (let i = 0; i < size * size * 4; i += 4) {
-    out[offset + i] = 0;
-    out[offset + i + 1] = 0;
-    out[offset + i + 2] = 0;
-    out[offset + i + 3] = 0;
+    out[i] = 0;
+    out[i + 1] = 0;
+    out[i + 2] = 0;
+    out[i + 3] = 0;
   }
 
-  const flipAxis = rnd() < .5;
+  let flipAxis = rnd() < .5;
   let w = flipAxis ? size - 3 : floor(size / 2 - 1);
   let h = !flipAxis ? size - 3 : floor(size / 2 - 1);
 
-  const spriteSize = size * rnd(.9, .6);
-  const density = rnd(1, .9);
-  const doubleCenter = rnd() < .5;
-  const yBias = rnd(.1, -.1);
+  let spriteSize = size * rnd(.9, .6);
+  let density = rnd(1, .9);
+  let doubleCenter = rnd() < .5;
+  let yBias = rnd(.1, -.1);
 
   let x = floor(size / 2);
   let y = 2;
   let colors = [[18, 16, 22], [65, 16, 65]];
   let draw = (outline: number = 0) => {
-    rng = floor(seed);
+    rng = seed;
     let [r, g, b] = colors[outline];
     for (let k = 0; k < w * h; ++k) {
-      const i = flipAxis ? floor(k / w) : k % w;
-      const j = !flipAxis ? floor(k / w) : k % w;
-      const isHole = rnd() > density;
+      let i = flipAxis ? floor(k / w) : k % w;
+      let j = !flipAxis ? floor(k / w) : k % w;
+      let isHole = rnd() > density;
       if (!isHole && rnd(spriteSize / 2) ** 2 > i * i + (j - (1 - 2 * yBias) * h / 2) ** 2) {
         for (let sx = 0; sx < 1 + 2 * outline; sx++) {
           for (let sy = 0; sy < 1 + 2 * outline; sy++) {
             let px = x + i - outline - (doubleCenter ? 1 : 0) + sx;
             let py = y + j - outline + sy;
-            put(out, offset + (py * outputW + px) * 4, r, g, b, 255);
+            put(out, (py * outputW + px) * 4, r, g, b, 255);
             px = x - i - outline + sx;
             py = y + j - outline + sy;
-            put(out, offset + (py * outputW + px) * 4, r, g, b, 255);
+            put(out, (py * outputW + px) * 4, r, g, b, 255);
           }
         }
       }
@@ -371,99 +371,4 @@ export let genShadowCreature = (outputW: number, outputH: number, seed: number, 
   };
   draw(1);
   draw();
-};
-
-export let genCultist = (
-  w: number, h: number, seed: number,
-  out: Uint8Array, offset = 0
-): void => {
-  let rng = seed | 0;
-  let rnd = (): number => {
-    rng ^= rng << 13;
-    rng ^= rng >>> 17;
-    rng ^= rng << 5;
-    return (rng >>> 0) / 4294967296;
-  };
-
-  // clear
-  for (let i = 0; i < w * h * 4; i += 4) {
-    out[offset + i] = 0;
-    out[offset + i + 1] = 0;
-    out[offset + i + 2] = 0;
-    out[offset + i + 3] = 0;
-  }
-
-  let cx = (w - 1) * 0.5;
-  let robeW = w * (0.28 + rnd() * 0.08);     // half-width at base
-  let hoodH = h * (0.42 + rnd() * 0.06);     // how tall the hood is
-  let cowlDepth = 0.55 + rnd() * 0.15;       // how deep the face hole is
-
-  for (let y = 0; y < h; y++) {
-    let width: number;
-    if (y < hoodH) {
-      // pointed / rounded hood
-      let ht = y / hoodH;
-      width = robeW * (0.35 + 0.65 * Math.sqrt(ht));
-    } else {
-      // body / robe
-      let bt = (y - hoodH) / (h - hoodH);
-      width = robeW * (0.92 + 0.18 * bt);
-    }
-
-    for (let x = 0; x < w; x++) {
-      let dx = Math.abs(x - cx);
-      if (dx > width + 0.6) continue;
-
-      // soft edge AA
-      let edge = clamp(1 - (dx - width + 0.7), 0, 1);
-      let a = (edge * 255) | 0;
-      if (a < 8) continue;
-
-      let r: number, g: number, b: number;
-
-      // ---- face hole (cowl) ----
-      let inHood = y < hoodH;
-      let faceHole = false;
-      if (inHood) {
-        let faceCy = hoodH * 0.55;
-        let faceRx = width * 0.55;
-        let faceRy = hoodH * 0.38;
-        let fx = (x - cx) / faceRx;
-        let fy = (y - faceCy) / faceRy;
-        if (fx * fx + fy * fy < cowlDepth) {
-          faceHole = true;
-        }
-      }
-
-      if (faceHole) {
-        // pure black void inside the hood
-        r = g = b = 8 + (rnd() * 6 | 0);
-      } else {
-        // robe / hood fabric – deep purple-black with slight variation
-        let n = valueNoise(x * 0.31, y * 0.27, seed + 77);
-        let shade = 0.55 + 0.45 * n;
-        r = (28 * shade) | 0;
-        g = (18 * shade) | 0;
-        b = (42 * shade) | 0;
-
-        // subtle vertical folds
-        let fold = Math.sin((x - cx) * 0.55 + seed * 0.1) * 0.5 + 0.5;
-        let foldDark = 0.82 + 0.18 * fold;
-        r = (r * foldDark) | 0;
-        g = (g * foldDark) | 0;
-        b = (b * foldDark) | 0;
-
-        // darker near silhouette edge (volume cue)
-        let edgeDist = width - dx;
-        if (edgeDist < 2.2) {
-          let wear = 0.65 + 0.35 * (edgeDist / 2.2);
-          r = (r * wear) | 0;
-          g = (g * wear) | 0;
-          b = (b * wear) | 0;
-        }
-      }
-
-      put(out, offset + (y * w + x) * 4, r, g, b, a);
-    }
-  }
 };

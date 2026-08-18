@@ -99,7 +99,8 @@ declare const TEXTURE_STONE: 14;
 declare const TEXTURE_WOOD: 15;
 declare const TEXTURE_HORN: 16;
 declare const TEXTURE_DEMON: 17;
-declare const TEXTURE_CULTIST: 18;
+declare const TEXTURE_DEMON_MEDIUM: 18;
+declare const TEXTURE_DEMON_LARGE: 19;
 
 declare const CELL_FLOOR: 0;
 declare const CELL_WALL: 1;
