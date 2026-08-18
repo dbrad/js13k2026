@@ -1,8 +1,8 @@
 {
-  "name": "js13k2025",
+  "name": "js13k2026",
   "version": "1.0.0",
   "author": "David Brad (davidbrad.015@gmail.com)",
-  "description": "js13k entry for the 2025 edition of the jam",
+  "description": "js13k entry for the 2026 edition of the jam",
   "main": "index.html",
   "license": "MIT",
   "dependencies": {
@@ -16,8 +16,5 @@
   },
   "overrides": {
     "minimist": "1.2.8"
-  },
-  "devDependencies": {
-    "tsdoc-markdown": "^1.5.0"
   }
 }

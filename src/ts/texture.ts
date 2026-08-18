@@ -2,7 +2,7 @@ import { assert } from "@debug";
 import textureAltas from "@res/sheet.webp";
 import { characterCodeMap, glUploadAtlas } from "./gl";
 import { floor, randInt } from "./math";
-import { genBrick, genStone, genUnicornHorn, genWood } from "./procedural-textures";
+import { genBrick, genCultist, genShadowCreature, genStone, genUnicornHorn, genWood } from "./procedural-textures";
 
 let textureDefinitions: TextureDefinition[] = [
   [TEXTURE_TYPE_SPRITE_STRIP, [TEXTURE_D_PAD, TEXTURE_D_PAD_UP, TEXTURE_D_PAD_RIGHT, TEXTURE_A_BUTTON_UP, TEXTURE_B_BUTTON_UP, TEXTURE_A_BUTTON_DOWN, TEXTURE_B_BUTTON_DOWN, TEXTURE_BAT], 0, 16, 16, 16, 0, 2],
@@ -76,24 +76,35 @@ export let loadTextureAtlas = async (): Promise<HTMLCanvasElement> => {
 
     let S = 32;
     let offset = 8;
-    stampProcedural(ctx, genBrick, offset, PROC_Y, S, S, 0xBEEF);
+    let seed = randInt(0, 100000);
+    stampProcedural(ctx, genBrick, offset, PROC_Y, S, S, seed);
     TEXTURE_CACHE[TEXTURE_BRICK] = newTexture(S, S, offset / ATLAS_WIDTH, PROC_Y / ATLAS_HEIGHT, (offset + S) / ATLAS_WIDTH, (PROC_Y + S) / ATLAS_HEIGHT);
 
     offset += S + 8;
-    stampProcedural(ctx, genBrick, offset, PROC_Y, S, S, 0xBEEF, true);
+    stampProcedural(ctx, genBrick, offset, PROC_Y, S, S, seed, true);
     TEXTURE_CACHE[TEXTURE_BRICK_CRACK] = newTexture(S, S, offset / ATLAS_WIDTH, PROC_Y / ATLAS_HEIGHT, (offset + S) / ATLAS_WIDTH, (PROC_Y + S) / ATLAS_HEIGHT);
 
     offset += S + 8;
-    stampProcedural(ctx, genStone, offset, PROC_Y, S, S, randInt(0, 100000));
+    stampProcedural(ctx, genStone, offset, PROC_Y, S, S, seed);
     TEXTURE_CACHE[TEXTURE_STONE] = newTexture(S, S, offset / ATLAS_WIDTH, PROC_Y / ATLAS_HEIGHT, (offset + S) / ATLAS_WIDTH, (PROC_Y + S) / ATLAS_HEIGHT);
 
     offset += S + 8;
-    stampProcedural(ctx, genWood, offset, PROC_Y, S, S, randInt(0, 100000));
+    stampProcedural(ctx, genWood, offset, PROC_Y, S, S, seed);
     TEXTURE_CACHE[TEXTURE_WOOD] = newTexture(S, S, offset / ATLAS_WIDTH, PROC_Y / ATLAS_HEIGHT, (offset + S) / ATLAS_WIDTH, (PROC_Y + S) / ATLAS_HEIGHT);
 
     offset += S + 8;
-    stampProcedural(ctx, genUnicornHorn, offset, PROC_Y, 24, 48, 0x1337);
+    stampProcedural(ctx, genUnicornHorn, offset, PROC_Y, 24, 48, seed);
     TEXTURE_CACHE[TEXTURE_HORN] = newTexture(24, 48, offset / ATLAS_WIDTH, PROC_Y / ATLAS_HEIGHT, (offset + 24) / ATLAS_WIDTH, (PROC_Y + 48) / ATLAS_HEIGHT);
+
+    offset += 0;
+    PROC_Y += 64;
+    S = 16;
+    stampProcedural(ctx, genShadowCreature, offset, PROC_Y, S, S, seed);
+    TEXTURE_CACHE[TEXTURE_DEMON] = newTexture(S, S, offset / ATLAS_WIDTH, PROC_Y / ATLAS_HEIGHT, (offset + S) / ATLAS_WIDTH, (PROC_Y + S) / ATLAS_HEIGHT);
+
+    offset += S + 8;
+    stampProcedural(ctx, genCultist, offset, PROC_Y, S, S, seed);
+    TEXTURE_CACHE[TEXTURE_CULTIST] = newTexture(S, S, offset / ATLAS_WIDTH, PROC_Y / ATLAS_HEIGHT, (offset + S) / ATLAS_WIDTH, (PROC_Y + S) / ATLAS_HEIGHT);
 
     glUploadAtlas(canvas);
     resolve(canvas);

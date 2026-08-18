@@ -21,6 +21,7 @@
     - Use audio.ts and https://killedbyapixel.github.io/ZzFX/ to generate sound effects
 - [ ] Music
     - Program some EDM / drum and bass music using zzfx and timing loops
+- [ ] Charge levels for attack
 - [ ] Power ups? Leveling? progression?
     - Think about pickups, levels, stats, added charge levels, or something to give player sense of progression
 - [ ] Juice

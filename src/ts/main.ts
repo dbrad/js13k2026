@@ -31,15 +31,15 @@ window.addEventListener("load", async (): Promise<void> => {
 
     [px, py] = generateDungeon(mapW, mapH, 4, 7, 50);
 
-    entityAdd(5.5, 3.5, TEXTURE_A_BUTTON_UP, 1);
-    entityAdd(7.5, 4.5, TEXTURE_A_BUTTON_UP, 1);
-    entityAdd(3.5, 12.5, TEXTURE_A_BUTTON_UP, 1);
-    entityAdd(10.5, 10.5, TEXTURE_A_BUTTON_UP, 1);
-    entityAdd(12.5, 12.5, TEXTURE_A_BUTTON_UP, 1);
-    entityAdd(15.5, 15.5, TEXTURE_A_BUTTON_UP, 1);
-    entityAdd(20.5, 20.5, TEXTURE_A_BUTTON_UP, 1);
-    entityAdd(25.5, 25.5, TEXTURE_A_BUTTON_UP, 1);
-    entityAdd(28.5, 28.5, TEXTURE_A_BUTTON_UP, 1);
+    entityAdd(px, py, TEXTURE_CULTIST, 1);
+    entityAdd(px + 1, py + 1, TEXTURE_DEMON, 1);
+    entityAdd(3.5, 12.5, TEXTURE_DEMON, 1);
+    entityAdd(10.5, 10.5, TEXTURE_DEMON, 1);
+    entityAdd(12.5, 12.5, TEXTURE_DEMON, 1);
+    entityAdd(15.5, 15.5, TEXTURE_DEMON, 1);
+    entityAdd(20.5, 20.5, TEXTURE_DEMON, 1);
+    entityAdd(25.5, 25.5, TEXTURE_DEMON, 1);
+    entityAdd(28.5, 28.5, TEXTURE_DEMON, 1);
 
     entitySpawnDust(px, py, 220);
     initPerformanceMeter();
