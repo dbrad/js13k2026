@@ -16,9 +16,15 @@ tools/*
 !tools/7z/*
 
 AGENTS.md
-
 .omp/
 .omp/**/*
-
+.pi/
+.pi/**/*
+.agents/
+.agents/**/*
 docker/
 docker/**/*
+skills-lock.json
+docs/agents
+.tools/
+.tools/**/*

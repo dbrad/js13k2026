@@ -1,0 +1,25 @@
+Day 06 - 2026-08-18
+
+---
+
+Clawed back some space by removing all sprites except the font atlas.
+Add shader circle drawing with SDF
+Mobile controls are now 2 analog style sticks + 2 buttons all made from SDF circles
+
+---
+
+`-Zab0 -Zlr930 -Zmc4 -Zmd10 -Zpr14 -S0,1,2,3,7,9,21,22,42,141,148,266`
+
+-------------------------------------------------------------------------------
+Language                     files          blank        comment           code
+-------------------------------------------------------------------------------
+TypeScript                      18            503             56           2679
+GLSL                             2             17              1             83
+HTML                             1              2              0              6
+-------------------------------------------------------------------------------
+SUM:                            21            522             57           2768
+-------------------------------------------------------------------------------
+
+The file is under the limit.
+USED: 75.17% | 10006 BYTES
+LEFT: 24.83% |  3306 BYTES

@@ -17,6 +17,7 @@
     - Boss will spawn in the final room to guard the exit (drop a key maybe)
 - [ ] Boss mechanics
     - On screen hp bar for boss, more complex / dangerous fight ai
+- [ ] Win and lose conditions
 - [ ] Sound effects
     - Use audio.ts and https://killedbyapixel.github.io/ZzFX/ to generate sound effects
 - [ ] Music
@@ -26,8 +27,10 @@
     - Think about pickups, levels, stats, added charge levels, or something to give player sense of progression
 - [x] Cleanup shader files
     - shorten all param and uniform names
+- [ ] Psuedo-scenes (Menu, options, gameplay)
 - [ ] Cleanup / Simplify Proc-gen Textures
 - [ ] Cleanup / Simplify Map Generation
+    - Get breakable walls back in the game?
 - [ ] Juice
     - screen shake on hit
     - enemies and walls flash white on hit
