@@ -12,6 +12,8 @@ export let LIGHT_DECAY = 6.5;
 export let AMBIENT = 0.20;
 export let PLAYER_TORCH_INTENSITY = 1.0;
 
+export let rooms: { id_: number; x_: number; y_: number; w_: number; h_: number; centerX_: number; centerY_: number; }[] = [];
+
 export let generateDungeon = (width: number, height: number, minRoomSize: number, maxRoomSize: number, maxRooms: number, loopChance: number = 0.15, deadEndChance: number = 0.20): [number, number] => {
     mapW = width;
     mapH = height;
@@ -19,11 +21,11 @@ export let generateDungeon = (width: number, height: number, minRoomSize: number
     lightCalculated = new Int8Array(width * height);
     lightMap.fill(AMBIENT);
 
-    mapData = new Int8Array(width * height).fill(1);
+    mapData = new Int8Array(width * height).fill(CELL_WALL);
     mapOffsetData = new Float32Array(width * height);
-    let rooms: Room[] = [];
+    rooms = [];
 
-    let intersects = (r1: Room, r2: Room): boolean => {
+    let intersects = (r1: typeof rooms[0], r2: typeof rooms[0]): boolean => {
         return (
             r1.x_ < r2.x_ + r2.w_ + 1 &&
             r1.x_ + r1.w_ > r2.x_ - 1 &&
@@ -35,14 +37,10 @@ export let generateDungeon = (width: number, height: number, minRoomSize: number
     let carveHorizontalTunnel = (x1: number, x2: number, y: number) => {
         let start = min(x1, x2);
         let end = max(x1, x2);
-        let hitWall = false;
         for (let x = start; x <= end; x++) {
             let index = y * width + x;
-            if (mapData[index] === 1) {
-                if (!hitWall) {
-                    hitWall = true;
-                }
-                mapData[index] = 0;
+            if (mapData[index] === CELL_WALL) {
+                mapData[index] = CELL_FLOOR;
             }
         }
     };
@@ -52,26 +50,23 @@ export let generateDungeon = (width: number, height: number, minRoomSize: number
         let end = max(y1, y2);
         for (let y = start; y <= end; y++) {
             let index = y * width + x;
-            if (mapData[index] === 1) {
-                mapData[index] = 0;
+            if (mapData[index] === CELL_WALL) {
+                mapData[index] = CELL_FLOOR;
             }
         }
     };
 
-    let placeCorridorEntrances = (id: number) => {
+    let placeCorridorEntrances = () => {
         let isFloor = (x: number, y: number) =>
-            mapData[y * width + x] === 0;
+            mapData[y * width + x] === CELL_FLOOR;
 
         for (let y = 2; y < height - 2; y++) {
             for (let x = 2; x < width - 2; x++) {
-
-                if (!isFloor(x, y)) {
-                    continue;
-                }
+                if (!isFloor(x, y)) continue;
 
                 // Room below, corridor continues above
-                if (mapData[y * width + (x - 1)] === 1 &&
-                    mapData[y * width + (x + 1)] === 1 &&
+                if (mapData[y * width + (x - 1)] === CELL_WALL &&
+                    mapData[y * width + (x + 1)] === CELL_WALL &&
                     isFloor(x, y - 1) &&
                     isFloor(x - 1, y + 1) &&
                     isFloor(x, y + 1) &&
@@ -82,8 +77,8 @@ export let generateDungeon = (width: number, height: number, minRoomSize: number
                 }
 
                 // Room above, corridor continues below
-                if (mapData[y * width + (x - 1)] === 1 &&
-                    mapData[y * width + (x + 1)] === 1 &&
+                if (mapData[y * width + (x - 1)] === CELL_WALL &&
+                    mapData[y * width + (x + 1)] === CELL_WALL &&
                     isFloor(x, y + 1) &&
                     isFloor(x - 1, y - 1) &&
                     isFloor(x, y - 1) &&
@@ -94,8 +89,8 @@ export let generateDungeon = (width: number, height: number, minRoomSize: number
                 }
 
                 // Room right, corridor continues left
-                if (mapData[(y - 1) * width + x] === 1 &&
-                    mapData[(y + 1) * width + x] === 1 &&
+                if (mapData[(y - 1) * width + x] === CELL_WALL &&
+                    mapData[(y + 1) * width + x] === CELL_WALL &&
                     isFloor(x - 1, y) &&
                     isFloor(x + 1, y - 1) &&
                     isFloor(x + 1, y) &&
@@ -106,8 +101,8 @@ export let generateDungeon = (width: number, height: number, minRoomSize: number
                 }
 
                 // Room left, corridor continues right
-                if (mapData[(y - 1) * width + x] === 1 &&
-                    mapData[(y + 1) * width + x] === 1 &&
+                if (mapData[(y - 1) * width + x] === CELL_WALL &&
+                    mapData[(y + 1) * width + x] === CELL_WALL &&
                     isFloor(x + 1, y) &&
                     isFloor(x - 1, y - 1) &&
                     isFloor(x - 1, y) &&
@@ -120,7 +115,7 @@ export let generateDungeon = (width: number, height: number, minRoomSize: number
         }
     };
 
-    let connectRooms = (r1: Room, r2: Room) => {
+    let connectRooms = (r1: typeof rooms[0], r2: typeof rooms[0]) => {
         if (random() < 0.5) {
             carveHorizontalTunnel(r1.centerX_, r2.centerX_, r1.centerY_);
             carveVerticalTunnel(r1.centerY_, r2.centerY_, r2.centerX_);
@@ -140,7 +135,7 @@ export let generateDungeon = (width: number, height: number, minRoomSize: number
         let x = floor(random() * (width - w - 2)) + 1;
         let y = floor(random() * (height - h - 2)) + 1;
 
-        let newRoom: Room = {
+        let newRoom = {
             id_: roomIdCounter,
             x_: x, y_: y, w_: w, h_: h,
             centerX_: floor(x + w / 2),
@@ -158,7 +153,7 @@ export let generateDungeon = (width: number, height: number, minRoomSize: number
         if (!overlap) {
             for (let ry = newRoom.y_; ry < newRoom.y_ + newRoom.h_; ry++) {
                 for (let rx = newRoom.x_; rx < newRoom.x_ + newRoom.w_; rx++) {
-                    mapData[ry * width + rx] = 0;
+                    mapData[ry * width + rx] = CELL_FLOOR;
                 }
             }
             if (px === 0 && py === 0) {
@@ -181,7 +176,7 @@ export let generateDungeon = (width: number, height: number, minRoomSize: number
 
     while (connectedRoomIds.size < rooms.length) {
         let minDistance = Infinity;
-        let bestEdge: [Room, Room] | null = null;
+        let bestEdge: [typeof rooms[0], typeof rooms[0]] | null = null;
 
         for (let r1 of rooms) {
             if (!connectedRoomIds.has(r1.id_)) continue;
@@ -231,6 +226,7 @@ export let generateDungeon = (width: number, height: number, minRoomSize: number
         }
     }
 
-    placeCorridorEntrances(2);
+    placeCorridorEntrances();
+
     return [px, py];
 };

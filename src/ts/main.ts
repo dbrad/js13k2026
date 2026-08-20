@@ -1,11 +1,11 @@
 import version from "../../VERSION.txt";
 import { drawPerformanceMeter, initPerformanceMeter, performanceMark, tickPerformanceMeter, togglePerformanceDisplay } from "./__debug/debug";
 import { initCanvas } from "./canvas";
-import { entityAdd, entityClear, entityCollect, entityDraw, entityPlayerCollide, entitySpawnDust, entityUpdate, fireRainbowBeam } from "./entity";
+import { entityAdd, entityClear, entityCollect, entityDraw, entityPlayerCollide, entitySpawnDust, entityUpdate, fireRainbowBeam, spawnEnemiesInRoom } from "./entity";
 import { eventProcess } from "./event";
 import { gl, glClear, glFlush, glInit, glPushColorQuad, glPushText, glPushTexture, uShake } from "./gl";
 import { A_PRESSED, B_IS_DOWN, B_PRESSED, DOWN_IS_DOWN, drawControls, initializeInput, isTouch, isTouchEvent, LEFT_IS_DOWN, lookDeltaX, RIGHT_IS_DOWN, UP_IS_DOWN, updateHardwareInput, updateInputState } from "./input";
-import { generateDungeon, mapOffsetData } from "./map";
+import { generateDungeon, mapOffsetData, rooms } from "./map";
 import { cos, min, sin } from "./math";
 import { interactionId, rayMove, rayRender, rayRenderFloorCeiling } from "./raycast";
 import { getShakeSum, shakeUpdate, shakeX, shakeY, updateHeadbob, zeroShake } from "./shake";
@@ -29,6 +29,10 @@ window.addEventListener("load", async (): Promise<void> => {
     let wasBPressed = false;
 
     [px, py] = generateDungeon(mapW, mapH, 4, 7, 50);
+    for (let i = 1; i < rooms.length; i++) {
+        let r = rooms[i];
+        spawnEnemiesInRoom(r.x_, r.y_, r.w_, r.h_, TEXTURE_DEMON);
+    }
 
     entityAdd(px, py, TEXTURE_DEMON_MEDIUM, 1);
     entityAdd(px + 1, py + 1, TEXTURE_DEMON, 1);

@@ -16,6 +16,11 @@ export let FLAG_DAMAGE = 1 << 5;
 export let FLAG_PROJECTILE = 1 << 6;
 export let FLAG_ENEMY = 1 << 7;
 
+export let ENEMY_NONE = 0;
+export let ENEMY_MELEE = 1;
+export let ENEMY_TANK = 2;
+export let ENEMY_RANGED = 3;
+
 let DRIFT_SPEED = 0.15;
 let STEER_STRENGTH = 1.25;
 let MAX_PARTICLE_DIST = 19;
@@ -37,6 +42,20 @@ let BEAM_SPREAD = 0.12;
 let BEAM_RANGE = 20;
 let BEAM_STEP = 0.1;
 
+let MELEE_SPEED = 1.55;
+let TANK_SPEED = 0.95;
+let RANGED_SPEED = 1.15;
+let PROJECTILE_SPEED = 9.0;
+let MELEE_ATTACK_RANGE = 1.15;
+let RANGED_ATTACK_RANGE = 7.5;
+let RANGED_MIN_DIST = 3.8;
+let RANGED_MAX_DIST = 6.2;
+let MELEE_COOLDOWN = 1.1;
+let RANGED_COOLDOWN = 1.6;
+let TANK_COOLDOWN = 1.4;
+let PSEUDO_LIFETIME = 0.18;
+let PROJECTILE_LIFETIME = 2.4;
+
 let x_ = new Float32Array(MAX_ENTITIES);
 let y_ = new Float32Array(MAX_ENTITIES);
 let z_ = new Float32Array(MAX_ENTITIES);
@@ -49,15 +68,22 @@ let scale_ = new Float32Array(MAX_ENTITIES);
 let size_ = new Float32Array(MAX_ENTITIES);
 let phase_ = new Float32Array(MAX_ENTITIES);
 let data_ = new Float32Array(MAX_ENTITIES);
-let colour_ = new Uint32Array(MAX_ENTITIES);
-let texId_ = new Int16Array(MAX_ENTITIES);
-let flags_ = new Uint16Array(MAX_ENTITIES);
+let colour_ = new Int32Array(MAX_ENTITIES);
+let texId_ = new Int32Array(MAX_ENTITIES);
+let flags_ = new Int32Array(MAX_ENTITIES);
 let facing_ = new Float32Array(MAX_ENTITIES);
+let type_id_ = new Int32Array(MAX_ENTITIES);
+let hp_ = new Float32Array(MAX_ENTITIES);
+let max_hp_ = new Float32Array(MAX_ENTITIES);
+let damage_ = new Float32Array(MAX_ENTITIES);
+let targetX_ = new Float32Array(MAX_ENTITIES);
+let targetY_ = new Float32Array(MAX_ENTITIES);
+let lastAttackTime__ = new Float32Array(MAX_ENTITIES);
 
-let active = new Int16Array(MAX_ENTITIES);
+let active = new Int32Array(MAX_ENTITIES);
 let activeCount = 0;
 
-let visIdx_ = new Int16Array(MAX_VISIBLE);
+let visIdx_ = new Int32Array(MAX_VISIBLE);
 let visDist_ = new Float32Array(MAX_VISIBLE);
 let visScreenX_ = new Float32Array(MAX_VISIBLE);
 let visHeight_ = new Float32Array(MAX_VISIBLE);
@@ -65,6 +91,10 @@ let visLight_ = new Float32Array(MAX_VISIBLE);
 let visibleCount = 0;
 
 let particleTime = 0;
+
+let floorScratchX = new Float32Array(256);
+let floorScratchY = new Float32Array(256);
+let floorScratchCount = 0;
 
 let fogFactor = (dist: number): number => {
     let t = (dist - FOG_START) / (FOG_END - FOG_START);
@@ -90,7 +120,19 @@ export let entityClear = (): void => {
     activeCount = 0;
 };
 
-export let entityAdd = (x: number, y: number, texId: number, scale = 1, flags = FLAG_BILLBOARD | FLAG_ACTIVE, colour = 0xffffffff, z = 0.5): number => {
+type enemyStat = [
+    number,
+    number
+];
+
+let enemyStats: [enemyStat, enemyStat, enemyStat, enemyStat] = [
+    [0, 0],
+    [5, 3],
+    [20, 1],
+    [5, 2]
+];
+
+export let entityAdd = (x: number, y: number, texId: number, scale = 1, flags = FLAG_BILLBOARD | FLAG_ACTIVE, colour = 0xffffffff, z = 0.5, type_id = ENEMY_NONE): number => {
     if (activeCount >= MAX_ENTITIES) return -1;
 
     let slot = -1;
@@ -119,6 +161,18 @@ export let entityAdd = (x: number, y: number, texId: number, scale = 1, flags = 
     flags_[slot] = flags | FLAG_ACTIVE;
     data_[slot] = 0;
 
+    if (type_id > ENEMY_NONE) {
+        let stats = enemyStats[type_id];
+        type_id_[slot] = type_id;
+        hp_[slot] = stats[0];
+        max_hp_[slot] = stats[0];
+        damage_[slot] = stats[1];
+        flags_[slot] |= FLAG_ENEMY | FLAG_SOLID;
+        targetX_[slot] = 0;
+        targetY_[slot] = 0;
+        lastAttackTime__[slot] = 0;
+    }
+
     active[activeCount] = slot;
     return activeCount++;
 };
@@ -142,6 +196,35 @@ export let entityRemove = (activeIdx: number): void => {
         active[activeIdx] = active[last];
     }
     activeCount = last;
+};
+
+let spawnProjectile = (sx: number, sy: number, dx: number, dy: number, dmg: number, col: number): void => {
+    let len = sqrt(dx * dx + dy * dy);
+    if (len < 0.001) return;
+    let inv = 1 / len;
+    let ndx = dx * inv;
+    let ndy = dy * inv;
+
+    let id = entityAdd(sx, sy, 0, 0.35, FLAG_PROJECTILE | FLAG_DAMAGE | FLAG_ACTIVE | FLAG_BILLBOARD, col, 0.45);
+    if (id < 0) return;
+    let s = active[id];
+    vx_[s] = ndx * PROJECTILE_SPEED;
+    vy_[s] = ndy * PROJECTILE_SPEED;
+    damage_[s] = dmg;
+    data_[s] = PROJECTILE_LIFETIME;
+    size_[s] = 0.55;
+    colour_[s] = col;
+};
+
+let spawnPseudoMelee = (tx: number, ty: number, dmg: number): void => {
+    let id = entityAdd(tx, ty, 0, 0.7, FLAG_DAMAGE | FLAG_ACTIVE, 0xff4488ff, 0.4);
+    if (id < 0) return;
+    let s = active[id];
+    damage_[s] = dmg;
+    data_[s] = PSEUDO_LIFETIME;
+    size_[s] = 1.1;
+    vx_[s] = 0;
+    vy_[s] = 0;
 };
 
 export let fireRainbowBeam = (px: number, py: number, angle: number, charge: number = 1.0): void => {
@@ -171,7 +254,6 @@ export let fireRainbowBeam = (px: number, py: number, angle: number, charge: num
             }
 
             if (cell === CELL_CRACKED) {
-                // TODO: Better wall destruction
                 mapData[my * mapW + mx] = CELL_FLOOR;
                 hitDist = d;
 
@@ -282,7 +364,7 @@ export let entitySpawnDust = (px: number, py: number, count = 220): void => {
     }
 };
 
-export let entityPlayerCollide = (px: number, py: number, playerRadius = 0.25, onDamage?: (activeIdx: number) => void): [number, number] => {
+export let entityPlayerCollide = (px: number, py: number, playerRadius = 0.25, onDamage?: (activeIdx: number, dmg: number) => void): [number, number] => {
     let outX = px;
     let outY = py;
 
@@ -293,9 +375,10 @@ export let entityPlayerCollide = (px: number, py: number, playerRadius = 0.25, o
         let er = (flags_[s] & FLAG_PROJECTILE) ? 0.15 : 0.4 * scale_[s];
         if (circleOverlap(outX, outY, playerRadius, x_[s], y_[s], er)) {
             if (onDamage) {
-                onDamage(i);
-                if (flags_[s] & FLAG_PROJECTILE) flags_[s] = 0;
+                onDamage(i, damage_[s]);
             }
+
+            flags_[s] = 0;
         }
     }
 
@@ -304,6 +387,7 @@ export let entityPlayerCollide = (px: number, py: number, playerRadius = 0.25, o
 
 export let entityUpdate = (dt: number, px: number, py: number): void => {
     particleTime += dt;
+
     for (let i = activeCount - 1; i >= 0; i--) {
         let s = active[i];
         if ((flags_[s] & FLAG_ACTIVE) === 0) {
@@ -312,18 +396,89 @@ export let entityUpdate = (dt: number, px: number, py: number): void => {
         }
 
         if (flags_[s] & (FLAG_ENEMY | FLAG_PROJECTILE)) {
-            let dx = vx_[s] * dt;
-            let dy = vy_[s] * dt;
-            let [nx, ny] = rayMove(x_[s], y_[s], dx, dy, 0.2);
-            x_[s] = nx;
-            y_[s] = ny;
 
-            if (nx === x_[s] - dx && ny === y_[s] - dy) {
-                if (flags_[s] & FLAG_PROJECTILE) {
+            if (data_[s] > 0) {
+                data_[s] -= dt;
+                if (data_[s] <= 0) {
                     flags_[s] = 0;
                     entityRemove(i);
                     continue;
                 }
+            }
+
+            if (flags_[s] & FLAG_ENEMY) {
+                let edx = px - x_[s];
+                let edy = py - y_[s];
+                let dist = sqrt(edx * edx + edy * edy);
+                let invDist = dist > 0.001 ? 1 / dist : 0;
+                let ndx = edx * invDist;
+                let ndy = edy * invDist;
+
+                let typ = type_id_[s];
+                let speed = MELEE_SPEED;
+                let cooldown = MELEE_COOLDOWN;
+                let attackRange = MELEE_ATTACK_RANGE;
+
+                if (typ === ENEMY_TANK) {
+                    speed = TANK_SPEED;
+                    cooldown = TANK_COOLDOWN;
+                } else if (typ === ENEMY_RANGED) {
+                    speed = RANGED_SPEED;
+                    cooldown = RANGED_COOLDOWN;
+                    attackRange = RANGED_ATTACK_RANGE;
+                }
+
+                if (lastAttackTime__[s] > 0) {
+                    lastAttackTime__[s] -= dt;
+                }
+
+                if (typ === ENEMY_RANGED) {
+                    if (dist < RANGED_MIN_DIST) {
+                        vx_[s] = -ndx * speed;
+                        vy_[s] = -ndy * speed;
+                    } else if (dist > RANGED_MAX_DIST) {
+                        vx_[s] = ndx * speed;
+                        vy_[s] = ndy * speed;
+                    } else {
+                        vx_[s] *= 0.85;
+                        vy_[s] *= 0.85;
+                        vx_[s] += -ndy * 0.35;
+                        vy_[s] += ndx * 0.35;
+                    }
+                } else {
+                    if (dist > 0.55) {
+                        vx_[s] = ndx * speed;
+                        vy_[s] = ndy * speed;
+                    } else {
+                        vx_[s] = 0;
+                        vy_[s] = 0;
+                    }
+                }
+
+                facing_[s] = Math.atan2(ndy, ndx);
+
+                if (dist <= attackRange && lastAttackTime__[s] <= 0) {
+                    lastAttackTime__[s] = cooldown;
+                    if (typ === ENEMY_RANGED) {
+                        spawnProjectile(x_[s], y_[s], edx, edy, damage_[s], 0xff22aaff);
+                    } else {
+                        spawnPseudoMelee(px, py, damage_[s]);
+                    }
+                }
+            }
+
+            let mdx = vx_[s] * dt;
+            let mdy = vy_[s] * dt;
+            let ox = x_[s];
+            let oy = y_[s];
+            let [nx, ny] = rayMove(ox, oy, mdx, mdy, 0.2);
+            x_[s] = nx;
+            y_[s] = ny;
+
+            if ((flags_[s] & FLAG_PROJECTILE) && nx === ox && ny === oy && (mdx !== 0 || mdy !== 0)) {
+                flags_[s] = 0;
+                entityRemove(i);
+                continue;
             }
         }
 
@@ -500,5 +655,68 @@ export let entityDraw = (px: number, py: number, angle: number, now: number): vo
             let texU = tex.u0_ + uSpan * ((col - drawStartX) * invW);
             glPushQuad(col, drawStartY, 1, height, texU, tex.v0_, texU, tex.v1_, litColour, fog);
         }
+    }
+};
+
+let collectFloorTiles = (rx: number, ry: number, rw: number, rh: number): void => {
+    floorScratchCount = 0;
+    let x0 = max(1, rx | 0);
+    let y0 = max(1, ry | 0);
+    let x1 = min(mapW - 2, (rx + rw) | 0);
+    let y1 = min(mapH - 2, (ry + rh) | 0);
+
+    for (let y = y0; y < y1; y++) {
+        for (let x = x0; x < x1; x++) {
+            if (mapData[y * mapW + x] !== CELL_FLOOR) continue;
+
+            if (mapData[y * mapW + (x - 1)] === CELL_WALL ||
+                mapData[y * mapW + (x + 1)] === CELL_WALL ||
+                mapData[(y - 1) * mapW + x] === CELL_WALL ||
+                mapData[(y + 1) * mapW + x] === CELL_WALL) continue;
+
+            if (floorScratchCount >= 256) return;
+            floorScratchX[floorScratchCount] = x + 0.5;
+            floorScratchY[floorScratchCount] = y + 0.5;
+            floorScratchCount++;
+        }
+    }
+};
+
+export let spawnEnemiesInRoom = (rx: number, ry: number, rw: number, rh: number, texId: number = 1): void => {
+    collectFloorTiles(rx, ry, rw, rh);
+    if (floorScratchCount === 0) return;
+
+    let count = 1 + (random() * 3 | 0);
+    if (count > floorScratchCount) count = floorScratchCount;
+
+    for (let i = 0; i < count; i++) {
+        let j = i + (random() * (floorScratchCount - i) | 0);
+        let tx = floorScratchX[i];
+        let ty = floorScratchY[i];
+        floorScratchX[i] = floorScratchX[j];
+        floorScratchY[i] = floorScratchY[j];
+        floorScratchX[j] = tx;
+        floorScratchY[j] = ty;
+    }
+
+    for (let i = 0; i < count; i++) {
+        let sx = floorScratchX[i];
+        let sy = floorScratchY[i];
+
+        let r = random();
+        let typ = ENEMY_MELEE;
+        let scl = 0.95;
+        let col = 0xffffffff;
+        if (r > 0.0) {
+            typ = ENEMY_RANGED;
+            scl = 0.85;
+            col = 0xffaaccff;
+        } else if (r > 0.88) {
+            typ = ENEMY_TANK;
+            scl = 1.25;
+            col = 0xffccaa88;
+        }
+
+        entityAdd(sx, sy, texId, scl, FLAG_BILLBOARD | FLAG_ACTIVE | FLAG_ENEMY | FLAG_SOLID, col, 0.5, typ);
     }
 };

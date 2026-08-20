@@ -120,3 +120,8 @@ declare const GS_MUTEMUSIC: 2;
 declare const GS_SCREENSHAKE: 3;
 
 declare const MAX_CHARGE: 1;
+
+declare const ENEMY_NONE: 0;
+declare const ENEMY_MELEE: 1;
+declare const ENEMY_TANK: 2;
+declare const ENEMY_RANGE: 3;

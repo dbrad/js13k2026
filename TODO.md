@@ -9,15 +9,21 @@
     - Need to add extra control(s) on right side of mobile so player can strafe and look
 - [x] Enemy Sprites
     - Need pro-gen sprites for enemies
-- [ ] Enemy spawning, stats, systems and ai
+- [x] Enemy Phase 1: spawning, stats, systems and basic ai
     - Need logic to spawn enemies in most rooms, add tweakable hp, dmg, movespeed and some simple combat ai
+- [ ] Enemy Phase 2
+    - Add delay to enemy noticing player before attacking.
+    - Make enemies take damage from rainbow beam.
+    - Add particles / effect to melee attacks
+- [ ] Add player health and taking damage
+- [ ] Lose condition
 - [ ] Exit placement
     - need to make sure the player and exit are spawned far away from eachother
 - [ ] Boss spawning
     - Boss will spawn in the final room to guard the exit (drop a key maybe)
 - [ ] Boss mechanics
     - On screen hp bar for boss, more complex / dangerous fight ai
-- [ ] Win and lose conditions
+- [ ] Win condition
 - [ ] Sound effects
     - Use audio.ts and https://killedbyapixel.github.io/ZzFX/ to generate sound effects
 - [ ] Music
