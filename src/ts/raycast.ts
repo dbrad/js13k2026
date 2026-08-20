@@ -9,10 +9,10 @@ let MAX_RAY_DEPTH = 50;
 let INTERACTION_DISTANCE = 1.5;
 export let interactionId = -1;
 
-export let FOG_R = 0;//0.05;
-export let FOG_G = 0;//0.05;
-export let FOG_B = 0;//0.08;
-export let FOG_ABGR = 0xff000000;//0xff140D0D;
+export let FOG_R = 0; // 0.05;
+export let FOG_G = 0; // 0.05;
+export let FOG_B = 0; // 0.08;
+export let FOG_ABGR = 0xff000000; // 0xff140D0D;
 export let FOG_START = 1;
 export let FOG_END = 20;
 
@@ -24,7 +24,7 @@ export let fogFactor = (dist: number): number => {
 };
 
 let shadeFogABGR = (shade: number): number => {
-    let s = (shade * 255) | 0;
+    let s = floor(shade * 255);
     let out = (255 & 0xff) << 8 >>> 0;
     out = (out | s) << 8 >>> 0;
     out = (out | s) << 8 >>> 0;
@@ -237,8 +237,8 @@ export let rayRenderFloorCeiling = (px: number, py: number, angle: number): void
 };
 
 export let rayIsSolid = (x: number, y: number): boolean => {
-    let mx = x | 0;
-    let my = y | 0;
+    let mx = floor(x);
+    let my = floor(y);
     if (mx < 0 || my < 0 || mx >= mapW || my >= mapH) return true;
     return mapData[my * mapW + mx] > 0;
 };

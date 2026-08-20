@@ -10,6 +10,7 @@ export let math = Math,
   cos = math.cos,
   sin = math.sin,
   tan = math.tan,
+  atan2 = math.atan2,
   random = math.random;
 
 export let EULER = 2.71828 as const;

@@ -12,9 +12,9 @@
 - [x] Enemy Phase 1: spawning, stats, systems and basic ai
     - Need logic to spawn enemies in most rooms, add tweakable hp, dmg, movespeed and some simple combat ai
 - [ ] Enemy Phase 2
-    - Add delay to enemy noticing player before attacking.
+    - Add delay to enemy noticing player before attacking. 
     - Make enemies take damage from rainbow beam.
-    - Add particles / effect to melee attacks
+    - Add particles / effect / quads / some sort of visual to enemy attacks
 - [ ] Add player health and taking damage
 - [ ] Lose condition
 - [ ] Exit placement

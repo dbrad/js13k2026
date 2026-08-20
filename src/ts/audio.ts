@@ -1,4 +1,4 @@
-import { abs, cos, max, min, PI, random, round, sin, tan } from "./math";
+import { abs, cos, floor, max, min, PI, random, round, sin, tan } from "./math";
 
 export let zzfxPlay = (sample: number[]): void => {
     let buffer = zzfxContext.createBuffer(1, sample.length, zzfxSampleRate);
@@ -32,12 +32,12 @@ let zzfxGenerate = (volume = 1, randomness = .05, frequency = 220, attack = 0, s
     modulation *= PI2 / sampleRate;
     pitchJump *= PI2 / sampleRate;
     pitchJumpTime *= sampleRate;
-    repeatTime = repeatTime * sampleRate | 0;
+    repeatTime = floor(repeatTime * sampleRate);
     volume *= zzfxVolume;
 
-    for (length = attack + decay + sustain + release + delay | 0;
+    for (length = floor(attack + decay + sustain + release + delay);
         i < length; b[i++] = s * volume) {
-        if (!(++c % (bitCrush * 100 | 0))) {
+        if (!(++c % floor(bitCrush * 100))) {
             s = shape ? shape > 1 ? shape > 2 ? shape > 3 ?
                 sin(t ** 3) :
                 max(min(tan(t), 1), -1) :
@@ -61,7 +61,7 @@ let zzfxGenerate = (volume = 1, randomness = .05, frequency = 220, attack = 0, s
 
             s = delay ? s / 2 + (delay > i ? 0 :
                 (i < length - delay ? 1 : (length - i) / delay) *
-                b[i - delay | 0] / 2 / volume) : s;
+                b[floor(i - delay)] / 2 / volume) : s;
 
             if (filter)
                 s = y1 = b2 * x2 + b1 * (x2 = x1) + b0 * (x1 = s) - a2 * y2 - a1 * (y2 = y1);

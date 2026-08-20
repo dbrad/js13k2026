@@ -1,12 +1,13 @@
 import version from "../../VERSION.txt";
 import { drawPerformanceMeter, initPerformanceMeter, performanceMark, tickPerformanceMeter, togglePerformanceDisplay } from "./__debug/debug";
+import { zzfxInit } from "./audio";
 import { initCanvas } from "./canvas";
 import { entityAdd, entityClear, entityCollect, entityDraw, entityPlayerCollide, entitySpawnDust, entityUpdate, fireRainbowBeam, spawnEnemiesInRoom } from "./entity";
 import { eventProcess } from "./event";
 import { gl, glClear, glFlush, glInit, glPushColorQuad, glPushText, glPushTexture, uShake } from "./gl";
 import { A_PRESSED, B_IS_DOWN, B_PRESSED, DOWN_IS_DOWN, drawControls, initializeInput, isTouch, isTouchEvent, LEFT_IS_DOWN, lookDeltaX, RIGHT_IS_DOWN, UP_IS_DOWN, updateHardwareInput, updateInputState } from "./input";
 import { generateDungeon, mapOffsetData, rooms } from "./map";
-import { cos, min, sin } from "./math";
+import { cos, min, sin, sqrt } from "./math";
 import { interactionId, rayMove, rayRender, rayRenderFloorCeiling } from "./raycast";
 import { getShakeSum, shakeUpdate, shakeX, shakeY, updateHeadbob, zeroShake } from "./shake";
 import { loadTextureAtlas } from "./texture";
@@ -48,7 +49,7 @@ window.addEventListener("load", async (): Promise<void> => {
             initializeInput(canvas);
             isTouchEvent(e);
 
-            // zzfxInit();
+            zzfxInit();
 
             canvas.removeEventListener("touchstart", initializeGame);
             canvas.removeEventListener("pointerdown", initializeGame);
@@ -148,7 +149,7 @@ window.addEventListener("load", async (): Promise<void> => {
 
                 let len2 = moveX * moveX + moveY * moveY;
                 if (len2 > 1) {
-                    let inv = 1 / Math.sqrt(len2);
+                    let inv = 1 / sqrt(len2);
                     moveX *= inv;
                     moveY *= inv;
                 }

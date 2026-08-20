@@ -1,6 +1,6 @@
 import { requestFullscreen } from "./canvas";
 import { glPushColorCircle, glPushText } from "./gl";
-import { floor, isPointInCircle } from "./math";
+import { floor, hypot, isPointInCircle } from "./math";
 
 let canvasRef: HTMLCanvasElement;
 let pointerLocked = false;
@@ -207,11 +207,11 @@ export let updateHardwareInput = (): void => {
             rightX = rightY = 0;
         }
 
-        let len = Math.hypot(leftX, leftY);
+        let len = hypot(leftX, leftY);
         if (len > 1) { leftX /= len; leftY /= len; }
         if (len < STICK_DEADZONE) { leftX = leftY = 0; }
 
-        len = Math.hypot(rightX, rightY);
+        len = hypot(rightX, rightY);
         if (len > 1) { rightX /= len; rightY /= len; }
         if (len < STICK_DEADZONE) { rightX = rightY = 0; }
 

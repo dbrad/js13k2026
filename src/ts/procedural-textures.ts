@@ -1,4 +1,4 @@
-import { clamp, floor, randInt } from "./math";
+import { abs, atan2, clamp, cos, floor, max, min, randInt, round } from "./math";
 
 let hash2 = (x: number, y: number, seed: number): number => {
   let h = seed + x * 374761393 + y * 668265263;
@@ -19,19 +19,19 @@ let valueNoise = (x: number, y: number, seed: number): number => {
 };
 
 let put = (out: Uint8Array, i: number, r: number, g: number, b: number, a = 255): void => {
-  out[i] = r < 0 ? 0 : r > 255 ? 255 : r | 0;
-  out[i + 1] = g < 0 ? 0 : g > 255 ? 255 : g | 0;
-  out[i + 2] = b < 0 ? 0 : b > 255 ? 255 : b | 0;
+  out[i] = floor(clamp(r, 0, 255));
+  out[i + 1] = floor(clamp(g, 0, 255));
+  out[i + 2] = floor(clamp(b, 0, 255));
   out[i + 3] = a;
 };
 
 export let genBrick = (w: number, h: number, seed: number, out: Uint8Array, cracked: boolean = false): void => {
-  let brickW = Math.max(6, (w / 4) | 0);
-  let brickH = Math.max(3, (h / 8) | 0);
+  let brickW = max(6, floor(w / 4));
+  let brickH = max(3, floor(h / 8));
   let mortar = 1;
 
   for (let y = 0; y < h; y++) {
-    let row = (y / brickH) | 0;
+    let row = floor(y / brickH);
     let shift = (row & 1) * (brickW >> 1);
 
     for (let x = 0; x < w; x++) {
@@ -39,7 +39,7 @@ export let genBrick = (w: number, h: number, seed: number, out: Uint8Array, crac
       let by = y % brickH;
       let isMortar = bx < mortar || by < mortar;
 
-      let brickId = (((x + shift) / brickW) | 0) + row * 31;
+      let brickId = (floor((x + shift) / brickW)) + row * 31;
       let v = 0.78 + 0.22 * ((hash2(brickId, row, seed) & 7) / 7);
 
       let r: number, g: number, b: number;
@@ -47,9 +47,9 @@ export let genBrick = (w: number, h: number, seed: number, out: Uint8Array, crac
         let m = 20 + (hash2(x, y, seed) & 12);
         r = g = b = m;
       } else {
-        r = (62 * v) | 0;
-        g = (60 * v) | 0;
-        b = (66 * v) | 0;
+        r = floor(62 * v);
+        g = floor(60 * v);
+        b = floor(66 * v);
 
         let grit = (hash2(x, y, seed) & 5) - 2;
         r = clamp(r + grit, 0, 255);
@@ -57,9 +57,9 @@ export let genBrick = (w: number, h: number, seed: number, out: Uint8Array, crac
         b = clamp(b + grit, 0, 255);
 
         let gy = by / brickH;
-        r = (r * (0.92 + 0.16 * gy)) | 0;
-        g = (g * (0.92 + 0.16 * gy)) | 0;
-        b = (b * (0.92 + 0.16 * gy)) | 0;
+        r = floor(r * (0.92 + 0.16 * gy));
+        g = floor(g * (0.92 + 0.16 * gy));
+        b = floor(b * (0.92 + 0.16 * gy));
       }
 
       if (cracked) {
@@ -67,18 +67,18 @@ export let genBrick = (w: number, h: number, seed: number, out: Uint8Array, crac
 
         {
           let n = valueNoise(x * 0.11 + 2.3, y * 0.19, seed + 901);
-          let d = Math.abs(n - 0.5) * 2;
-          crack = Math.min(crack, d);
+          let d = abs(n - 0.5) * 2;
+          crack = min(crack, d);
         }
         {
           let n = valueNoise(x * 0.17 - y * 0.08, y * 0.13, seed + 417);
-          let d = Math.abs(n - 0.5) * 2;
-          crack = Math.min(crack, d * 1.15);
+          let d = abs(n - 0.5) * 2;
+          crack = min(crack, d * 1.15);
         }
         {
           let n = valueNoise(x * 0.09, y * 0.22 + 5.1, seed + 233);
-          let d = Math.abs(n - 0.5) * 2;
-          crack = Math.min(crack, d * 1.3);
+          let d = abs(n - 0.5) * 2;
+          crack = min(crack, d * 1.3);
         }
 
         let width = 0.07;
@@ -99,8 +99,8 @@ export let genBrick = (w: number, h: number, seed: number, out: Uint8Array, crac
 export let genStone = (w: number, h: number, seed: number, out: Uint8Array,): void => {
   // Choose tile counts that divide the dimensions evenly so the texture
   // repeats without cutting a tile in half.
-  let tilesX = Math.max(2, Math.round(w / 9));
-  let tilesY = Math.max(2, Math.round(h / 9));
+  let tilesX = max(2, round(w / 9));
+  let tilesY = max(2, round(h / 9));
 
   // Nudge until we have exact divisors (keeps visual size close to target)
   while (w % tilesX !== 0 && tilesX > 2) tilesX--;
@@ -108,7 +108,7 @@ export let genStone = (w: number, h: number, seed: number, out: Uint8Array,): vo
 
   let tileW = (w / tilesX) | 0;
   let tileH = (h / tilesY) | 0;
-  let mortar = Math.max(1, (Math.min(tileW, tileH) / 8) | 0);
+  let mortar = max(1, (min(tileW, tileH) / 8) | 0);
 
   // weathered grey-stone palette (dark → light)
   let tones = [
@@ -152,11 +152,7 @@ export let genStone = (w: number, h: number, seed: number, out: Uint8Array,): vo
 
         // edge weathering / darkening near the mortar (left & top)
         // also darken near the right & bottom so the tile still looks inset
-        let distL = localX - mortar;
-        let distT = localY - mortar;
-        let distR = tileW - 1 - localX;
-        let distB = tileH - 1 - localY;
-        let edgeDist = Math.min(distL, distT, distR, distB);
+        let edgeDist = min(localX - mortar, localY - mortar, tileW - 1 - localX, tileH - 1 - localY);
 
         if (edgeDist < 2) {
           let wear = 1 - (2 - edgeDist) * 0.16;
@@ -187,10 +183,10 @@ export let genStone = (w: number, h: number, seed: number, out: Uint8Array,): vo
 
 export let genWood = (w: number, h: number, seed: number, out: Uint8Array,): void => {
   // plank height (thickness of each board)
-  let plankH = 8;//Math.max(6, Math.round(h / 8));
+  let plankH = 8;//max(6, round(h / 8));
   // average plank length – longer than brick, scales with width
-  let plankLen = Math.max(14, (w * 0.75) | 0);
-  let joint = 1;//Math.max(1, (plankH / 5) | 0);   // thickness of end + side grooves
+  let plankLen = max(14, (w * 0.75) | 0);
+  let joint = 1;//max(1, (plankH / 5) | 0);   // thickness of end + side grooves
   let lastRow = 0;
   for (let y = 0; y < h; y++) {
     let row = (y / plankH) | 0;
@@ -238,7 +234,7 @@ export let genWood = (w: number, h: number, seed: number, out: Uint8Array,): voi
         b = (b * dark) | 0;
       } else {
         // subtle bevel / highlight just inside the edges
-        let edgeDist = Math.min(localX - joint, plankLen - joint - 1 - localX,
+        let edgeDist = min(localX - joint, plankLen - joint - 1 - localX,
           localY - joint, plankH - joint - 1 - localY);
         if (edgeDist < 2) {
           let bevel = 1.0 + (2 - edgeDist) * 0.07;
@@ -249,8 +245,8 @@ export let genWood = (w: number, h: number, seed: number, out: Uint8Array,): voi
       }
 
       // occasional knot
-      let knotX = (pSeed >>> 8) % Math.max(1, plankLen - 6) + 3;
-      let dist = Math.abs(localX - knotX);
+      let knotX = (pSeed >>> 8) % max(1, plankLen - 6) + 3;
+      let dist = abs(localX - knotX);
       if (dist < 2.5 && localY > joint + 1 && localY < plankH - joint - 1) {
         let k = 1 - dist / 2.5;
         r = (r * (1 - 0.48 * k)) | 0;
@@ -285,7 +281,7 @@ export let genUnicornHorn = (w: number, h: number, seed: number, out: Uint8Array
 
     for (let x = 0; x < w; x++) {
       let dx = x - cx;
-      let dist = Math.abs(dx);
+      let dist = abs(dx);
 
       if (dist > radius + 0.6) {
         put(out, (y * w + x) * 4, 0, 0, 0, 0);
@@ -293,21 +289,22 @@ export let genUnicornHorn = (w: number, h: number, seed: number, out: Uint8Array
       }
 
       // ridge (spiral)
-      let ang = Math.atan2(dx, 1) + phase;   // approximate
-      let ridge = Math.cos(ang * 3.0);
+      let ang = atan2(dx, 1) + phase;   // approximate
+      let ridge = cos(ang * 3.0);
       let ridgeDark = ridge > 0.35 ? 0.72 : 1.0;
 
       // base colour: cream → soft pink/gold gradient
       let tipness = 1 - t;
-      let r = (245 - tipness * 30 + (seed & 15)) | 0;
-      let g = (220 - tipness * 55) | 0;
-      let b = (190 - tipness * 40) | 0;
+      let r = floor(245 - tipness * 30 + (seed & 15));
+      let g = floor(220 - tipness * 55);
+      let b = floor(190 - tipness * 40);
 
       // apply ridge + subtle vertical highlight
-      let highlight = 1.0 + 0.18 * (1 - Math.abs(dx) / radius);
-      r = (r * ridgeDark * highlight) | 0;
-      g = (g * ridgeDark * highlight) | 0;
-      b = (b * ridgeDark * highlight) | 0;
+      let highlight = 1.0 + 0.18 * (1 - abs(dx) / radius);
+      let rh = ridgeDark * highlight;
+      r = floor(r * rh);
+      g = floor(g * rh);
+      b = floor(b * rh);
 
       // soft edge AA (cheap)
       let edge = clamp(1 - (dist - radius + 0.8), 0, 1);

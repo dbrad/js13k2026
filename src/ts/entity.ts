@@ -1,6 +1,8 @@
+import { assert } from "./__debug/debug";
+import { playerShoot, zzfxPlay } from "./audio";
 import { glPushColorQuad, glPushQuad } from "./gl";
 import { AMBIENT, lightMap, mapData, mapH, mapW } from "./map";
-import { abs, circleOverlap, cos, floor, max, min, PI, random, sin, sqrt } from "./math";
+import { abs, atan2, circleOverlap, cos, floor, max, min, PI, random, sin, sqrt } from "./math";
 import { FOG_END, FOG_START, FOV, rayIsSolid, rayMove, zBuffer } from "./raycast";
 import { TEXTURE_CACHE } from "./texture";
 
@@ -56,6 +58,18 @@ let TANK_COOLDOWN = 1.4;
 let PSEUDO_LIFETIME = 0.18;
 let PROJECTILE_LIFETIME = 2.4;
 
+let NOTICE_DIST = 9.5;
+let NOTICE_DIST_SQ = NOTICE_DIST * NOTICE_DIST;
+let NOTICE_DELAY_MIN = 0.35;
+let NOTICE_DELAY_MAX = 0.85;
+let IDLE_WANDER_SPEED = 0.35;
+
+let SEPARATION_RADIUS = 0.85;
+let SEPARATION_STRENGTH = 2.8;
+
+let BEAM_BASE_DAMAGE = 4.5;
+let BEAM_HIT_RADIUS = 0.55;
+
 let x_ = new Float32Array(MAX_ENTITIES);
 let y_ = new Float32Array(MAX_ENTITIES);
 let z_ = new Float32Array(MAX_ENTITIES);
@@ -79,6 +93,8 @@ let damage_ = new Float32Array(MAX_ENTITIES);
 let targetX_ = new Float32Array(MAX_ENTITIES);
 let targetY_ = new Float32Array(MAX_ENTITIES);
 let lastAttackTime__ = new Float32Array(MAX_ENTITIES);
+
+let alert_ = new Float32Array(MAX_ENTITIES);
 
 let active = new Int32Array(MAX_ENTITIES);
 let activeCount = 0;
@@ -110,7 +126,7 @@ let modulateABGR = (abgr: number, light: number): number => {
     if (r > 255) r = 255;
     if (g > 255) g = 255;
     if (b > 255) b = 255;
-    return (a << 24) | (b << 16) | (g << 8) | (r | 0);
+    return (a << 24) | (b << 16) | (g << 8) | floor(r);
 };
 
 export let entityClear = (): void => {
@@ -133,7 +149,7 @@ let enemyStats: [enemyStat, enemyStat, enemyStat, enemyStat] = [
 ];
 
 export let entityAdd = (x: number, y: number, texId: number, scale = 1, flags = FLAG_BILLBOARD | FLAG_ACTIVE, colour = 0xffffffff, z = 0.5, type_id = ENEMY_NONE): number => {
-    if (activeCount >= MAX_ENTITIES) return -1;
+    assert(activeCount <= MAX_ENTITIES, `entity pool too small, increase entity pool size. active: ${activeCount} max: ${MAX_ENTITIES}`);
 
     let slot = -1;
     for (let i = 0; i < MAX_ENTITIES; i++) {
@@ -142,7 +158,7 @@ export let entityAdd = (x: number, y: number, texId: number, scale = 1, flags = 
             break;
         }
     }
-    if (slot < 0) return -1;
+    assert(slot >= 0, `entity pool too small, increase entity pool size. active: ${activeCount} max: ${MAX_ENTITIES}`);
 
     x_[slot] = x;
     y_[slot] = y;
@@ -160,17 +176,23 @@ export let entityAdd = (x: number, y: number, texId: number, scale = 1, flags = 
     size_[slot] = 1;
     flags_[slot] = flags | FLAG_ACTIVE;
     data_[slot] = 0;
+    type_id_[slot] = type_id;
+    hp_[slot] = 0;
+    max_hp_[slot] = 0;
+    damage_[slot] = 0;
+    targetX_[slot] = 0;
+    targetY_[slot] = 0;
+    lastAttackTime__[slot] = 0;
+    alert_[slot] = 0;
 
     if (type_id > ENEMY_NONE) {
         let stats = enemyStats[type_id];
-        type_id_[slot] = type_id;
         hp_[slot] = stats[0];
         max_hp_[slot] = stats[0];
         damage_[slot] = stats[1];
         flags_[slot] |= FLAG_ENEMY | FLAG_SOLID;
-        targetX_[slot] = 0;
-        targetY_[slot] = 0;
-        lastAttackTime__[slot] = 0;
+
+        alert_[slot] = -1;
     }
 
     active[activeCount] = slot;
@@ -179,7 +201,6 @@ export let entityAdd = (x: number, y: number, texId: number, scale = 1, flags = 
 
 export let entityAddParticle = (x: number, y: number, z = 0.5, size = 1, col = 0xffffffff): number => {
     let id = entityAdd(x, y, 0, 1, FLAG_PARTICLE | FLAG_ACTIVE, col, z);
-    if (id < 0) return -1;
     let slot = active[id];
     size_[slot] = size;
     colour_[slot] = col;
@@ -198,6 +219,27 @@ export let entityRemove = (activeIdx: number): void => {
     activeCount = last;
 };
 
+let burstParticles = (ox: number, oy: number, oz: number, count: number, col: number, speed: number, life: number): void => {
+    for (let k = 0; k < count; k++) {
+        let id = entityAddParticle(
+            ox + (random() - 0.5) * 0.25,
+            oy + (random() - 0.5) * 0.25,
+            oz + (random() - 0.5) * 0.15,
+            0.7 + random() * 1.1,
+            col
+        );
+        if (id < 0) return;
+        let s = active[id];
+        let ang = random() * PI * 2;
+        let sp = speed * (0.5 + random());
+        vx_[s] = cos(ang) * sp;
+        vy_[s] = sin(ang) * sp;
+        vz_[s] = (random() - 0.3) * speed * 0.8;
+        data_[s] = life * (0.6 + random() * 0.5);
+        size_[s] = 0.6 + random() * 1.2;
+    }
+};
+
 let spawnProjectile = (sx: number, sy: number, dx: number, dy: number, dmg: number, col: number): void => {
     let len = sqrt(dx * dx + dy * dy);
     if (len < 0.001) return;
@@ -205,29 +247,39 @@ let spawnProjectile = (sx: number, sy: number, dx: number, dy: number, dmg: numb
     let ndx = dx * inv;
     let ndy = dy * inv;
 
-    let id = entityAdd(sx, sy, 0, 0.35, FLAG_PROJECTILE | FLAG_DAMAGE | FLAG_ACTIVE | FLAG_BILLBOARD, col, 0.45);
+    let id = entityAdd(sx, sy, 0, 0.45, FLAG_PROJECTILE | FLAG_DAMAGE | FLAG_ACTIVE | FLAG_BILLBOARD, col, 0.45);
     if (id < 0) return;
     let s = active[id];
     vx_[s] = ndx * PROJECTILE_SPEED;
     vy_[s] = ndy * PROJECTILE_SPEED;
     damage_[s] = dmg;
     data_[s] = PROJECTILE_LIFETIME;
-    size_[s] = 0.55;
+    size_[s] = 0.7;
     colour_[s] = col;
+
+
+    burstParticles(sx + ndx * 0.3, sy + ndy * 0.3, 0.45, 5, col, 2.2, 0.22);
 };
 
 let spawnPseudoMelee = (tx: number, ty: number, dmg: number): void => {
-    let id = entityAdd(tx, ty, 0, 0.7, FLAG_DAMAGE | FLAG_ACTIVE, 0xff4488ff, 0.4);
+    let id = entityAdd(tx, ty, 0, 0.85, FLAG_DAMAGE | FLAG_ACTIVE, 0xff4488ff, 0.4);
     if (id < 0) return;
     let s = active[id];
     damage_[s] = dmg;
     data_[s] = PSEUDO_LIFETIME;
-    size_[s] = 1.1;
+    size_[s] = 1.2;
     vx_[s] = 0;
     vy_[s] = 0;
+
+
+    burstParticles(tx, ty, 0.5, 8, 0xff66aaff, 3.5, 0.28);
+    burstParticles(tx, ty, 0.35, 4, 0xffffffff, 1.8, 0.18);
 };
 
 export let fireRainbowBeam = (px: number, py: number, angle: number, charge: number = 1.0): void => {
+    zzfxPlay(playerShoot);
+    let dmg = BEAM_BASE_DAMAGE * (0.7 + charge * 0.6);
+
     for (let i = 0; i < 7; i++) {
         let t = i / 6;
         let rayAngle = angle - BEAM_SPREAD * 0.5 + BEAM_SPREAD * t;
@@ -275,6 +327,39 @@ export let fireRainbowBeam = (px: number, py: number, angle: number, charge: num
                 break;
             }
         }
+
+
+        if (i === 1 || i === 3 || i === 5) {
+            for (let d = 0.4; d < hitDist; d += 0.45) {
+                let bx = px + dx * d;
+                let by = py + dy * d;
+
+                for (let ei = activeCount - 1; ei >= 0; ei--) {
+                    let es = active[ei];
+                    if ((flags_[es] & (FLAG_ACTIVE | FLAG_ENEMY)) !== (FLAG_ACTIVE | FLAG_ENEMY)) continue;
+                    if (hp_[es] <= 0) continue;
+
+                    let ex = x_[es] - bx;
+                    let ey = y_[es] - by;
+                    if (ex * ex + ey * ey > BEAM_HIT_RADIUS * BEAM_HIT_RADIUS) continue;
+
+                    hp_[es] -= dmg;
+
+                    burstParticles(x_[es], y_[es], 0.55, 6, RAINBOW[i], 2.8, 0.25);
+
+                    if (hp_[es] <= 0) {
+
+                        burstParticles(x_[es], y_[es], 0.5, 12, 0xffffffff, 4.0, 0.4);
+                        burstParticles(x_[es], y_[es], 0.4, 6, RAINBOW[(i + 3) % 7], 2.5, 0.35);
+                        flags_[es] = 0;
+                        entityRemove(ei);
+                    }
+
+
+                }
+            }
+        }
+
 
         for (let p = 0; p < 14 + floor(charge * 10); p++) {
             let u = p / ((14 + floor(charge * 10)) - 1);
@@ -377,12 +462,39 @@ export let entityPlayerCollide = (px: number, py: number, playerRadius = 0.25, o
             if (onDamage) {
                 onDamage(i, damage_[s]);
             }
-
             flags_[s] = 0;
         }
     }
 
     return [outX, outY];
+};
+
+let applySeparation = (s: number): void => {
+    let sx = x_[s];
+    let sy = y_[s];
+    let pushX = 0;
+    let pushY = 0;
+
+    for (let j = 0; j < activeCount; j++) {
+        let o = active[j];
+        if (o === s) continue;
+        if ((flags_[o] & (FLAG_ACTIVE | FLAG_SOLID | FLAG_ENEMY)) !== (FLAG_ACTIVE | FLAG_SOLID | FLAG_ENEMY)) continue;
+
+        let dx = sx - x_[o];
+        let dy = sy - y_[o];
+        let d2 = dx * dx + dy * dy;
+        if (d2 < 0.0001 || d2 > SEPARATION_RADIUS * SEPARATION_RADIUS) continue;
+
+        let d = sqrt(d2);
+        let force = (SEPARATION_RADIUS - d) / SEPARATION_RADIUS;
+        force *= force;
+        let inv = 1 / d;
+        pushX += dx * inv * force;
+        pushY += dy * inv * force;
+    }
+
+    vx_[s] += pushX * SEPARATION_STRENGTH;
+    vy_[s] += pushY * SEPARATION_STRENGTH;
 };
 
 export let entityUpdate = (dt: number, px: number, py: number): void => {
@@ -409,7 +521,8 @@ export let entityUpdate = (dt: number, px: number, py: number): void => {
             if (flags_[s] & FLAG_ENEMY) {
                 let edx = px - x_[s];
                 let edy = py - y_[s];
-                let dist = sqrt(edx * edx + edy * edy);
+                let distSq = edx * edx + edy * edy;
+                let dist = sqrt(distSq);
                 let invDist = dist > 0.001 ? 1 / dist : 0;
                 let ndx = edx * invDist;
                 let ndy = edy * invDist;
@@ -428,41 +541,77 @@ export let entityUpdate = (dt: number, px: number, py: number): void => {
                     attackRange = RANGED_ATTACK_RANGE;
                 }
 
-                if (lastAttackTime__[s] > 0) {
-                    lastAttackTime__[s] -= dt;
+
+
+
+
+                if (alert_[s] < 0) {
+
+                    if (distSq < NOTICE_DIST_SQ) {
+                        alert_[s] = NOTICE_DELAY_MIN + random() * (NOTICE_DELAY_MAX - NOTICE_DELAY_MIN);
+
+                        facing_[s] = atan2(ndy, ndx);
+                    } else {
+
+                        if (random() < 0.01) {
+                            let ang = random() * PI * 2;
+                            preferX_[s] = cos(ang);
+                            preferY_[s] = sin(ang);
+                        }
+                        vx_[s] = preferX_[s] * IDLE_WANDER_SPEED;
+                        vy_[s] = preferY_[s] * IDLE_WANDER_SPEED;
+
+                        applySeparation(s);
+                    }
+                } else if (alert_[s] > 0) {
+
+                    alert_[s] -= dt;
+                    facing_[s] = atan2(ndy, ndx);
+                    vx_[s] = ndx * speed * 0.25;
+                    vy_[s] = ndy * speed * 0.25;
+                    applySeparation(s);
+                    if (alert_[s] <= 0) alert_[s] = 0;
                 }
 
-                if (typ === ENEMY_RANGED) {
-                    if (dist < RANGED_MIN_DIST) {
-                        vx_[s] = -ndx * speed;
-                        vy_[s] = -ndy * speed;
-                    } else if (dist > RANGED_MAX_DIST) {
-                        vx_[s] = ndx * speed;
-                        vy_[s] = ndy * speed;
-                    } else {
-                        vx_[s] *= 0.85;
-                        vy_[s] *= 0.85;
-                        vx_[s] += -ndy * 0.35;
-                        vy_[s] += ndx * 0.35;
-                    }
-                } else {
-                    if (dist > 0.55) {
-                        vx_[s] = ndx * speed;
-                        vy_[s] = ndy * speed;
-                    } else {
-                        vx_[s] = 0;
-                        vy_[s] = 0;
-                    }
-                }
 
-                facing_[s] = Math.atan2(ndy, ndx);
+                if (alert_[s] === 0) {
+                    if (lastAttackTime__[s] > 0) {
+                        lastAttackTime__[s] -= dt;
+                    }
 
-                if (dist <= attackRange && lastAttackTime__[s] <= 0) {
-                    lastAttackTime__[s] = cooldown;
                     if (typ === ENEMY_RANGED) {
-                        spawnProjectile(x_[s], y_[s], edx, edy, damage_[s], 0xff22aaff);
+                        if (dist < RANGED_MIN_DIST) {
+                            vx_[s] = -ndx * speed;
+                            vy_[s] = -ndy * speed;
+                        } else if (dist > RANGED_MAX_DIST) {
+                            vx_[s] = ndx * speed;
+                            vy_[s] = ndy * speed;
+                        } else {
+                            vx_[s] *= 0.85;
+                            vy_[s] *= 0.85;
+                            vx_[s] += -ndy * 0.35;
+                            vy_[s] += ndx * 0.35;
+                        }
                     } else {
-                        spawnPseudoMelee(px, py, damage_[s]);
+                        if (dist > 0.55) {
+                            vx_[s] = ndx * speed;
+                            vy_[s] = ndy * speed;
+                        } else {
+                            vx_[s] = 0;
+                            vy_[s] = 0;
+                        }
+                    }
+
+                    facing_[s] = atan2(ndy, ndx);
+                    applySeparation(s);
+
+                    if (dist <= attackRange && lastAttackTime__[s] <= 0) {
+                        lastAttackTime__[s] = cooldown;
+                        if (typ === ENEMY_RANGED) {
+                            spawnProjectile(x_[s], y_[s], edx, edy, damage_[s], 0xff22aaff);
+                        } else {
+                            spawnPseudoMelee(px, py, damage_[s]);
+                        }
                     }
                 }
             }
@@ -476,11 +625,14 @@ export let entityUpdate = (dt: number, px: number, py: number): void => {
             y_[s] = ny;
 
             if ((flags_[s] & FLAG_PROJECTILE) && nx === ox && ny === oy && (mdx !== 0 || mdy !== 0)) {
+
+                burstParticles(ox, oy, 0.4, 5, colour_[s], 2.0, 0.2);
                 flags_[s] = 0;
                 entityRemove(i);
                 continue;
             }
         }
+
 
         if ((flags_[s] & FLAG_PARTICLE) === 0) continue;
 
@@ -562,11 +714,18 @@ export let entityCollect = (px: number, py: number, angle: number): void => {
             scale_[s] *
             ((flags_[s] & FLAG_PARTICLE) !== 0 ? size_[s] * 0.026 : 1);
 
+
+        if (flags_[s] & FLAG_PROJECTILE) {
+            height = abs(SCREEN_HEIGHT / transformY) * 0.35 * size_[s];
+        } else if ((flags_[s] & FLAG_DAMAGE) && !(flags_[s] & FLAG_ENEMY)) {
+            height = abs(SCREEN_HEIGHT / transformY) * 0.5 * size_[s];
+        }
+
         if (screenX < -height || screenX > SCREEN_WIDTH + height) continue;
         if (visibleCount >= MAX_VISIBLE) continue;
 
-        let cellX = x_[s] | 0;
-        let cellY = y_[s] | 0;
+        let cellX = floor(x_[s]);
+        let cellY = floor(y_[s]);
         let cellLight = AMBIENT;
         if (cellX >= 0 && cellY >= 0 && cellX < mapW && cellY < mapH) {
             cellLight = lightMap[cellY * mapW + cellX];
@@ -615,17 +774,29 @@ export let entityDraw = (px: number, py: number, angle: number, now: number): vo
         let light = visLight_[i];
         let fog = fogFactor(dist);
 
-        if ((flags_[s] & FLAG_PARTICLE) !== 0) {
+
+        if ((flags_[s] & FLAG_PARTICLE) !== 0 || (flags_[s] & FLAG_PROJECTILE) !== 0 ||
+            ((flags_[s] & FLAG_DAMAGE) !== 0 && (flags_[s] & FLAG_ENEMY) === 0)) {
+
             let moteH = height;
-            let sx = screenX | 0;
+            let sx = floor(screenX);
             if (sx < 0 || sx >= SCREEN_WIDTH) continue;
             if (dist > zBuffer[sx]) continue;
 
             let vOffset = ((z_[s] - 0.5) / dist) * (SCREEN_HEIGHT * 0.5);
             let drawY = SCREEN_HEIGHT * 0.5 - moteH * 0.5 - vOffset;
 
-            let alpha = min(0.38, 0.38 / dist);
-            let col = ((alpha * 255) | 0) << 24 | colour_[s];
+            let alpha = 0.55;
+            if (flags_[s] & FLAG_PARTICLE) {
+                alpha = min(0.38, 0.38 / dist);
+            } else if (flags_[s] & FLAG_PROJECTILE) {
+                alpha = 0.85;
+            } else {
+
+                alpha = min(0.7, data_[s] / PSEUDO_LIFETIME * 0.7);
+            }
+
+            let col = floor(alpha * 255) << 24 | (colour_[s] & 0xffffff);
             let lit = modulateABGR(col, light);
 
             glPushColorQuad(screenX - moteH * 0.5, drawY, moteH, moteH, lit);
@@ -633,7 +804,7 @@ export let entityDraw = (px: number, py: number, angle: number, now: number): vo
         }
 
         let tex = TEXTURE_CACHE[texId_[s]];
-        if (!tex) continue;
+        assert(tex !== undefined, `missing texture from texture cache. id: ${texId_[s]}`);
 
         let litColour = modulateABGR(colour_[s], light);
 
@@ -643,8 +814,8 @@ export let entityDraw = (px: number, py: number, angle: number, now: number): vo
         let bob = sin(now * 3 + phase_[s]) * (height * 0.04);
         let drawStartY = (SCREEN_HEIGHT - height) * 0.5 + bob;
 
-        let startCol = max(0, drawStartX | 0);
-        let endCol = min(SCREEN_WIDTH - 1, drawEndX | 0);
+        let startCol = max(0, floor(drawStartX));
+        let endCol = min(SCREEN_WIDTH - 1, floor(drawEndX));
         if (endCol < startCol) continue;
 
         let uSpan = tex.u1_ - tex.u0_;
@@ -660,10 +831,10 @@ export let entityDraw = (px: number, py: number, angle: number, now: number): vo
 
 let collectFloorTiles = (rx: number, ry: number, rw: number, rh: number): void => {
     floorScratchCount = 0;
-    let x0 = max(1, rx | 0);
-    let y0 = max(1, ry | 0);
-    let x1 = min(mapW - 2, (rx + rw) | 0);
-    let y1 = min(mapH - 2, (ry + rh) | 0);
+    let x0 = max(1, floor(rx));
+    let y0 = max(1, floor(ry));
+    let x1 = min(mapW - 2, floor(rx + rw));
+    let y1 = min(mapH - 2, floor(ry + rh));
 
     for (let y = y0; y < y1; y++) {
         for (let x = x0; x < x1; x++) {
@@ -686,11 +857,11 @@ export let spawnEnemiesInRoom = (rx: number, ry: number, rw: number, rh: number,
     collectFloorTiles(rx, ry, rw, rh);
     if (floorScratchCount === 0) return;
 
-    let count = 1 + (random() * 3 | 0);
+    let count = 1 + floor(random() * 3);
     if (count > floorScratchCount) count = floorScratchCount;
 
     for (let i = 0; i < count; i++) {
-        let j = i + (random() * (floorScratchCount - i) | 0);
+        let j = i + floor(random() * (floorScratchCount - i));
         let tx = floorScratchX[i];
         let ty = floorScratchY[i];
         floorScratchX[i] = floorScratchX[j];
@@ -707,7 +878,7 @@ export let spawnEnemiesInRoom = (rx: number, ry: number, rw: number, rh: number,
         let typ = ENEMY_MELEE;
         let scl = 0.95;
         let col = 0xffffffff;
-        if (r > 0.0) {
+        if (r > 0.72) {
             typ = ENEMY_RANGED;
             scl = 0.85;
             col = 0xffaaccff;
