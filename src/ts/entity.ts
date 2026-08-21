@@ -1,6 +1,6 @@
 import { assert } from "./__debug/debug";
 import { playerShoot, zzfxPlay } from "./audio";
-import { glPushColorQuad, glPushQuad } from "./gl";
+import { glPushColorCircle, glPushQuad } from "./gl";
 import { AMBIENT, lightMap, mapData, mapH, mapW } from "./map";
 import { abs, atan2, circleOverlap, cos, floor, max, min, PI, random, sin, sqrt } from "./math";
 import { FOG_END, FOG_START, FOV, rayIsSolid, rayMove, zBuffer } from "./raycast";
@@ -47,7 +47,7 @@ let BEAM_STEP = 0.1;
 let MELEE_SPEED = 1.55;
 let TANK_SPEED = 0.95;
 let RANGED_SPEED = 1.15;
-let PROJECTILE_SPEED = 9.0;
+let PROJECTILE_SPEED = 3.0;
 let MELEE_ATTACK_RANGE = 1.15;
 let RANGED_ATTACK_RANGE = 7.5;
 let RANGED_MIN_DIST = 3.8;
@@ -56,12 +56,10 @@ let MELEE_COOLDOWN = 1.1;
 let RANGED_COOLDOWN = 1.6;
 let TANK_COOLDOWN = 1.4;
 let PSEUDO_LIFETIME = 0.18;
-let PROJECTILE_LIFETIME = 2.4;
+let PROJECTILE_LIFETIME = 5.4;
 
-let NOTICE_DIST = 9.5;
-let NOTICE_DIST_SQ = NOTICE_DIST * NOTICE_DIST;
-let NOTICE_DELAY_MIN = 0.35;
-let NOTICE_DELAY_MAX = 0.85;
+let NOTICE_DELAY_MIN = 0.55;
+let NOTICE_DELAY_MAX = 1;
 let IDLE_WANDER_SPEED = 0.35;
 
 let SEPARATION_RADIUS = 0.85;
@@ -93,11 +91,14 @@ let damage_ = new Float32Array(MAX_ENTITIES);
 let targetX_ = new Float32Array(MAX_ENTITIES);
 let targetY_ = new Float32Array(MAX_ENTITIES);
 let lastAttackTime__ = new Float32Array(MAX_ENTITIES);
-
 let alert_ = new Float32Array(MAX_ENTITIES);
 
 let active = new Int32Array(MAX_ENTITIES);
 let activeCount = 0;
+
+let free_ = new Int32Array(MAX_ENTITIES);
+let freeCount = MAX_ENTITIES;
+for (let i = 0; i < MAX_ENTITIES; i++) free_[i] = i;
 
 let visIdx_ = new Int32Array(MAX_VISIBLE);
 let visDist_ = new Float32Array(MAX_VISIBLE);
@@ -119,29 +120,21 @@ let fogFactor = (dist: number): number => {
 };
 
 let modulateABGR = (abgr: number, light: number): number => {
-    let r = ((abgr >>> 0) & 0xff) * light;
-    let g = ((abgr >>> 8) & 0xff) * light;
-    let b = ((abgr >>> 16) & 0xff) * light;
+    let r = min(255, ((abgr >>> 0) & 0xff) * light);
+    let g = min(255, ((abgr >>> 8) & 0xff) * light);
+    let b = min(255, ((abgr >>> 16) & 0xff) * light);
     let a = (abgr >>> 24) & 0xff;
-    if (r > 255) r = 255;
-    if (g > 255) g = 255;
-    if (b > 255) b = 255;
     return (a << 24) | (b << 16) | (g << 8) | floor(r);
 };
 
 export let entityClear = (): void => {
-    for (let i = 0; i < activeCount; i++) {
-        flags_[active[i]] = 0;
-    }
+    for (let i = 0; i < activeCount; i++) flags_[active[i]] = 0;
     activeCount = 0;
+    freeCount = MAX_ENTITIES;
+    for (let i = 0; i < MAX_ENTITIES; i++) free_[i] = i;
 };
 
-type enemyStat = [
-    number,
-    number
-];
-
-let enemyStats: [enemyStat, enemyStat, enemyStat, enemyStat] = [
+let enemyStats: [number, number][] = [
     [0, 0],
     [5, 3],
     [20, 1],
@@ -149,16 +142,10 @@ let enemyStats: [enemyStat, enemyStat, enemyStat, enemyStat] = [
 ];
 
 export let entityAdd = (x: number, y: number, texId: number, scale = 1, flags = FLAG_BILLBOARD | FLAG_ACTIVE, colour = 0xffffffff, z = 0.5, type_id = ENEMY_NONE): number => {
-    assert(activeCount <= MAX_ENTITIES, `entity pool too small, increase entity pool size. active: ${activeCount} max: ${MAX_ENTITIES}`);
-
-    let slot = -1;
-    for (let i = 0; i < MAX_ENTITIES; i++) {
-        if ((flags_[i] & FLAG_ACTIVE) === 0) {
-            slot = i;
-            break;
-        }
+    if (freeCount === 0) {
+        assert(false, `entity pool exhausted`);
     }
-    assert(slot >= 0, `entity pool too small, increase entity pool size. active: ${activeCount} max: ${MAX_ENTITIES}`);
+    let slot = free_[--freeCount];
 
     x_[slot] = x;
     y_[slot] = y;
@@ -191,7 +178,6 @@ export let entityAdd = (x: number, y: number, texId: number, scale = 1, flags = 
         max_hp_[slot] = stats[0];
         damage_[slot] = stats[1];
         flags_[slot] |= FLAG_ENEMY | FLAG_SOLID;
-
         alert_[slot] = -1;
     }
 
@@ -211,6 +197,7 @@ export let entityRemove = (activeIdx: number): void => {
     if (activeIdx < 0 || activeIdx >= activeCount) return;
     let slot = active[activeIdx];
     flags_[slot] = 0;
+    free_[freeCount++] = slot;
 
     let last = activeCount - 1;
     if (activeIdx !== last) {
@@ -225,19 +212,27 @@ let burstParticles = (ox: number, oy: number, oz: number, count: number, col: nu
             ox + (random() - 0.5) * 0.25,
             oy + (random() - 0.5) * 0.25,
             oz + (random() - 0.5) * 0.15,
-            0.7 + random() * 1.1,
+            1.7 + random() * 1.1,
             col
         );
-        if (id < 0) return;
         let s = active[id];
         let ang = random() * PI * 2;
         let sp = speed * (0.5 + random());
         vx_[s] = cos(ang) * sp;
         vy_[s] = sin(ang) * sp;
         vz_[s] = (random() - 0.3) * speed * 0.8;
-        data_[s] = life * (0.6 + random() * 0.5);
-        size_[s] = 0.6 + random() * 1.2;
+        data_[s] = life * (1.6 + random() * 0.5);
+        size_[s] = 2.6 + random() * 1.2;
     }
+};
+
+let spawnBeamParticle = (x: number, y: number, z: number, size: number, col: number, life: number, vx: number, vy: number, vz: number): void => {
+    let id = entityAddParticle(x, y, z, size, col);
+    let s = active[id];
+    vx_[s] = vx;
+    vy_[s] = vy;
+    vz_[s] = vz;
+    data_[s] = life;
 };
 
 let spawnProjectile = (sx: number, sy: number, dx: number, dy: number, dmg: number, col: number): void => {
@@ -248,22 +243,19 @@ let spawnProjectile = (sx: number, sy: number, dx: number, dy: number, dmg: numb
     let ndy = dy * inv;
 
     let id = entityAdd(sx, sy, 0, 0.45, FLAG_PROJECTILE | FLAG_DAMAGE | FLAG_ACTIVE | FLAG_BILLBOARD, col, 0.45);
-    if (id < 0) return;
     let s = active[id];
     vx_[s] = ndx * PROJECTILE_SPEED;
     vy_[s] = ndy * PROJECTILE_SPEED;
     damage_[s] = dmg;
     data_[s] = PROJECTILE_LIFETIME;
-    size_[s] = 0.7;
+    size_[s] = 0.3;
     colour_[s] = col;
-
 
     burstParticles(sx + ndx * 0.3, sy + ndy * 0.3, 0.45, 5, col, 2.2, 0.22);
 };
 
 let spawnPseudoMelee = (tx: number, ty: number, dmg: number): void => {
     let id = entityAdd(tx, ty, 0, 0.85, FLAG_DAMAGE | FLAG_ACTIVE, 0xff4488ff, 0.4);
-    if (id < 0) return;
     let s = active[id];
     damage_[s] = dmg;
     data_[s] = PSEUDO_LIFETIME;
@@ -271,21 +263,20 @@ let spawnPseudoMelee = (tx: number, ty: number, dmg: number): void => {
     vx_[s] = 0;
     vy_[s] = 0;
 
-
-    burstParticles(tx, ty, 0.5, 8, 0xff66aaff, 3.5, 0.28);
+    burstParticles(tx, ty, 0.5, 8, 0xff2222ff, 3.5, 0.28);
     burstParticles(tx, ty, 0.35, 4, 0xffffffff, 1.8, 0.18);
 };
 
 export let fireRainbowBeam = (px: number, py: number, angle: number, charge: number = 1.0): void => {
     zzfxPlay(playerShoot);
     let dmg = BEAM_BASE_DAMAGE * (0.7 + charge * 0.6);
+    let range = floor(3 + 2 * charge);
 
     for (let i = 0; i < 7; i++) {
         let t = i / 6;
         let rayAngle = angle - BEAM_SPREAD * 0.5 + BEAM_SPREAD * t;
         let dx = cos(rayAngle);
         let dy = sin(rayAngle);
-
         let hitDist = BEAM_RANGE * charge;
 
         for (let d = BEAM_STEP; d < hitDist; d += BEAM_STEP) {
@@ -308,104 +299,96 @@ export let fireRainbowBeam = (px: number, py: number, angle: number, charge: num
             if (cell === CELL_CRACKED) {
                 mapData[my * mapW + mx] = CELL_FLOOR;
                 hitDist = d;
-
                 for (let k = 0; k < 8; k++) {
-                    let id = entityAddParticle(
+                    spawnBeamParticle(
                         x + (random() - 0.5) * 0.4,
                         y + (random() - 0.5) * 0.4,
                         0.4 + random() * 0.3,
                         0.9 + random() * 0.8,
-                        0xff6688aa
+                        0xff6688aa,
+                        0.35 + random() * 0.25,
+                        (random() - 0.5) * 2.2,
+                        (random() - 0.5) * 2.2,
+                        0.8 + random() * 1.4
                     );
-                    if (id < 0) continue;
-                    let s = active[id];
-                    vx_[s] = (random() - 0.5) * 2.2;
-                    vy_[s] = (random() - 0.5) * 2.2;
-                    vz_[s] = 0.8 + random() * 1.4;
-                    data_[s] = 0.35 + random() * 0.25;
                 }
                 break;
             }
         }
 
-
-        if (i === 1 || i === 3 || i === 5) {
+        // Damage on odd rays only (still dense hits)
+        if (i & 1) {
             for (let d = 0.4; d < hitDist; d += 0.45) {
                 let bx = px + dx * d;
                 let by = py + dy * d;
 
                 for (let ei = activeCount - 1; ei >= 0; ei--) {
                     let es = active[ei];
-                    if ((flags_[es] & (FLAG_ACTIVE | FLAG_ENEMY)) !== (FLAG_ACTIVE | FLAG_ENEMY)) continue;
-                    if (hp_[es] <= 0) continue;
+                    if ((flags_[es] & (FLAG_ACTIVE | FLAG_ENEMY)) !== (FLAG_ACTIVE | FLAG_ENEMY) || hp_[es] <= 0) continue;
 
                     let ex = x_[es] - bx;
                     let ey = y_[es] - by;
                     if (ex * ex + ey * ey > BEAM_HIT_RADIUS * BEAM_HIT_RADIUS) continue;
 
                     hp_[es] -= dmg;
-
                     burstParticles(x_[es], y_[es], 0.55, 6, RAINBOW[i], 2.8, 0.25);
 
                     if (hp_[es] <= 0) {
-
                         burstParticles(x_[es], y_[es], 0.5, 12, 0xffffffff, 4.0, 0.4);
                         burstParticles(x_[es], y_[es], 0.4, 6, RAINBOW[(i + 3) % 7], 2.5, 0.35);
                         flags_[es] = 0;
+                        // TODO: Do damage based on charge, not 1-shot
                         entityRemove(ei);
                     }
-
-
                 }
             }
         }
 
-
-        for (let p = 0; p < 14 + floor(charge * 10); p++) {
-            let u = p / ((14 + floor(charge * 10)) - 1);
+        // Unified trail particles
+        let n = 14 + floor(charge * 10);
+        for (let p = 0; p < n; p++) {
+            let u = p / (n - 1 || 1);
             let x = px + dx * hitDist * u;
             let y = py + dy * hitDist * u;
-
-            let id = entityAddParticle(x, y, 0.42 + (random() - 0.5) * 0.12, 1.1 + random() * 0.9, RAINBOW[i]);
-            if (id < 0) continue;
-            let s = active[id];
-            vx_[s] = dx * (0.9 + random() * 0.7) + (random() - 0.5) * 0.4;
-            vy_[s] = dy * (0.9 + random() * 0.7) + (random() - 0.5) * 0.4;
-            vz_[s] = (random() - 0.5) * 0.6;
-            data_[s] = 0.12 + random() * 0.10;
-            size_[s] = 0.8 + random() * 0.9;
+            spawnBeamParticle(
+                x, y,
+                0.42 + (random() - 0.5) * 0.12,
+                1.1 + random() * 0.9,
+                RAINBOW[i],
+                0.12 + random() * 0.10,
+                dx * (0.9 + random() * 0.7) + (random() - 0.5) * 0.4,
+                dy * (0.9 + random() * 0.7) + (random() - 0.5) * 0.4,
+                (random() - 0.5) * 0.6
+            );
         }
 
-        for (let p = 0; p < 4; p++) {
+        // Fewer large core particles
+        for (let p = 0; p < 3; p++) {
             let u = random() * 0.95;
-            let x = px + dx * hitDist * u;
-            let y = py + dy * hitDist * u;
-
-            let id = entityAddParticle(x, y, 0.3, 2.0 + random(), RAINBOW[i]);
-            if (id < 0) continue;
-            let s = active[id];
-            vx_[s] = dx * 0.18;
-            vy_[s] = dy * 0.18;
-            vz_[s] = 0;
-            data_[s] = 0.38 + random() * 0.15;
-            size_[s] = 1.6 + random() * 0.8;
+            spawnBeamParticle(
+                px + dx * hitDist * u,
+                py + dy * hitDist * u,
+                0.3,
+                2.0 + random(),
+                RAINBOW[i],
+                0.38 + random() * 0.15,
+                dx * 0.18,
+                dy * 0.18,
+                0
+            );
         }
 
-        let range = floor(3 + (2 * charge));
+        // Light only on center ray
         if (i === 3) {
             for (let d = -1; d < hitDist; d += 1) {
                 let mx = floor(px + dx * d);
                 let my = floor(py + dy * d);
-                if (mx >= 0 && my >= 0 && mx < mapW && my < mapH) {
-                    for (let lx = mx - range; lx < mx + range; lx++) {
-                        for (let ly = my - range; ly < my + range; ly++) {
-                            if (lx < 0 || lx >= mapW || ly < 0 || ly >= mapH) continue;
-                            let idx = ly * mapW + lx;
-                            let ddx = mx - lx;
-                            let ddy = my - ly;
-                            let dist = sqrt(ddx * ddx + ddy * ddy);
-                            lightMap[idx] = max(lightMap[idx], min(0.5 + (charge), AMBIENT + max(0, 1.5 - 0.3 * dist)));
-                        }
+                if (mx < 0 || my < 0 || mx >= mapW || my >= mapH) continue;
+                for (let lx = mx - range; lx <= mx + range; lx++) {
+                    for (let ly = my - range; ly <= my + range; ly++) {
+                        if (lx < 0 || lx >= mapW || ly < 0 || ly >= mapH) continue;
+                        let dist = sqrt((mx - lx) * (mx - lx) + (my - ly) * (my - ly));
+                        lightMap[ly * mapW + lx] = max(lightMap[ly * mapW + lx], min(0.5 + charge, AMBIENT + max(0, 1.5 - 0.3 * dist)));
                     }
                 }
             }
@@ -444,29 +427,23 @@ export let entitySpawnDust = (px: number, py: number, count = 220): void => {
     let n = min(count, MAX_ENTITIES - activeCount);
     for (let i = 0; i < n; i++) {
         let id = entityAddParticle(px, py);
-        if (id < 0) break;
         respawnDustMote(active[id]);
     }
 };
 
 export let entityPlayerCollide = (px: number, py: number, playerRadius = 0.25, onDamage?: (activeIdx: number, dmg: number) => void): [number, number] => {
-    let outX = px;
-    let outY = py;
-
     for (let i = 0; i < activeCount; i++) {
         let s = active[i];
         if ((flags_[s] & (FLAG_ACTIVE | FLAG_DAMAGE)) !== (FLAG_ACTIVE | FLAG_DAMAGE)) continue;
 
         let er = (flags_[s] & FLAG_PROJECTILE) ? 0.15 : 0.4 * scale_[s];
-        if (circleOverlap(outX, outY, playerRadius, x_[s], y_[s], er)) {
-            if (onDamage) {
-                onDamage(i, damage_[s]);
-            }
+        if (circleOverlap(px, py, playerRadius, x_[s], y_[s], er)) {
+            if (onDamage) onDamage(i, damage_[s]);
+            burstParticles(x_[s], y_[s], 0.4, 15, colour_[s], 2.0, 0.3);
             flags_[s] = 0;
         }
     }
-
-    return [outX, outY];
+    return [px, py];
 };
 
 let applySeparation = (s: number): void => {
@@ -497,6 +474,22 @@ let applySeparation = (s: number): void => {
     vy_[s] += pushY * SEPARATION_STRENGTH;
 };
 
+let hasLineOfSight = (x0: number, y0: number, x1: number, y1: number): boolean => {
+    let dx = x1 - x0;
+    let dy = y1 - y0;
+    let steps = floor(max(abs(dx), abs(dy)) * 2) + 1;
+    if (steps < 1) return true;
+    let inv = 1 / steps;
+    for (let i = 1; i < steps; i++) {
+        let t = i * inv;
+        let mx = floor(x0 + dx * t);
+        let my = floor(y0 + dy * t);
+        if (mx < 0 || my < 0 || mx >= mapW || my >= mapH) return false;
+        if (mapData[my * mapW + mx] !== CELL_FLOOR) return false;
+    }
+    return true;
+};
+
 export let entityUpdate = (dt: number, px: number, py: number): void => {
     particleTime += dt;
 
@@ -508,7 +501,6 @@ export let entityUpdate = (dt: number, px: number, py: number): void => {
         }
 
         if (flags_[s] & (FLAG_ENEMY | FLAG_PROJECTILE)) {
-
             if (data_[s] > 0) {
                 data_[s] -= dt;
                 if (data_[s] <= 0) {
@@ -541,18 +533,10 @@ export let entityUpdate = (dt: number, px: number, py: number): void => {
                     attackRange = RANGED_ATTACK_RANGE;
                 }
 
-
-
-
-
                 if (alert_[s] < 0) {
-
-                    if (distSq < NOTICE_DIST_SQ) {
+                    if (hasLineOfSight(x_[s], y_[s], px, py)) {
                         alert_[s] = NOTICE_DELAY_MIN + random() * (NOTICE_DELAY_MAX - NOTICE_DELAY_MIN);
-
-                        facing_[s] = atan2(ndy, ndx);
                     } else {
-
                         if (random() < 0.01) {
                             let ang = random() * PI * 2;
                             preferX_[s] = cos(ang);
@@ -560,79 +544,63 @@ export let entityUpdate = (dt: number, px: number, py: number): void => {
                         }
                         vx_[s] = preferX_[s] * IDLE_WANDER_SPEED;
                         vy_[s] = preferY_[s] * IDLE_WANDER_SPEED;
-
-                        applySeparation(s);
                     }
                 } else if (alert_[s] > 0) {
-
                     alert_[s] -= dt;
-                    facing_[s] = atan2(ndy, ndx);
+                    if (alert_[s] <= 0) alert_[s] = 0;
                     vx_[s] = ndx * speed * 0.25;
                     vy_[s] = ndy * speed * 0.25;
-                    applySeparation(s);
-                    if (alert_[s] <= 0) alert_[s] = 0;
                 }
 
-
                 if (alert_[s] === 0) {
-                    if (lastAttackTime__[s] > 0) {
-                        lastAttackTime__[s] -= dt;
-                    }
+                    if (lastAttackTime__[s] > 0) lastAttackTime__[s] -= dt;
 
                     if (typ === ENEMY_RANGED) {
-                        if (dist < RANGED_MIN_DIST) {
-                            vx_[s] = -ndx * speed;
-                            vy_[s] = -ndy * speed;
-                        } else if (dist > RANGED_MAX_DIST) {
+                        if (dist > RANGED_MAX_DIST) {
                             vx_[s] = ndx * speed;
                             vy_[s] = ndy * speed;
                         } else {
-                            vx_[s] *= 0.85;
-                            vy_[s] *= 0.85;
-                            vx_[s] += -ndy * 0.35;
-                            vy_[s] += ndx * 0.35;
+                            vx_[s] = vx_[s] * 0.85 - ndy * 0.35;
+                            vy_[s] = vy_[s] * 0.85 + ndx * 0.35;
                         }
                     } else {
-                        if (dist > 0.55) {
-                            vx_[s] = ndx * speed;
-                            vy_[s] = ndy * speed;
-                        } else {
-                            vx_[s] = 0;
-                            vy_[s] = 0;
-                        }
+                        vx_[s] = dist > 0.75 ? ndx * speed : 0;
+                        vy_[s] = dist > 0.75 ? ndy * speed : 0;
                     }
-
-                    facing_[s] = atan2(ndy, ndx);
-                    applySeparation(s);
 
                     if (dist <= attackRange && lastAttackTime__[s] <= 0) {
                         lastAttackTime__[s] = cooldown;
                         if (typ === ENEMY_RANGED) {
-                            spawnProjectile(x_[s], y_[s], edx, edy, damage_[s], 0xff22aaff);
+                            spawnProjectile(x_[s], y_[s], edx, edy, damage_[s], 0xff2222ff);
                         } else {
                             spawnPseudoMelee(px, py, damage_[s]);
                         }
                     }
                 }
+
+                facing_[s] = atan2(ndy, ndx);
+                applySeparation(s);
+
+                let mdx = vx_[s] * dt;
+                let mdy = vy_[s] * dt;
+                [x_[s], y_[s]] = rayMove(x_[s], y_[s], mdx, mdy, 0.2);
+                continue;
             }
 
             let mdx = vx_[s] * dt;
             let mdy = vy_[s] * dt;
-            let ox = x_[s];
-            let oy = y_[s];
-            let [nx, ny] = rayMove(ox, oy, mdx, mdy, 0.2);
-            x_[s] = nx;
-            y_[s] = ny;
-
-            if ((flags_[s] & FLAG_PROJECTILE) && nx === ox && ny === oy && (mdx !== 0 || mdy !== 0)) {
-
-                burstParticles(ox, oy, 0.4, 5, colour_[s], 2.0, 0.2);
+            let nx = x_[s] + mdx;
+            let ny = y_[s] + mdy;
+            if (mapData[floor(ny) * mapW + floor(nx)] === CELL_FLOOR) {
+                x_[s] = nx;
+                y_[s] = ny;
+            } else {
+                burstParticles(x_[s], y_[s], 0.4, 15, colour_[s], 2.0, 0.3);
                 flags_[s] = 0;
                 entityRemove(i);
                 continue;
             }
         }
-
 
         if ((flags_[s] & FLAG_PARTICLE) === 0) continue;
 
@@ -714,7 +682,6 @@ export let entityCollect = (px: number, py: number, angle: number): void => {
             scale_[s] *
             ((flags_[s] & FLAG_PARTICLE) !== 0 ? size_[s] * 0.026 : 1);
 
-
         if (flags_[s] & FLAG_PROJECTILE) {
             height = abs(SCREEN_HEIGHT / transformY) * 0.35 * size_[s];
         } else if ((flags_[s] & FLAG_DAMAGE) && !(flags_[s] & FLAG_ENEMY)) {
@@ -739,6 +706,7 @@ export let entityCollect = (px: number, py: number, angle: number): void => {
         visibleCount++;
     }
 
+    // Insertion sort back-to-front
     for (let i = 1; i < visibleCount; i++) {
         let tIdx = visIdx_[i];
         let tDist = visDist_[i];
@@ -774,7 +742,6 @@ export let entityDraw = (px: number, py: number, angle: number, now: number): vo
         let light = visLight_[i];
         let fog = fogFactor(dist);
 
-
         if ((flags_[s] & FLAG_PARTICLE) !== 0 || (flags_[s] & FLAG_PROJECTILE) !== 0 ||
             ((flags_[s] & FLAG_DAMAGE) !== 0 && (flags_[s] & FLAG_ENEMY) === 0)) {
 
@@ -792,14 +759,13 @@ export let entityDraw = (px: number, py: number, angle: number, now: number): vo
             } else if (flags_[s] & FLAG_PROJECTILE) {
                 alpha = 0.85;
             } else {
-
                 alpha = min(0.7, data_[s] / PSEUDO_LIFETIME * 0.7);
             }
 
             let col = floor(alpha * 255) << 24 | (colour_[s] & 0xffffff);
             let lit = modulateABGR(col, light);
 
-            glPushColorQuad(screenX - moteH * 0.5, drawY, moteH, moteH, lit);
+            glPushColorCircle(screenX - moteH * 0.5, drawY, moteH, lit);
             continue;
         }
 

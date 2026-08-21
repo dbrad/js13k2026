@@ -9,7 +9,7 @@ export let lightMap: Float32Array;
 export let lightCalculated: Int8Array;
 export let LIGHT_DECAY = 6.5;
 
-export let AMBIENT = 0.20;
+export let AMBIENT = 0.25;
 export let PLAYER_TORCH_INTENSITY = 1.0;
 
 export let rooms: { id_: number; x_: number; y_: number; w_: number; h_: number; centerX_: number; centerY_: number; }[] = [];

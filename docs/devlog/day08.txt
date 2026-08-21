@@ -1,24 +1,25 @@
-Day 07 - 2026-08-19
+Day 08 - 2026-08-20
 
 ---
 
-Planned and exeucted first phase of adding enemy entities.
-Still more work to do. Update TODO with followup work.
+More work on the enemy and projectile systems done.
+A bit closer to an actual combat system.
+Also imported zzfx to check the footprint, took 5-6% of the overal space.
 
 ---
 
-`-Zab0 -Zlr930 -Zmc4 -Zmd10 -Zpr14 -S0,1,2,3,5,6,13,19,42,116,266,401`
+`-Zab0 -Zlr930 -Zmc4 -Zmd10 -Zpr14 -S0,1,2,3,7,13,21,42,57,170,196,401`
 
 -------------------------------------------------------------------------------
 Language                     files          blank        comment           code
 -------------------------------------------------------------------------------
-TypeScript                      18            535             55           2871
+TypeScript                      18            548             60           2985
 GLSL                             2             17              1             83
 HTML                             1              2              0              6
 -------------------------------------------------------------------------------
-SUM:                            21            554             56           2960
+SUM:                            21            567             61           3074
 -------------------------------------------------------------------------------
 
 The file is under the limit.
-USED: 79.45% | 10576 BYTES
-LEFT: 20.55% |  2736 BYTES
+USED: 88.01% | 11716 BYTES
+LEFT: 11.99% |  1596 BYTES

@@ -13,7 +13,7 @@ export let FOG_R = 0; // 0.05;
 export let FOG_G = 0; // 0.05;
 export let FOG_B = 0; // 0.08;
 export let FOG_ABGR = 0xff000000; // 0xff140D0D;
-export let FOG_START = 1;
+export let FOG_START = 2;
 export let FOG_END = 20;
 
 export let zBuffer = new Float32Array(SCREEN_WIDTH);

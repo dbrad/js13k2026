@@ -35,10 +35,6 @@ window.addEventListener("load", async (): Promise<void> => {
         spawnEnemiesInRoom(r.x_, r.y_, r.w_, r.h_, TEXTURE_DEMON);
     }
 
-    entityAdd(px, py, TEXTURE_DEMON_MEDIUM, 1);
-    entityAdd(px + 1, py + 1, TEXTURE_DEMON, 1);
-    entityAdd(px - 1, py - 1, TEXTURE_DEMON_LARGE, 1);
-
     entitySpawnDust(px, py, 220);
     initPerformanceMeter();
 
