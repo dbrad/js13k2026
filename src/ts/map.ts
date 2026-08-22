@@ -14,10 +14,10 @@ export let lightCalculated: Int32Array;
 export let LIGHT_DECAY = 6.5;
 export let LIGHT_CAP = 2;
 
-export let AMBIENT = 0.15;
+export let AMBIENT = 0.1;
 export let PLAYER_TORCH_INTENSITY = 1.0;
 export let updatePlayerTorch = (charging: boolean) => {
-    PLAYER_TORCH_INTENSITY = charging ? 1.3 : 1;
+    PLAYER_TORCH_INTENSITY = charging ? 1.2 : 0.9;
 };
 
 type Room = { id_: number; type_: number; x_: number; y_: number; w_: number; h_: number; n_: number[]; };
@@ -26,7 +26,7 @@ export let rooms: Room[] = [];
 export let generateDungeon = (width: number, height: number): [number, number] => {
     mapW = width;
     mapH = height;
-    lightMap = new Float32Array(width * height).fill(AMBIENT);
+    lightMap = new Float32Array(width * height * 3).fill(AMBIENT);
     lightCalculated = new Int32Array(width * height);
     mapData = new Int32Array(width * height).fill(CELL_WALL);
     mapOffsetData = new Float32Array(width * height);

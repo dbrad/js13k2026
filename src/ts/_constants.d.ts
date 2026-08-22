@@ -56,6 +56,8 @@ declare const GL_COLOR_ATTACHMENT0: 36064;
 declare const GL_FRAMEBUFFER: 36160;
 declare const GL_RED: 6403;
 declare const GL_R32F: 33326;
+declare const GL_RGB: 6407;
+declare const GL_RGB32F: 34837;
 
 declare const D_LEFT: 0;
 declare const D_UP: 1;

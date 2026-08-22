@@ -23,12 +23,11 @@ export let fogFactor = (dist: number): number => {
     return t * t;
 };
 
-let shadeFogABGR = (shade: number): number => {
-    let s = floor(shade * 255);
+let shadeFogABGR = (r: number, g: number, b: number): number => {
     let out = (255 & 0xff) << 8 >>> 0;
-    out = (out | s) << 8 >>> 0;
-    out = (out | s) << 8 >>> 0;
-    out = (out | s) >>> 0;
+    out = (out | floor(b * 255)) << 8 >>> 0;
+    out = (out | floor(g * 255)) << 8 >>> 0;
+    out = (out | floor(r * 255)) >>> 0;
     return out;
 };
 
@@ -48,7 +47,10 @@ export let rayRender = (px: number, py: number, angle: number, now: number, dt: 
 
     let playerIdx = playerY * mapW + playerX;
     let desired = PLAYER_TORCH_INTENSITY - fading;
-    lightMap[playerIdx] += (desired - lightMap[playerIdx]) * min(LIGHT_CAP, LIGHT_DECAY * dt);
+    let lIdx = playerIdx * 3;
+    lightMap[lIdx] += (desired - lightMap[lIdx]) * min(LIGHT_CAP, LIGHT_DECAY * dt);
+    lightMap[lIdx + 1] += (desired - lightMap[lIdx + 1]) * min(LIGHT_CAP, LIGHT_DECAY * dt);
+    lightMap[lIdx + 2] += (desired - lightMap[lIdx + 2]) * min(LIGHT_CAP, LIGHT_DECAY * dt);
     lightCalculated[playerIdx] = 1;
 
     for (let x = 0; x < SCREEN_WIDTH; x++) {
@@ -111,8 +113,11 @@ export let rayRender = (px: number, py: number, angle: number, now: number, dt: 
                 let dx = rayMapX - playerX;
                 let dy = rayMapY - playerY;
                 let dist = sqrt(dx * dx + dy * dy);
-                let targetLightLevel = clamp(PLAYER_TORCH_INTENSITY - (0.3 * dist) - fading, AMBIENT, 1);
-                lightMap[idx] += (targetLightLevel - lightMap[idx]) * min(LIGHT_CAP, LIGHT_DECAY * dt);
+                let targetLightLevel = clamp(PLAYER_TORCH_INTENSITY - (0.2 * dist) - fading, AMBIENT, 1);
+                let lIdx = idx * 3;
+                lightMap[lIdx] += (targetLightLevel - lightMap[lIdx]) * min(LIGHT_CAP, LIGHT_DECAY * dt);
+                lightMap[lIdx + 1] += (targetLightLevel - lightMap[lIdx + 1]) * min(LIGHT_CAP, LIGHT_DECAY * dt);
+                lightMap[lIdx + 2] += (targetLightLevel - lightMap[lIdx + 2]) * min(LIGHT_CAP, LIGHT_DECAY * dt);
                 lightCalculated[idx] = 1;
             }
 
@@ -206,19 +211,21 @@ export let rayRender = (px: number, py: number, angle: number, now: number, dt: 
                     TEXTURE_CACHE[TEXTURE_WOOD];
         let u0 = wallTexture.u0_ + (textureX / TEXTURE_SIZE) * (wallTexture.u1_ - wallTexture.u0_);
 
-        let cellLighting = lightMap[rayMapY * mapW + rayMapX];
-        let shade = min(1.0, 1.0 / (1.0 + perpWallDist * 0.18));
-        let finalShade = (side === 1 ? shade * 0.82 : shade) * cellLighting;
+        let lightingIdx = (rayMapY * mapW + rayMapX) * 3;
 
         let textureV0 = wallTexture.v0_ + vStart * (wallTexture.v1_ - wallTexture.v0_);
         let textureV1 = wallTexture.v0_ + vEnd * (wallTexture.v1_ - wallTexture.v0_);
 
-        glPushQuad(x, drawStart, 1, drawEnd - drawStart, u0, textureV0, u0, textureV1, shadeFogABGR(finalShade), fogFactor(distForFog));
+        glPushQuad(x, drawStart, 1, drawEnd - drawStart, u0, textureV0, u0, textureV1, shadeFogABGR(lightMap[lightingIdx], lightMap[lightingIdx + 1], lightMap[lightingIdx + 2]), fogFactor(distForFog));
     };
 
     for (let i = 0; i < lightCalculated.length; i++) {
-        if (lightCalculated[i] === 1) continue;
-        lightMap[i] += (AMBIENT - lightMap[i]) * min(LIGHT_CAP, LIGHT_DECAY * dt);
+        if (lightCalculated[i] === 0) {
+            let lIdx = i * 3;
+            lightMap[lIdx] += (AMBIENT - lightMap[lIdx]) * min(LIGHT_CAP, LIGHT_DECAY * dt);
+            lightMap[lIdx + 1] += (AMBIENT - lightMap[lIdx + 1]) * min(LIGHT_CAP, LIGHT_DECAY * dt);
+            lightMap[lIdx + 2] += (AMBIENT - lightMap[lIdx + 2]) * min(LIGHT_CAP, LIGHT_DECAY * dt);
+        }
     }
     updateLightmap(lightMap);
 };

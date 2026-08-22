@@ -2,8 +2,8 @@ import { assert } from "./__debug/debug";
 import { sfxEnemyAlert, sfxEnemyDeath, sfxEnemyMelee, sfxEnemyRanged, sfxLaserFire, zzfxPlay } from "./audio";
 import { glPushColorCircle, glPushQuad } from "./gl";
 import { AMBIENT, lightMap, mapData, mapH, mapW } from "./map";
-import { abs, atan2, circleOverlap, cos, floor, max, min, PI, random, sin, sqrt } from "./math";
-import { FOG_END, FOG_START, FOV, rayIsSolid, rayMove, zBuffer } from "./raycast";
+import { abs, atan2, circleOverlap, cos, floor, max, min, PI, randInt, random, sin, sqrt } from "./math";
+import { fogFactor, FOV, rayIsSolid, rayMove, zBuffer } from "./raycast";
 import { TEXTURE_CACHE } from "./texture";
 
 export let MAX_ENTITIES = 5000;
@@ -40,6 +40,16 @@ let RAINBOW = [
     0xffff00ff,
 ];
 
+let RAINBOWf = [
+    [1.5, 0, 0],
+    [1.5, 0.75, 0],
+    [1.5, 1.5, 0],
+    [0, 1.5, 0],
+    [0, 1.5, 1.5],
+    [0, 0, 1.5],
+    [1.5, 0, 1.5],
+];
+
 let BEAM_SPREAD = 0.12;
 let BEAM_RANGE = 20;
 let BEAM_STEP = 0.1;
@@ -50,7 +60,6 @@ let RANGED_SPEED = 1.15;
 let PROJECTILE_SPEED = 3.0;
 let MELEE_ATTACK_RANGE = 1.15;
 let RANGED_ATTACK_RANGE = 7.5;
-let RANGED_MIN_DIST = 3.8;
 let RANGED_MAX_DIST = 6.2;
 let MELEE_COOLDOWN = 1.1;
 let RANGED_COOLDOWN = 1.6;
@@ -104,7 +113,6 @@ let visIdx_ = new Int32Array(MAX_VISIBLE);
 let visDist_ = new Float32Array(MAX_VISIBLE);
 let visScreenX_ = new Float32Array(MAX_VISIBLE);
 let visHeight_ = new Float32Array(MAX_VISIBLE);
-let visLight_ = new Float32Array(MAX_VISIBLE);
 let visibleCount = 0;
 
 let particleTime = 0;
@@ -113,18 +121,12 @@ let floorScratchX = new Float32Array(256);
 let floorScratchY = new Float32Array(256);
 let floorScratchCount = 0;
 
-let fogFactor = (dist: number): number => {
-    let t = (dist - FOG_START) / (FOG_END - FOG_START);
-    t = t < 0 ? 0 : t > 1 ? 1 : t;
-    return t * t;
-};
-
-let modulateABGR = (abgr: number, light: number): number => {
-    let r = min(255, ((abgr >>> 0) & 0xff) * light);
-    let g = min(255, ((abgr >>> 8) & 0xff) * light);
-    let b = min(255, ((abgr >>> 16) & 0xff) * light);
+let modulateABGR = (abgr: number, r: number, g: number, b: number): number => {
+    let outR = min(255, ((abgr >>> 0) & 0xff) * r);
+    let outG = min(255, ((abgr >>> 8) & 0xff) * g);
+    let outB = min(255, ((abgr >>> 16) & 0xff) * b);
     let a = (abgr >>> 24) & 0xff;
-    return (a << 24) | (b << 16) | (g << 8) | floor(r);
+    return (a << 24) | (outB << 16) | (outG << 8) | floor(outR);
 };
 
 export let entityClear = (): void => {
@@ -389,7 +391,11 @@ export let fireRainbowBeam = (px: number, py: number, angle: number, charge: num
                     for (let ly = my - range; ly <= my + range; ly++) {
                         if (lx < 0 || lx >= mapW || ly < 0 || ly >= mapH) continue;
                         let dist = sqrt((mx - lx) * (mx - lx) + (my - ly) * (my - ly));
-                        lightMap[ly * mapW + lx] = max(lightMap[ly * mapW + lx], min(0.5 + charge, AMBIENT + max(0, 1.5 - 0.3 * dist)));
+                        let lightIdx = (ly * mapW + lx) * 3;
+                        let rnd = randInt(0, 6);
+                        lightMap[lightIdx] = max(lightMap[lightIdx], min(0.5 + charge, AMBIENT + max(0, RAINBOWf[rnd][0] - 0.3 * dist)));
+                        lightMap[lightIdx + 1] = max(lightMap[lightIdx + 1], min(0.5 + charge, AMBIENT + max(0.2, RAINBOWf[rnd][1] - 0.3 * dist)));
+                        lightMap[lightIdx + 2] = max(lightMap[lightIdx + 2], min(0.5 + charge, AMBIENT + max(0.2, RAINBOWf[rnd][2] - 0.3 * dist)));
                     }
                 }
             }
@@ -695,18 +701,10 @@ export let entityCollect = (px: number, py: number, angle: number): void => {
         if (screenX < -height || screenX > SCREEN_WIDTH + height) continue;
         if (visibleCount >= MAX_VISIBLE) continue;
 
-        let cellX = floor(x_[s]);
-        let cellY = floor(y_[s]);
-        let cellLight = AMBIENT;
-        if (cellX >= 0 && cellY >= 0 && cellX < mapW && cellY < mapH) {
-            cellLight = lightMap[cellY * mapW + cellX];
-        }
-
         visIdx_[visibleCount] = s;
         visDist_[visibleCount] = transformY;
         visScreenX_[visibleCount] = screenX;
         visHeight_[visibleCount] = height;
-        visLight_[visibleCount] = min(1.5, cellLight);
         visibleCount++;
     }
 
@@ -716,7 +714,6 @@ export let entityCollect = (px: number, py: number, angle: number): void => {
         let tDist = visDist_[i];
         let tSX = visScreenX_[i];
         let tH = visHeight_[i];
-        let tL = visLight_[i];
 
         let j = i - 1;
         while (j >= 0 && visDist_[j] < tDist) {
@@ -724,14 +721,12 @@ export let entityCollect = (px: number, py: number, angle: number): void => {
             visDist_[j + 1] = visDist_[j];
             visScreenX_[j + 1] = visScreenX_[j];
             visHeight_[j + 1] = visHeight_[j];
-            visLight_[j + 1] = visLight_[j];
             j--;
         }
         visIdx_[j + 1] = tIdx;
         visDist_[j + 1] = tDist;
         visScreenX_[j + 1] = tSX;
         visHeight_[j + 1] = tH;
-        visLight_[j + 1] = tL;
     }
 };
 
@@ -740,10 +735,15 @@ export let entityDraw = (px: number, py: number, angle: number, now: number): vo
         let s = visIdx_[i];
         if ((flags_[s] & FLAG_ACTIVE) === 0) continue;
 
+        let cellX = floor(x_[s]);
+        let cellY = floor(y_[s]);
         let dist = visDist_[i];
         let screenX = visScreenX_[i];
         let height = visHeight_[i];
-        let light = visLight_[i];
+        let lightIdx = (cellY * mapW + cellX) * 3;
+        let lightR = lightMap[lightIdx];
+        let lightG = lightMap[lightIdx + 1];
+        let lightB = lightMap[lightIdx + 2];
         let fog = fogFactor(dist);
 
         if ((flags_[s] & FLAG_PARTICLE) !== 0 || (flags_[s] & FLAG_PROJECTILE) !== 0 ||
@@ -767,7 +767,7 @@ export let entityDraw = (px: number, py: number, angle: number, now: number): vo
             }
 
             let col = floor(alpha * 255) << 24 | (colour_[s] & 0xffffff);
-            let lit = modulateABGR(col, light);
+            let lit = modulateABGR(col, lightR, lightG, lightB);
 
             glPushColorCircle(screenX - moteH * 0.5, drawY, moteH, lit);
             continue;
@@ -776,7 +776,7 @@ export let entityDraw = (px: number, py: number, angle: number, now: number): vo
         let tex = TEXTURE_CACHE[texId_[s]];
         assert(tex !== undefined, `missing texture from texture cache. id: ${texId_[s]}`);
 
-        let litColour = modulateABGR(colour_[s], light);
+        let litColour = modulateABGR(colour_[s], lightR, lightG, lightB);
 
         let halfW = height * 0.5;
         let drawStartX = screenX - halfW;

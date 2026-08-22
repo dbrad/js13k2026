@@ -71,7 +71,7 @@ export let glInit = (canvas: HTMLCanvasElement): void => {
     gl.texParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     gl.texParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     gl.texParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    gl.texImage2D(GL_TEXTURE_2D, 0, GL_R32F, 50, 50, 0, GL_RED, GL_FLOAT, new Float32Array(50 * 50));
+    gl.texImage2D(GL_TEXTURE_2D, 0, GL_RGB32F, 50, 50, 0, GL_RGB, GL_FLOAT, new Float32Array(50 * 50 * 3));
 
     program = createProgram(mainVertex, mainFragment);
     gl.useProgram(program);
@@ -115,7 +115,7 @@ export let glInit = (canvas: HTMLCanvasElement): void => {
 export let updateLightmap = (lightmapData: Float32Array) => {
     gl.activeTexture(GL_TEXTURE1);
     gl.bindTexture(GL_TEXTURE_2D, lightmapTex);
-    gl.texSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 50, 50, GL_RED, GL_FLOAT, lightmapData);
+    gl.texSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 50, 50, GL_RGB, GL_FLOAT, lightmapData);
     gl.activeTexture(GL_TEXTURE0);
 };
 

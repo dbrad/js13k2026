@@ -1,0 +1,26 @@
+Day 10 - 2026-08-22
+
+---
+
+Got the new custom map generator done.
+Rooms, doors, secret rooms, exist placement. The whole shebang.
+Removed tween.ts and event.ts, door logic is now handled directly.
+Changed lighting to handle full rgb now.
+
+---
+
+`-Zab0 -Zlr930 -Zmc4 -Zmd10 -Zpr14 -S0,1,2,3,6,13,21,42,51,92,321,393`
+
+-------------------------------------------------------------------------------
+Language                     files          blank        comment           code
+-------------------------------------------------------------------------------
+TypeScript                      16            532             54           2921
+GLSL                             2             17              1             82
+HTML                             1              2              0              6
+-------------------------------------------------------------------------------
+SUM:                            19            551             55           3009
+-------------------------------------------------------------------------------
+
+The file is under the limit.
+USED: 89.63% | 11931 BYTES
+LEFT: 10.37% |  1381 BYTES

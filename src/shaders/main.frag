@@ -49,10 +49,9 @@ void main() {
         vec2 world = pl + rayDir * rowDist;
         vec2 lightUV = world * (1.0f / 50.0f);
         lightUV = clamp(lightUV, 0.0f, 1.0f);
-        float light = texture(l, lightUV).r;
+        vec3 light = texture(l, lightUV).rgb;
 
-        float shade = min(1.0f, 1.0f / (1.0f + rowDist * 0.18f)) * 0.75f;
-        shade *= light;
+        vec3 shade = min(1.0f, 1.0f / (1.0f + rowDist * 0.18f)) * 0.75f * light;
 
         float halfSize = 0.5f / TEX_SIZE;
         vec2 t = clamp(fract(world * scale + 1e-5f), halfSize, 1.0f - halfSize);

@@ -94,9 +94,7 @@ window.addEventListener("load", async (): Promise<void> => {
 
                 if (A_PRESSED) {
                     if (interactionId > -1) {
-                        console.log(`open door ${interactionId}`);
                         doorAnimActive[interactionId] = 1;
-                        console.log(doorAnimActive);
                     }
                 }
 
@@ -180,7 +178,6 @@ window.addEventListener("load", async (): Promise<void> => {
 
                     doorAnimT[i] += dt * (1 / 0.6);
                     mapOffsetData[i] = doorAnimT[i];
-                    console.log(doorAnimT[i], mapOffsetData[i]);
 
                     if (doorAnimT[i] >= 1) {
                         doorAnimT[i] = 1;

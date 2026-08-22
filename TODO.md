@@ -15,12 +15,12 @@
     - Add delay to enemy noticing player before attacking. 
     - Make enemies take damage from rainbow beam.
     - Add particles / effect / quads / some sort of visual to enemy attacks
-- [ ] Add player attack cooldown
+- [x] Add player attack cooldown
 - [ ] Charge levels for attack
 - [ ] Add player health and taking damage
 - [ ] Lose condition
-- [ ] Cleanup / Simplify Map Generation
-- [ ] Exit placement
+- [x] Cleanup / Simplify Map Generation
+- [x] Exit placement
     - need to make sure the player and exit are spawned far away from eachother
 - [ ] Boss spawning
     - Boss will spawn in the final room to guard the exit (drop a key maybe)
@@ -39,9 +39,8 @@
 - [x] Cleanup shader files
     - shorten all param and uniform names
 - [ ] Psuedo-scenes (Menu, options, gameplay)
-- [ ] Cleanup / Simplify Proc-gen Textures
-    - Get breakable walls back in the game?
-- [ ] Consider removing tween and event systems
+- [x] Cleanup / Simplify Proc-gen Textures
+- [x] Consider removing tween and event systems
 - [ ] Juice
     - screen shake on hit
     - enemies and walls flash white on hit
