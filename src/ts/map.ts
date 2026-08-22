@@ -1,3 +1,4 @@
+import { assert } from "./__debug/debug";
 import { max, min, randInt, random } from "./math";
 
 export let mapW = 0;
@@ -158,8 +159,7 @@ export let generateDungeon = (width: number, height: number): [number, number] =
         }
     }
 
-    let secretsLeft = 3;
-    m: for (let mapY = 0; mapY < mapH - 5; mapY++) {
+    for (let mapY = 0; mapY < mapH - 5; mapY++) {
         for (let mapX = 0; mapX < mapW - 5; mapX++) {
             let validRoom = true;
             r: for (let roomY = mapY; roomY < mapY + 5; roomY++) {
@@ -173,14 +173,46 @@ export let generateDungeon = (width: number, height: number): [number, number] =
             if (validRoom) {
                 let i = addRoom(mapX, mapY, 5, 5, -1, -1);
                 rooms[i].type_ = ROOM_TYPE_SECRET;
-                // TODO(agent): check each wall, start at the center of the wall, if the next tile outward is a floor, replace the wall tile we checked from with a cracked wall
-                if (--secretsLeft === 0) {
-                    break m;
+                let rX = mapX;
+                let rY = mapY;
+                let rW = 5;
+                let rH = 5;
+                if (rY > 0 && mapData[(rY - 1) * mapW + (rX + 2)] === CELL_FLOOR) {
+                    mapData[rY * mapW + (rX + 2)] = CELL_CRACKED;
+                }
+                if (rY + rH < mapH && mapData[(rY + rH) * mapW + (rX + 2)] === CELL_FLOOR) {
+                    mapData[(rY + rH - 1) * mapW + (rX + 2)] = CELL_CRACKED;
+                }
+                if (rX > 0 && mapData[(rY + 2) * mapW + (rX - 1)] === CELL_FLOOR) {
+                    mapData[(rY + 2) * mapW + rX] = CELL_CRACKED;
+                }
+                if (rX + rW < mapW && mapData[(rY + 2) * mapW + (rX + rW)] === CELL_FLOOR) {
+                    mapData[(rY + 2) * mapW + (rX + rW - 1)] = CELL_CRACKED;
                 }
                 mapX += 4;
             }
         }
     }
-    // Find fartheest room from room 0, spawn player in middle of that
-    return [5, 5];
+    let bestRoomId = -1;
+    let maxDist = -1;
+    let boss = rooms[0];
+    let bossCx = boss.x_ + boss.w_ / 2;
+    let bossCy = boss.y_ + boss.h_ / 2;
+
+    for (let i = 0; i < rooms.length; i++) {
+        let r = rooms[i];
+        if (r.type_ === ROOM_TYPE_NORMAL) {
+            let rCx = r.x_ + r.w_ / 2;
+            let rCy = r.y_ + r.h_ / 2;
+            let dist = (rCx - bossCx) ** 2 + (rCy - bossCy) ** 2;
+            if (dist > maxDist) {
+                maxDist = dist;
+                bestRoomId = i;
+            }
+        }
+    }
+
+    assert(bestRoomId !== -1, "somehow no room to spawn player in");
+    rooms[bestRoomId].type_ = ROOM_TYPE_PLAYER;
+    return [rooms[bestRoomId].x_ + rooms[bestRoomId].w_ / 2, rooms[bestRoomId].y_ + rooms[bestRoomId].h_ / 2];
 };
