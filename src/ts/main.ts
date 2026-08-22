@@ -2,16 +2,14 @@ import version from "../../VERSION.txt";
 import { drawPerformanceMeter, initPerformanceMeter, performanceMark, tickPerformanceMeter, togglePerformanceDisplay } from "./__debug/debug";
 import { playMusic, sfxFootstep, sfxLaserCharge, zzfxInit, zzfxPlay } from "./audio";
 import { initCanvas } from "./canvas";
-import { entityAdd, entityClear, entityCollect, entityDraw, entityPlayerCollide, entitySpawnDust, entityUpdate, fireRainbowBeam, spawnEnemiesInRoom } from "./entity";
-import { eventProcess } from "./event";
+import { entityClear, entityCollect, entityDraw, entityPlayerCollide, entitySpawnDust, entityUpdate, fireRainbowBeam, spawnEnemiesInRoom } from "./entity";
 import { gl, glClear, glFlush, glInit, glPushColorQuad, glPushText, glPushTexture, uShake } from "./gl";
 import { A_PRESSED, B_IS_DOWN, B_PRESSED, DOWN_IS_DOWN, drawControls, initializeInput, isTouch, isTouchEvent, LEFT_IS_DOWN, lookDeltaX, RIGHT_IS_DOWN, UP_IS_DOWN, updateHardwareInput, updateInputState } from "./input";
-import { generateDungeon, mapOffsetData, rooms, updatePlayerTorch } from "./map";
+import { doorAnimActive, doorAnimT, generateDungeon, mapData, mapOffsetData, rooms, updatePlayerTorch } from "./map";
 import { cos, max, min, sin, sqrt } from "./math";
 import { interactionId, rayMove, rayRender, rayRenderFloorCeiling } from "./raycast";
 import { getShakeSum, shakeUpdate, shakeX, shakeY, updateHeadbob, zeroShake } from "./shake";
 import { loadTextureAtlas } from "./texture";
-import { tweenTo, tweenUpdate } from "./tween";
 
 window.addEventListener("load", async (): Promise<void> => {
     let VERSION = version;
@@ -93,12 +91,12 @@ window.addEventListener("load", async (): Promise<void> => {
 
                 updateHardwareInput();
                 updateInputState(delta, dt);
-                tweenUpdate(dt);
-                eventProcess();
 
                 if (A_PRESSED) {
                     if (interactionId > -1) {
-                        tweenTo(mapOffsetData, interactionId, 1, 0.6, EASE_SMOOTHSTEP, EVENT_DOOR_OPEN, interactionId);
+                        console.log(`open door ${interactionId}`);
+                        doorAnimActive[interactionId] = 1;
+                        console.log(doorAnimActive);
                     }
                 }
 
@@ -175,6 +173,20 @@ window.addEventListener("load", async (): Promise<void> => {
                 if (moving && footstepTimer <= 0) {
                     zzfxPlay(sfxFootstep);
                     footstepTimer = 0.28;
+                }
+
+                for (let i = 0; i < mapW * mapH; i++) {
+                    if (!doorAnimActive[i]) continue;
+
+                    doorAnimT[i] += dt * (1 / 0.6);
+                    mapOffsetData[i] = doorAnimT[i];
+                    console.log(doorAnimT[i], mapOffsetData[i]);
+
+                    if (doorAnimT[i] >= 1) {
+                        doorAnimT[i] = 1;
+                        doorAnimActive[i] = 0;
+                        mapData[i] = CELL_FLOOR;
+                    }
                 }
 
                 updateHeadbob(delta, moving, speed);
