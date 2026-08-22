@@ -29,13 +29,13 @@
 - [ ] Win condition
 - [x] Add zzfx back in
     - took abou 5% remaining space
-- [ ] Sound effects
+- [x] Sound effects
     - Use audio.ts and https://killedbyapixel.github.io/ZzFX/ to generate sound effects
-- [ ] Music
-    - Program some EDM / drum and bass music using zzfx and timing loops
+- [x] Music
 - [ ] Power ups? Leveling? progression?
     - Think about pickups, levels, stats, added charge levels, or something to give player sense of progression
     - Healing packs
+    - Key to exit the level
 - [x] Cleanup shader files
     - shorten all param and uniform names
 - [ ] Psuedo-scenes (Menu, options, gameplay)

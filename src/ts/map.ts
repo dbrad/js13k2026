@@ -1,4 +1,4 @@
-import { abs, floor, max, min, random } from "./math";
+import { abs, max, min, randInt, random } from "./math";
 
 export let mapW = 0;
 export let mapH = 0;
@@ -8,225 +8,156 @@ export let mapOffsetData: Float32Array;
 export let lightMap: Float32Array;
 export let lightCalculated: Int8Array;
 export let LIGHT_DECAY = 6.5;
+export let LIGHT_CAP = 2;
 
-export let AMBIENT = 0.25;
+export let AMBIENT = 0.15;
 export let PLAYER_TORCH_INTENSITY = 1.0;
+export let updatePlayerTorch = (charging: boolean) => {
+    PLAYER_TORCH_INTENSITY = charging ? 1.3 : 1;
+};
 
-export let rooms: { id_: number; x_: number; y_: number; w_: number; h_: number; centerX_: number; centerY_: number; }[] = [];
+type Room = { id_: number; x_: number; y_: number; w_: number; h_: number; n_: number[]; };
+export let rooms: Room[] = [];
 
-export let generateDungeon = (width: number, height: number, minRoomSize: number, maxRoomSize: number, maxRooms: number, loopChance: number = 0.15, deadEndChance: number = 0.20): [number, number] => {
+export let generateDungeon = (width: number, height: number, minRoomSize = 5, maxRoomSize = 9, maxRooms = 20): [number, number] => {
     mapW = width;
     mapH = height;
-    lightMap = new Float32Array(width * height);
+    lightMap = new Float32Array(width * height).fill(AMBIENT);
     lightCalculated = new Int8Array(width * height);
-    lightMap.fill(AMBIENT);
-
     mapData = new Int8Array(width * height).fill(CELL_WALL);
     mapOffsetData = new Float32Array(width * height);
     rooms = [];
 
-    let intersects = (r1: typeof rooms[0], r2: typeof rooms[0]): boolean => {
-        return (
-            r1.x_ < r2.x_ + r2.w_ + 1 &&
-            r1.x_ + r1.w_ > r2.x_ - 1 &&
-            r1.y_ < r2.y_ + r2.h_ + 1 &&
-            r1.y_ + r1.h_ > r2.y_ - 1
-        );
-    };
-
-    let carveHorizontalTunnel = (x1: number, x2: number, y: number) => {
-        let start = min(x1, x2);
-        let end = max(x1, x2);
-        for (let x = start; x <= end; x++) {
-            let index = y * width + x;
-            if (mapData[index] === CELL_WALL) {
-                mapData[index] = CELL_FLOOR;
-            }
+    let startX = 2, startY = 2;
+    let addRoom = (x: number, y: number, w: number, h: number, parent: number, dir: number): number => {
+        for (let ry = y + 1; ry < y + (h - 2); ry++)
+            for (let rx = x + 1; rx < x + (w - 2); rx++)
+                mapData[ry * width + rx] = CELL_FLOOR;
+        let newRoom: Room = { id_: rooms.length, x_: x + 1, y_: y + 1, w_: w - 2, h_: h - 2, n_: [WALL_FREE, WALL_FREE, WALL_FREE, WALL_FREE] };
+        if (x < 4) newRoom.n_[WALL_WEST] = WALL_BLOCKED;
+        if (y < 4) newRoom.n_[WALL_NORTH] = WALL_BLOCKED;
+        if (x + w >= 46) newRoom.n_[WALL_EAST] = WALL_BLOCKED;
+        if (y + h >= 46) newRoom.n_[WALL_SOUTH] = WALL_BLOCKED;
+        rooms.push(newRoom);
+        if (parent > -1) {
+            newRoom.n_[(dir + 2) % 4] = parent;
+            rooms[parent].n_[dir] = newRoom.id_;
         }
+        return newRoom.id_;
     };
 
-    let carveVerticalTunnel = (y1: number, y2: number, x: number) => {
-        let start = min(y1, y2);
-        let end = max(y1, y2);
-        for (let y = start; y <= end; y++) {
-            let index = y * width + x;
-            if (mapData[index] === CELL_WALL) {
-                mapData[index] = CELL_FLOOR;
-            }
-        }
-    };
-
-    let placeCorridorEntrances = () => {
-        let isFloor = (x: number, y: number) =>
-            mapData[y * width + x] === CELL_FLOOR;
-
-        for (let y = 2; y < height - 2; y++) {
-            for (let x = 2; x < width - 2; x++) {
-                if (!isFloor(x, y)) continue;
-
-                // Room below, corridor continues above
-                if (mapData[y * width + (x - 1)] === CELL_WALL &&
-                    mapData[y * width + (x + 1)] === CELL_WALL &&
-                    isFloor(x, y - 1) &&
-                    isFloor(x - 1, y + 1) &&
-                    isFloor(x, y + 1) &&
-                    isFloor(x + 1, y + 1)
-                ) {
-                    mapData[y * width + x] = CELL_HORIZONTAL_DOOR;
-                    continue;
-                }
-
-                // Room above, corridor continues below
-                if (mapData[y * width + (x - 1)] === CELL_WALL &&
-                    mapData[y * width + (x + 1)] === CELL_WALL &&
-                    isFloor(x, y + 1) &&
-                    isFloor(x - 1, y - 1) &&
-                    isFloor(x, y - 1) &&
-                    isFloor(x + 1, y - 1)
-                ) {
-                    mapData[y * width + x] = CELL_HORIZONTAL_DOOR;
-                    continue;
-                }
-
-                // Room right, corridor continues left
-                if (mapData[(y - 1) * width + x] === CELL_WALL &&
-                    mapData[(y + 1) * width + x] === CELL_WALL &&
-                    isFloor(x - 1, y) &&
-                    isFloor(x + 1, y - 1) &&
-                    isFloor(x + 1, y) &&
-                    isFloor(x + 1, y + 1)
-                ) {
-                    mapData[y * width + x] = CELL_VERTICAL_DOOR;
-                    continue;
-                }
-
-                // Room left, corridor continues right
-                if (mapData[(y - 1) * width + x] === CELL_WALL &&
-                    mapData[(y + 1) * width + x] === CELL_WALL &&
-                    isFloor(x + 1, y) &&
-                    isFloor(x - 1, y - 1) &&
-                    isFloor(x - 1, y) &&
-                    isFloor(x - 1, y + 1)
-                ) {
-                    mapData[y * width + x] = CELL_VERTICAL_DOOR;
-                    continue;
-                }
-            }
-        }
-    };
-
-    let connectRooms = (r1: typeof rooms[0], r2: typeof rooms[0]) => {
-        if (random() < 0.5) {
-            carveHorizontalTunnel(r1.centerX_, r2.centerX_, r1.centerY_);
-            carveVerticalTunnel(r1.centerY_, r2.centerY_, r2.centerX_);
+    let addDoor = (room1Id: number, room2Id: number, wall: number, type: number = 0) => {
+        if (type === 1) {
+            let room = rooms[room1Id];
+            let x = randInt(room.x_ + 1, room.x_ + (room.w_ - 2));
+            mapData[(room.y_ - 1) * mapW + x] = CELL_HORIZONTAL_DOOR;
+            mapData[(room.y_ - 2) * mapW + x] = CELL_EXIT;
         } else {
-            carveVerticalTunnel(r1.centerY_, r2.centerY_, r1.centerX_);
-            carveHorizontalTunnel(r1.centerX_, r2.centerX_, r2.centerY_);
+            let room1 = rooms[room1Id];
+            let room2 = rooms[room2Id];
+            let x = 0;
+            let y = 0;
+            switch (wall) {
+                case WALL_NORTH:
+                case WALL_SOUTH:
+                    x = max(0, randInt(max(room1.x_, room2.x_), min(room1.x_ + room1.h_, room2.x_ + room2.h_)));
+                    y = max(0, wall === WALL_NORTH ? room1.y_ : room1.y_ + room1.h_ - 1);
+                    mapData[y * mapW + x] = CELL_HORIZONTAL_DOOR;
+                    break;
+                case WALL_WEST:
+                case WALL_EAST:
+                    // x = max(0, wall === WALL_WEST ? parentRoom.x_ - testW : parentRoom.x_ + parentRoom.w_);
+                    // y = max(0, randInt(parentRoom.y_ - testH - 2, parentRoom.y_ + testH - 2));
+                    break;
+            }
         }
     };
 
-    // 1. Placement
-    let roomIdCounter = 0;
-    let px = 0;
-    let py = 0;
-    for (let i = 0; i < maxRooms; i++) {
-        let w = floor(random() * (maxRoomSize - minRoomSize + 1)) + minRoomSize;
-        let h = floor(random() * (maxRoomSize - minRoomSize + 1)) + minRoomSize;
-        let x = floor(random() * (width - w - 2)) + 1;
-        let y = floor(random() * (height - h - 2)) + 1;
+    let getOverlap = (nx: number, ny: number, nw: number, nh: number, oldRoom: Room): boolean => {
+        let x = Math.max(nx, oldRoom.x_);
+        let y = Math.max(ny, oldRoom.y_);
+        let w = Math.min(nx + nw, oldRoom.x_ + oldRoom.w_) - x;
+        let h = Math.min(ny + nh, oldRoom.y_ + oldRoom.h_) - y;
 
-        let newRoom = {
-            id_: roomIdCounter,
-            x_: x, y_: y, w_: w, h_: h,
-            centerX_: floor(x + w / 2),
-            centerY_: floor(y + h / 2)
-        };
+        return w > 0 && h > 0;
+    };
 
-        let overlap = false;
-        for (let otherRoom of rooms) {
-            if (intersects(newRoom, otherRoom)) {
-                overlap = true;
+    let i = addRoom(startX, startY, 12, 12, -1, -1);
+    addDoor(i, -1, random() > 0.5 ? WALL_NORTH : WALL_WEST, 1);
+    rooms[i].n_[WALL_NORTH] = WALL_BLOCKED;
+    rooms[i].n_[WALL_WEST] = WALL_BLOCKED;
+
+    let parentRoom: Room | null = rooms[i];
+    let whoops = 100;
+    while (parentRoom && --whoops) {
+        let wall = -1;
+        for (let w = 0; w < 4; w++) {
+            if (parentRoom.n_[w] === WALL_FREE) {
+                wall = w;
+            }
+        }
+        if (wall > -1) {
+            let w = 5;
+            let h = 5;
+            let x: number = 0, y: number = 0;
+            let maxW = randInt(6, 12);
+            let maxH = randInt(6, 12);
+            let testW = w;
+            let testH = h;
+
+            switch (wall) {
+                case WALL_NORTH:
+                case WALL_SOUTH:
+                    x = max(0, randInt(parentRoom.x_ - (w - 2), parentRoom.x_ + (parentRoom.w_ - 1)));
+                    y = max(0, wall === WALL_NORTH ? parentRoom.y_ - h : parentRoom.y_ + parentRoom.h_);
+                    break;
+                case WALL_WEST:
+                case WALL_EAST:
+                    x = max(0, wall === WALL_WEST ? parentRoom.x_ - w : parentRoom.x_ + parentRoom.w_);
+                    y = max(0, randInt(parentRoom.y_ - (h - 2), parentRoom.y_ + (parentRoom.h_ - 2)));
+                    break;
+            }
+            let testX = x;
+            let testY = y;
+
+            while (true) {
+                let doesOverlap = false;
+                for (let roomId = 0; roomId < rooms.length; roomId++) {
+                    doesOverlap ||= getOverlap(testX, testY, testW, testH, rooms[roomId]);
+                    if (doesOverlap) break;
+                }
+                if (doesOverlap || w >= maxW || h >= maxH || x < 0 || y < 0 || x + w > mapW || y + h > mapH) {
+                    break;
+                }
+                w = testW;
+                h = testH;
+                x = testX;
+                y = testY;
+                if (random() < 0.5) {
+                    if (WALL_WEST) testX++;
+                    testW++;
+                } else {
+                    if (WALL_NORTH) testY++;
+                    testH++;
+                }
+            }
+            if (w === 5 && h === 5 && testW === 5 && testH === 5) {
+                parentRoom.n_[wall] = WALL_BLOCKED;
+                continue;
+            }
+            let newRoomId = addRoom(x, y, w, h, parentRoom.id_, wall);
+            addDoor(parentRoom.id_, newRoomId, wall);
+        }
+        parentRoom = null;
+        for (let ri = 0; ri < rooms.length; ri++) {
+            if (rooms[ri].n_[WALL_NORTH] === WALL_FREE || rooms[ri].n_[WALL_EAST] === WALL_FREE ||
+                rooms[ri].n_[WALL_SOUTH] === WALL_FREE || rooms[ri].n_[WALL_WEST] === WALL_FREE) {
+                parentRoom = rooms[ri];
                 break;
             }
         }
-
-        if (!overlap) {
-            for (let ry = newRoom.y_; ry < newRoom.y_ + newRoom.h_; ry++) {
-                for (let rx = newRoom.x_; rx < newRoom.x_ + newRoom.w_; rx++) {
-                    mapData[ry * width + rx] = CELL_FLOOR;
-                }
-            }
-            if (px === 0 && py === 0) {
-                px = newRoom.centerX_;
-                py = newRoom.centerY_;
-            }
-            rooms.push(newRoom);
-            roomIdCounter++;
-        }
     }
-    if (rooms.length < 2) return [px, py];
-
-    // 2. Proximity Graph Generation
-    let connections = new Set<string>();
-    let connectedRoomIds = new Set<number>();
-
-    connectedRoomIds.add(rooms[0].id_);
-
-    let getEdgeKey = (id1: number, id2: number) => `${min(id1, id2)}-${max(id1, id2)}`;
-
-    while (connectedRoomIds.size < rooms.length) {
-        let minDistance = Infinity;
-        let bestEdge: [typeof rooms[0], typeof rooms[0]] | null = null;
-
-        for (let r1 of rooms) {
-            if (!connectedRoomIds.has(r1.id_)) continue;
-
-            for (let r2 of rooms) {
-                if (connectedRoomIds.has(r2.id_)) continue;
-
-                let dist = abs(r1.centerX_ - r2.centerX_) + abs(r1.centerY_ - r2.centerY_);
-                if (dist < minDistance) {
-                    minDistance = dist;
-                    bestEdge = [r1, r2];
-                }
-            }
-        }
-
-        if (bestEdge) {
-            let [r1, r2] = bestEdge;
-            if (random() < deadEndChance && connectedRoomIds.size > 1) {
-                continue;
-            }
-
-            connectRooms(r1, r2);
-            connections.add(getEdgeKey(r1.id_, r2.id_));
-            connectedRoomIds.add(r2.id_);
-        } else {
-            let unconnected = rooms.find(r => !connectedRoomIds.has(r.id_));
-            if (unconnected) {
-                connectedRoomIds.add(unconnected.id_);
-            }
-        }
-    }
-
-    // 3. Loop Generation
-    for (let i = 0; i < rooms.length; i++) {
-        for (let j = i + 1; j < rooms.length; j++) {
-            let r1 = rooms[i];
-            let r2 = rooms[j];
-            let edgeKey = getEdgeKey(r1.id_, r2.id_);
-            if (!connections.has(edgeKey)) {
-                let dist = abs(r1.centerX_ - r2.centerX_) + abs(r1.centerY_ - r2.centerY_);
-                let maxSpread = max(width, height) * 0.4;
-                if (dist < maxSpread && random() < loopChance) {
-                    connectRooms(r1, r2);
-                    connections.add(edgeKey);
-                }
-            }
-        }
-    }
-
-    placeCorridorEntrances();
-
-    return [px, py];
+    console.table(rooms);
+    // Find farthest room
+    return [5, 5];
 };

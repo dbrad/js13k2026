@@ -100,6 +100,17 @@ declare const CELL_WALL: 1;
 declare const CELL_CRACKED: 2;
 declare const CELL_HORIZONTAL_DOOR: 3;
 declare const CELL_VERTICAL_DOOR: 4;
+declare const CELL_LOCKED_H: 5;
+declare const CELL_LOCKED_V: 6;
+declare const CELL_EXIT: 7;
+
+declare const WALL_NORTH: 0;
+declare const WALL_EAST: 1;
+declare const WALL_SOUTH: 2;
+declare const WALL_WEST: 3;
+
+declare const WALL_BLOCKED: -2;
+declare const WALL_FREE: -1;
 
 declare const EASE_LINEAR: 0;
 declare const EASE_SMOOTHSTEP: 1;

@@ -1,13 +1,13 @@
 import version from "../../VERSION.txt";
 import { drawPerformanceMeter, initPerformanceMeter, performanceMark, tickPerformanceMeter, togglePerformanceDisplay } from "./__debug/debug";
-import { zzfxInit } from "./audio";
+import { playMusic, sfxFootstep, sfxLaserCharge, zzfxInit, zzfxPlay } from "./audio";
 import { initCanvas } from "./canvas";
 import { entityAdd, entityClear, entityCollect, entityDraw, entityPlayerCollide, entitySpawnDust, entityUpdate, fireRainbowBeam, spawnEnemiesInRoom } from "./entity";
 import { eventProcess } from "./event";
 import { gl, glClear, glFlush, glInit, glPushColorQuad, glPushText, glPushTexture, uShake } from "./gl";
 import { A_PRESSED, B_IS_DOWN, B_PRESSED, DOWN_IS_DOWN, drawControls, initializeInput, isTouch, isTouchEvent, LEFT_IS_DOWN, lookDeltaX, RIGHT_IS_DOWN, UP_IS_DOWN, updateHardwareInput, updateInputState } from "./input";
-import { generateDungeon, mapOffsetData, rooms } from "./map";
-import { cos, min, sin, sqrt } from "./math";
+import { generateDungeon, mapOffsetData, rooms, updatePlayerTorch } from "./map";
+import { cos, max, min, sin, sqrt } from "./math";
 import { interactionId, rayMove, rayRender, rayRenderFloorCeiling } from "./raycast";
 import { getShakeSum, shakeUpdate, shakeX, shakeY, updateHeadbob, zeroShake } from "./shake";
 import { loadTextureAtlas } from "./texture";
@@ -63,6 +63,8 @@ window.addEventListener("load", async (): Promise<void> => {
 
     canvas.addEventListener("touchstart", initializeGame);
     canvas.addEventListener("pointerdown", initializeGame);
+    let footstepTimer = 0.28;
+    let shootCooldown = 0;
 
     let then = performance.now();
     let tick = (now: number): void => {
@@ -81,6 +83,8 @@ window.addEventListener("load", async (): Promise<void> => {
 
             performanceMark("update_start");
             {
+                shootCooldown = max(0, shootCooldown - dt);
+                playMusic(delta);
                 let speed = 3 * dt;
                 let moving = false;
 
@@ -98,27 +102,33 @@ window.addEventListener("load", async (): Promise<void> => {
                     }
                 }
 
-                if (B_PRESSED && isTouch) {
-                    if (!isCharging) {
+                if (isTouch && B_PRESSED) {
+                    // Mobile 2-tap to charge and shoot
+                    if (!isCharging && shootCooldown <= 0) {
+                        zzfxPlay(sfxLaserCharge);
                         isCharging = true;
                     } else {
                         fireRainbowBeam(px, py, angle, charge);
+                        shootCooldown = 1;
                         charge = 0;
                         isCharging = false;
                     }
-                } else if (B_IS_DOWN && !isTouch && !isCharging) {
+                } else if (!isTouch && B_IS_DOWN && !isCharging && shootCooldown <= 0) {
+                    // Desktop hold to charge
+                    zzfxPlay(sfxLaserCharge);
                     isCharging = true;
                     wasBPressed = true;
                 } else if (wasBPressed && !B_IS_DOWN) {
-                    if (!isTouch && isCharging && charge > 0) {
+                    // Desktop release to shoot
+                    if (isCharging) {
                         fireRainbowBeam(px, py, angle, charge);
+                        shootCooldown = 1;
                         charge = 0;
-                        isCharging = false;
-                    } else {
                         isCharging = false;
                     }
                     wasBPressed = false;
                 }
+
                 if (isCharging) {
                     charge = min(charge + chargeSpeed * dt, MAX_CHARGE);
                 }
@@ -160,6 +170,12 @@ window.addEventListener("load", async (): Promise<void> => {
                 });
 
                 angle += lookDeltaX;
+                footstepTimer -= dt;
+                updatePlayerTorch(isCharging);
+                if (moving && footstepTimer <= 0) {
+                    zzfxPlay(sfxFootstep);
+                    footstepTimer = 0.28;
+                }
 
                 updateHeadbob(delta, moving, speed);
                 shakeUpdate(delta);
@@ -185,8 +201,11 @@ window.addEventListener("load", async (): Promise<void> => {
                 }
 
                 glPushColorQuad(0, SCREEN_HEIGHT - 32, SCREEN_WIDTH, 16, 0xff333333);
-                glPushColorQuad(0, SCREEN_HEIGHT - 32, SCREEN_WIDTH * charge, 16, 0xff00ff00);
-
+                if (shootCooldown > 0) {
+                    glPushColorQuad(0, SCREEN_HEIGHT - 32, SCREEN_WIDTH * shootCooldown, 16, 0xff0000ff);
+                } else {
+                    glPushColorQuad(0, SCREEN_HEIGHT - 32, SCREEN_WIDTH * charge, 16, 0xff00ff00);
+                }
                 drawControls();
                 if (DEBUG) {
                     drawPerformanceMeter(px, py);

@@ -1,0 +1,28 @@
+Day 09 - 2026-08-21
+
+---
+
+Really dialed in sound effects and music
+Added a shoot cooldown for the player.
+Played with lighting a bit.
+Player's proximity light now increases while charing the laser.
+Refactor pass on proc gen textures.
+Began a complete rewrite of the map system. It is not going well.
+
+---
+
+`-Zab0 -Zlr930 -Zmc4 -Zmd10 -Zpr14 -S0,1,2,3,6,7,13,21,42,57,324,449`
+
+-------------------------------------------------------------------------------
+Language                     files          blank        comment           code
+-------------------------------------------------------------------------------
+TypeScript                      18            549             57           3010
+GLSL                             2             17              1             83
+HTML                             1              2              0              6
+-------------------------------------------------------------------------------
+SUM:                            21            568             58           3099
+-------------------------------------------------------------------------------
+
+The file is under the limit.
+USED: 90.00% | 11981 BYTES
+LEFT: 10.00% |  1331 BYTES

@@ -1,5 +1,5 @@
 import { gl, glPushColorQuad, glPushQuad, uDir, updateLightmap, uPlane, uPlayer } from "./gl";
-import { PLAYER_TORCH_INTENSITY, lightMap, LIGHT_DECAY, lightCalculated, AMBIENT, mapW, mapData, mapH, mapOffsetData } from "./map";
+import { PLAYER_TORCH_INTENSITY, lightMap, LIGHT_DECAY, lightCalculated, AMBIENT, mapW, mapData, mapH, mapOffsetData, LIGHT_CAP } from "./map";
 import { abs, clamp, cos, floor, max, min, sin, sqrt } from "./math";
 import { TEXTURE_CACHE } from "./texture";
 
@@ -48,7 +48,7 @@ export let rayRender = (px: number, py: number, angle: number, now: number, dt: 
 
     let playerIdx = playerY * mapW + playerX;
     let desired = PLAYER_TORCH_INTENSITY - fading;
-    lightMap[playerIdx] += (desired - lightMap[playerIdx]) * min(1, LIGHT_DECAY * dt);
+    lightMap[playerIdx] += (desired - lightMap[playerIdx]) * min(LIGHT_CAP, LIGHT_DECAY * dt);
     lightCalculated[playerIdx] = 1;
 
     for (let x = 0; x < SCREEN_WIDTH; x++) {
@@ -112,7 +112,7 @@ export let rayRender = (px: number, py: number, angle: number, now: number, dt: 
                 let dy = rayMapY - playerY;
                 let dist = sqrt(dx * dx + dy * dy);
                 let targetLightLevel = clamp(PLAYER_TORCH_INTENSITY - (0.3 * dist) - fading, AMBIENT, 1);
-                lightMap[idx] += (targetLightLevel - lightMap[idx]) * min(1, LIGHT_DECAY * dt);
+                lightMap[idx] += (targetLightLevel - lightMap[idx]) * min(LIGHT_CAP, LIGHT_DECAY * dt);
                 lightCalculated[idx] = 1;
             }
 
@@ -218,7 +218,7 @@ export let rayRender = (px: number, py: number, angle: number, now: number, dt: 
 
     for (let i = 0; i < lightCalculated.length; i++) {
         if (lightCalculated[i] === 1) continue;
-        lightMap[i] += (AMBIENT - lightMap[i]) * min(1, LIGHT_DECAY * dt);
+        lightMap[i] += (AMBIENT - lightMap[i]) * min(LIGHT_CAP, LIGHT_DECAY * dt);
     }
     updateLightmap(lightMap);
 };

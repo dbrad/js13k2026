@@ -89,37 +89,129 @@ let zzfxGenerate = (volume = 1, randomness = .05, frequency = 220, attack = 0, s
 
 export let zzfx = (m: (number | undefined)[]) => zzfxPlay(zzfxGenerate(...m));
 
-let zzfxVolume: number = 0.3;
+let zzfxVolume: number = 0.2;
 let zzfxSampleRate: number = 44100;
 let zzfxContext: AudioContext;
 
-export let boop: number[];
-export let boopGood: number[];
-export let playerShoot: number[];
-export let enemyShoot: number[];
+// ─── SFX ────────────────────────────────────────────────
+export let sfxFootstep: number[];
+export let sfxLaserCharge: number[];
+export let sfxLaserFire: number[];
+export let sfxPlayerHurt: number[];
+export let sfxEnemyMelee: number[];
+export let sfxEnemyAlert: number[];
+export let sfxEnemyRanged: number[];
+export let sfxEnemyDeath: number[];
 
+// ─── Ambient Music Layers ───────────────────────────────
+let droneA: number[];
+let droneB: number[];
+let pulse: number[];
+let pad: number[];
 let bass: number[];
 let snare: number[];
-let hihat: number[];
-let bassSynthC: number[];
-let bassSynthB: number[];
-let bassSynthA: number[];
 
 export let zzfxInit = (): void => {
     if (!zzfxContext) {
         zzfxContext = new AudioContext();
     }
-    boop = zzfxGenerate(...[, , , .05, .05, , , , , , 200, .06, , , , , , .5, .05]);
-    boopGood = zzfxGenerate(...[, , 440, .05, .05, , , , , , 200, .06, , , , , , .5, .05, 1]);
-    playerShoot = zzfxGenerate(...[.6, , , .02, , .05, 4, , , , , , , , , , .2, , .01]);
-    enemyShoot = zzfxGenerate(...[2, , 880, .28, , 0, 2, 4, , -83, 45, .06, .08, , , , .3, .7, .08, .3]);
+
+    // Player Footsteps – soft, slightly organic hoof thud
+    sfxFootstep = zzfxGenerate(...[
+        .12, .18, 95,           // vol, rand, freq
+        .005, .015, .06,        // attack, sustain, release
+        4, 1.6,                 // noise wave, shapeCurve
+        , , , , ,               // no slide / jump
+        2.8,                    // high noise amount
+        , .12, .08              // bitcrush lightly, short delay for body
+    ]);
+
+    // Player Laser Charging – rising magical energy
+    sfxLaserCharge = zzfxGenerate(...[.25, , 354, .2, 1, .5, 3, 2, 1, , , , , , 40, , , .5, , , 308]);
+
+    // Player Laser Firing – bright rainbow beam zap
+    sfxLaserFire = zzfxGenerate(...[
+        .7, .03, 880, .02, .05, .18, 1, 1.4, -12, 3, 220, .04, , .1, .8, , .05, .9, .02
+    ]);
+
+    // Player Hurt – sharp, painful unicorn cry
+    sfxPlayerHurt = zzfxGenerate(...[
+        .8, .08, 320, .01, .02, .22, 3, 2.2, -8, , -180, .08, , 1.5, , .1, .15
+    ]);
+
+    // Enemy Melee Attack – heavy occult swipe
+    sfxEnemyMelee = zzfxGenerate(...[
+        .9, .05, 110, .01, .04, .18, 3, 1.9, , , , , , 2.2, , .15, .2
+    ]);
+
+    // Enemy Alert Noise – short, creepy vocal-ish chirp
+    sfxEnemyAlert = zzfxGenerate(...[
+        .55, .1, 520, .02, .05, .12, 2, 2.4, 4, , 180, .06, , .8, , .08, .1
+    ]);
+
+    // Enemy Ranged Attack – dark energy bolt
+    sfxEnemyRanged = zzfxGenerate(...[
+        .65, .04, 280, .03, .08, .22, 1, 1.7, -6, 2, -90, .05, , .4, 1.1, , .12, .7, .04
+    ]);
+
+    // Enemy Death Cry – distorted, dying cultist scream
+    sfxEnemyDeath = zzfxGenerate(...[
+        1, .12, 180, .02, .15, .4, 3, 2.6, -4, , -120, .12, , 3, , .2, .25
+    ]);
+
+    // ─── Dark Ambient Layers ────────────────────────────
+    // Low ominous drone (foundation)
+    droneA = zzfxGenerate(...[
+        .35, 0, 55, .5, 4, 3, 0, 1, , , , , , .15, .4, , .4, .6, .8, .3, -40
+    ]);
+
+    // Slightly higher, more dissonant drone
+    droneB = zzfxGenerate(...[
+        .28, 0, 82.5, .6, 3.5, 2.8, 0, 1.1, , , , , , .2, .6, , .35, .55, .7, .4, -55
+    ]);
+
+    // Slow pulse / heartbeat
+    pulse = zzfxGenerate(...[
+        .4, 0, 48, .08, .4, .6, 2, .8, , , , , .5, 1.2, , , .2, .7, .3
+    ]);
+
+    // Distant cold pad (adds atmosphere)
+    pad = zzfxGenerate(...[
+        .22, 0, 110, 1, 3, 2.5, 0, 1.3, , , , , , .1, .3, , .5, .4, .9, .5, -30
+    ]);
 
     snare = zzfxGenerate(...[.9, , 655, , , .09, 3, 1.65, , , , , .02, 3.8, -.1, , .2]);
-    hihat = zzfxGenerate(...[.7, , 2200, , , .04, 3, 2, , , 800, .02, , 4.8, , .01, .1]);
     bass = zzfxGenerate(...[2.25, , 43, , , .25, , , , , , , , 2]);
-
-    bassSynthC = zzfxGenerate(...[.6, 0, 65.40639, .08, 1.5, 1, 2, .2, , , , , , .1, , , .19, .42, .15]);
-    bassSynthB = zzfxGenerate(...[.6, 0, 123.4708, .08, .96, 1, 2, .2, , , , , , .1, , , .19, .42, .15]);
-    bassSynthA = zzfxGenerate(...[.6, 0, 110, .08, 1.25, 1, 2, .2, , , , , , .1, , , .19, .42, .15]);
 };
 
+let beat = 0;
+let timer = 0;
+let bpm = (1 / (55 / 60) * 1000) * 0.25;
+
+export let playMusic = (delta: number) => {
+    // if (gameState[GS_MUTEMUSIC]) return;
+
+    timer -= delta;
+    if (timer <= 0) {
+        timer = bpm;
+
+        if (beat % 16 === 0) {
+            zzfxPlay(bass);
+        }
+        if ((beat - 6) % 16 === 0) {
+            zzfxPlay(snare);
+        }
+
+        // Continuous low drones (play every few bars so they overlap and never die)
+        if (beat % 32 === 0) zzfxPlay(droneA);
+        if (beat % 48 === 16) zzfxPlay(droneB);
+
+        // Slow pulse every 8 beats
+        if (beat % 32 === 0) zzfxPlay(pulse);
+
+        // Sparse cold pad
+        if (beat % 64 === 24) zzfxPlay(pad);
+
+        beat = (beat + 1) % 128;
+    }
+};

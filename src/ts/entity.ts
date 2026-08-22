@@ -1,5 +1,5 @@
 import { assert } from "./__debug/debug";
-import { playerShoot, zzfxPlay } from "./audio";
+import { sfxEnemyAlert, sfxEnemyDeath, sfxEnemyMelee, sfxEnemyRanged, sfxLaserFire, zzfxPlay } from "./audio";
 import { glPushColorCircle, glPushQuad } from "./gl";
 import { AMBIENT, lightMap, mapData, mapH, mapW } from "./map";
 import { abs, atan2, circleOverlap, cos, floor, max, min, PI, random, sin, sqrt } from "./math";
@@ -268,7 +268,7 @@ let spawnPseudoMelee = (tx: number, ty: number, dmg: number): void => {
 };
 
 export let fireRainbowBeam = (px: number, py: number, angle: number, charge: number = 1.0): void => {
-    zzfxPlay(playerShoot);
+    zzfxPlay(sfxLaserFire);
     let dmg = BEAM_BASE_DAMAGE * (0.7 + charge * 0.6);
     let range = floor(3 + 2 * charge);
 
@@ -337,6 +337,7 @@ export let fireRainbowBeam = (px: number, py: number, angle: number, charge: num
                         burstParticles(x_[es], y_[es], 0.5, 12, 0xffffffff, 4.0, 0.4);
                         burstParticles(x_[es], y_[es], 0.4, 6, RAINBOW[(i + 3) % 7], 2.5, 0.35);
                         flags_[es] = 0;
+                        zzfxPlay(sfxEnemyDeath);
                         // TODO: Do damage based on charge, not 1-shot
                         entityRemove(ei);
                     }
@@ -535,6 +536,7 @@ export let entityUpdate = (dt: number, px: number, py: number): void => {
 
                 if (alert_[s] < 0) {
                     if (hasLineOfSight(x_[s], y_[s], px, py)) {
+                        zzfxPlay(sfxEnemyAlert);
                         alert_[s] = NOTICE_DELAY_MIN + random() * (NOTICE_DELAY_MAX - NOTICE_DELAY_MIN);
                     } else {
                         if (random() < 0.01) {
@@ -571,8 +573,10 @@ export let entityUpdate = (dt: number, px: number, py: number): void => {
                     if (dist <= attackRange && lastAttackTime__[s] <= 0) {
                         lastAttackTime__[s] = cooldown;
                         if (typ === ENEMY_RANGED) {
+                            zzfxPlay(sfxEnemyRanged);
                             spawnProjectile(x_[s], y_[s], edx, edy, damage_[s], 0xff2222ff);
                         } else {
+                            zzfxPlay(sfxEnemyMelee);
                             spawnPseudoMelee(px, py, damage_[s]);
                         }
                     }
