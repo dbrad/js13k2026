@@ -29,7 +29,7 @@ window.addEventListener("load", async (): Promise<void> => {
     let isCharging = false;
     let wasBPressed = false;
 
-    [px, py] = generateDungeon(mapW, mapH, 4, 7, 50);
+    [px, py] = generateDungeon(mapW, mapH);
     for (let i = 1; i < rooms.length; i++) {
         let r = rooms[i];
         spawnEnemiesInRoom(r.x_, r.y_, r.w_, r.h_, TEXTURE_DEMON);

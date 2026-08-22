@@ -109,8 +109,14 @@ declare const WALL_EAST: 1;
 declare const WALL_SOUTH: 2;
 declare const WALL_WEST: 3;
 
+declare const WALL_MAP_BLOCKED: -3;
 declare const WALL_BLOCKED: -2;
 declare const WALL_FREE: -1;
+
+declare const ROOM_TYPE_NORMAL: 0;
+declare const ROOM_TYPE_PLAYER: 1;
+declare const ROOM_TYPE_BOSS: 2;
+declare const ROOM_TYPE_SECRET: 3;
 
 declare const EASE_LINEAR: 0;
 declare const EASE_SMOOTHSTEP: 1;

@@ -80,19 +80,17 @@ export let drawPerformanceMeter = (px: number, py: number): void => {
         for (let x = 0; x < mapW; x++) {
             for (let y = 0; y < mapH; y++) {
                 let idx = y * mapW + x;
-                if (mapData[idx] === CELL_FLOOR) {
+                if (mapData[idx] === CELL_WALL) {
+                    glPushColorQuad(x * 2, y * 2, 2, 2, 0xff333333); // RED = FLOOR
+                } else if (mapData[idx] === CELL_FLOOR) {
                     glPushColorQuad(x * 2, y * 2, 2, 2, 0xff000066); // RED = FLOOR
-                }
-                if (mapData[idx] === CELL_HORIZONTAL_DOOR || mapData[idx] === CELL_VERTICAL_DOOR) {
+                } else if (mapData[idx] === CELL_HORIZONTAL_DOOR || mapData[idx] === CELL_VERTICAL_DOOR) {
                     glPushColorQuad(x * 2, y * 2, 2, 2, 0xff00ffff); // YELLOW = DOOR
-                }
-                if (mapData[idx] === CELL_CRACKED) {
+                } else if (mapData[idx] === CELL_CRACKED) {
                     glPushColorQuad(x * 2, y * 2, 2, 2, 0xffffff00); // CYAN = BREAKABLE WALL
-                }
-                if (mapData[idx] === CELL_LOCKED_H || mapData[idx] === CELL_LOCKED_H) {
+                } else if (mapData[idx] === CELL_LOCKED_H || mapData[idx] === CELL_LOCKED_H) {
                     glPushColorQuad(x * 2, y * 2, 2, 2, 0xffff0000); // BLUE = LOCKED DOOR
-                }
-                if (mapData[idx] === CELL_EXIT) {
+                } else if (mapData[idx] === CELL_EXIT) {
                     glPushColorQuad(x * 2, y * 2, 2, 2, 0xffff00ff); // MAGENTA = EXIT BLOCK
                 }
                 if (px >= x && px < x + 1 && py >= y && py < y + 1) {
