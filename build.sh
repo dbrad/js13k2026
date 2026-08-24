@@ -3,6 +3,14 @@ set -e
 set -u
 set -o pipefail
 
+if [ -f .env ]; then
+    set -o allexport
+    source .env
+    set +o allexport
+else
+    PLATFORM="windows"
+fi
+
 log() {
   echo "[Build] $1"
 }
@@ -42,8 +50,14 @@ else
     rm -rf dist
     mkdir -p dist/src
     node_modules/.bin/html-inline -i build/release/index.html -o dist/src/index.html > /dev/null
-    ./tools/7z/7za a -tzip dist/game.zip dist/src/* > /dev/null 2>&1
-	./tools/ect -9 -zip dist/game.zip > /dev/null 2>&1
-    ./tools/cloc-1.86.exe --quiet --hide-rate src/
+    if [ $PLATFORM == "windows" ]; then
+        ./tools/7z/7za a -tzip dist/game.zip dist/src/* > /dev/null 2>&1
+    	./tools/ect -9 -zip dist/game.zip > /dev/null 2>&1
+        ./tools/cloc-1.86.exe --quiet --hide-rate src/
+    else
+        ./tools/7z/7zz a -tzip dist/game.zip dist/src/* > /dev/null 2>&1
+    	./tools/ect -9 -zip dist/game.zip > /dev/null 2>&1
+        cloc --quiet --hide-rate src/
+    fi
     node build/scripts/file-size.js
 fi

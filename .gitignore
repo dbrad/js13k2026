@@ -1,3 +1,5 @@
+.env
+
 node_modules
 node_modules/**/*
 
@@ -14,8 +16,11 @@ dist/**/*
 tools/*
 !tools/7z
 !tools/7z/*
+.tools/
+.tools/**/*
 
 AGENTS.md
+PLAN.md
 .omp/
 .omp/**/*
 .pi/
@@ -24,7 +29,3 @@ AGENTS.md
 .agents/**/*
 docker/
 docker/**/*
-skills-lock.json
-docs/agents
-.tools/
-.tools/**/*

@@ -16,10 +16,12 @@ uniform vec2 pn;
 
 out vec4 oc;
 
-const vec3 FOG_COLOR = vec3(0, 0, 0); // vec3(0.05f, 0.05f, 0.08f);
-const float FOG_START = 1.0f;
+const vec3 FOG_COLOR = vec3(0, 0, 0);
+const float FOG_START = 2.0f;
 const float FOG_END = 20.0f;
 const float TEX_SIZE = 32.0f;
+const float halfSize = 0.5f / TEX_SIZE;
+const float TEX = 64.0f + 24.0f;
 
 void main() {
     if(vu.x >= 10.0f) {
@@ -36,28 +38,23 @@ void main() {
             oc = vec4(FOG_COLOR, 1.0f);
             return;
         }
+        fog *= fog;
 
         float scale = 1.0f;
-        float TEX = 64.0f + 24.0f;
-
         if(frag.y <= mid) {
-            // Floor
             scale = 2.0f;
         }
 
         vec2 rayDir = d + pn * ((2.0f * frag.x) / r.x - 1.0f);
         vec2 world = pl + rayDir * rowDist;
-        vec2 lightUV = world * (1.0f / 50.0f);
-        lightUV = clamp(lightUV, 0.0f, 1.0f);
+        vec2 lightUV = clamp(world * (1.0f / 50.0f), 0.0f, 1.0f);
         vec3 light = texture(l, lightUV).rgb;
 
         vec3 shade = min(1.0f, 1.0f / (1.0f + rowDist * 0.18f)) * 0.75f * light;
 
-        float halfSize = 0.5f / TEX_SIZE;
         vec2 t = clamp(fract(world * scale + 1e-5f), halfSize, 1.0f - halfSize);
         vec2 uv = vec2((TEX + 0.5f + t.x * (TEX_SIZE - 1.0f)) / 512.0f, (32.0f + 0.5f + t.y * (TEX_SIZE - 1.0f)) / 512.0f);
         vec3 lit = texture(tx, uv).rgb * shade;
-        fog *= fog;
 
         oc = vec4(mix(lit, FOG_COLOR, fog), 1.0f);
     } else if(vu.x >= 3.0f && vu.x <= 4.0f) {
