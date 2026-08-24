@@ -1,8 +1,10 @@
 import { assert } from "./__debug/debug";
-import { max, min, randInt, random } from "./math";
+import { entityAddBoss } from "./entity";
+import { floor, max, min, randInt, random } from "./math";
 
 export let mapW = 0;
 export let mapH = 0;
+export let mapSize = 0;
 export let mapData: Int32Array;
 export let mapOffsetData: Float32Array;
 
@@ -26,10 +28,12 @@ export let rooms: Room[] = [];
 export let generateDungeon = (width: number, height: number): [number, number] => {
     mapW = width;
     mapH = height;
-    lightMap = new Float32Array(width * height * 3).fill(AMBIENT);
-    lightCalculated = new Int32Array(width * height);
-    mapData = new Int32Array(width * height).fill(CELL_WALL);
-    mapOffsetData = new Float32Array(width * height);
+    mapSize = width * height;
+
+    lightMap = new Float32Array(mapSize * 3).fill(AMBIENT);
+    lightCalculated = new Int32Array(mapSize);
+    mapData = new Int32Array(mapSize).fill(CELL_WALL);
+    mapOffsetData = new Float32Array(mapSize);
     doorAnimT = new Float32Array(width * width);
     doorAnimActive = new Int32Array(width * width);
     rooms = [];
@@ -72,10 +76,12 @@ export let generateDungeon = (width: number, height: number): [number, number] =
 
     let i = addRoom(2, 2, 12, 12, -1, -1);
     addDoor(i, -1, random() > .5 ? WALL_NORTH : WALL_WEST, 1);
-    rooms[i].type_ = ROOM_TYPE_BOSS;
-    rooms[i].n_[WALL_NORTH] = rooms[i].n_[WALL_WEST] = rooms[i].n_[WALL_EAST] = WALL_MAP_BLOCKED;
+    let bossRoom = rooms[i];
+    bossRoom.type_ = ROOM_TYPE_BOSS;
+    bossRoom.n_[WALL_NORTH] = bossRoom.n_[WALL_WEST] = bossRoom.n_[WALL_EAST] = WALL_MAP_BLOCKED;
+    entityAddBoss(bossRoom.x_ + floor(bossRoom.w_ / 2), bossRoom.y_ + floor(bossRoom.h_ / 2), ENEMY_BOSS_BULLET);
 
-    let parent: Room | null = rooms[i];
+    let parent: Room | null = bossRoom;
     while (parent) {
         let wall = -1;
         for (let w = 0; w < 4; w++) if (parent.n_[w] === WALL_FREE) { wall = w; break; }
@@ -152,5 +158,9 @@ export let generateDungeon = (width: number, height: number): [number, number] =
     }
     assert(best !== -1, "somehow no room to spawn player in");
     rooms[best].type_ = ROOM_TYPE_PLAYER;
-    return [rooms[best].x_ + rooms[best].w_ / 2, rooms[best].y_ + rooms[best].h_ / 2];
+
+
+    return [bossRoom.x_ + bossRoom.w_ / 2, bossRoom.y_ + bossRoom.h_ / 2];
+
+    // return [rooms[best].x_ + rooms[best].w_ / 2, rooms[best].y_ + rooms[best].h_ / 2];
 };

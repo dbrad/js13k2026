@@ -22,7 +22,9 @@
 - [x] Cleanup / Simplify Map Generation
 - [x] Exit placement
     - need to make sure the player and exit are spawned far away from eachother
-- [ ] Boss spawning
+- [ ] Add enemy lighting pass
+    - 3x3 purple lighting bump around alert+active enemies
+- [x] Room to spawn boss in
     - Boss will spawn in the final room to guard the exit (drop a key maybe)
 - [ ] Boss mechanics
     - On screen hp bar for boss, more complex / dangerous fight ai

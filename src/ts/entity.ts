@@ -2,26 +2,12 @@ import { assert } from "./__debug/debug";
 import { sfxEnemyAlert, sfxEnemyDeath, sfxEnemyMelee, sfxEnemyRanged, sfxLaserFire, zzfxPlay } from "./audio";
 import { glPushColorCircle, glPushQuad } from "./gl";
 import { AMBIENT, lightMap, mapData, mapH, mapW } from "./map";
-import { abs, atan2, circleOverlap, cos, floor, max, min, PI, randInt, random, sin, sqrt } from "./math";
+import { abs, circleOverlap, cos, floor, max, min, PI, randInt, random, sin, sqrt } from "./math";
 import { fogFactor, FOV, rayIsSolid, rayMove, zBuffer } from "./raycast";
 import { TEXTURE_CACHE } from "./texture";
 
 export let MAX_ENTITIES = 5000;
 export let MAX_VISIBLE = 500;
-
-export let FLAG_ACTIVE = 1 << 0;
-export let FLAG_PARTICLE = 1 << 1;
-export let FLAG_DUST_MOTE = 1 << 2;
-export let FLAG_BILLBOARD = 1 << 3;
-export let FLAG_SOLID = 1 << 4;
-export let FLAG_DAMAGE = 1 << 5;
-export let FLAG_PROJECTILE = 1 << 6;
-export let FLAG_ENEMY = 1 << 7;
-
-export let ENEMY_NONE = 0;
-export let ENEMY_MELEE = 1;
-export let ENEMY_TANK = 2;
-export let ENEMY_RANGED = 3;
 
 let DRIFT_SPEED = 0.15;
 let STEER_STRENGTH = 1.25;
@@ -88,11 +74,11 @@ let preferY_ = new Float32Array(MAX_ENTITIES);
 let scale_ = new Float32Array(MAX_ENTITIES);
 let size_ = new Float32Array(MAX_ENTITIES);
 let phase_ = new Float32Array(MAX_ENTITIES);
+let verticalBob_ = new Float32Array(MAX_ENTITIES);
 let data_ = new Float32Array(MAX_ENTITIES);
 let colour_ = new Int32Array(MAX_ENTITIES);
 let texId_ = new Int32Array(MAX_ENTITIES);
 let flags_ = new Int32Array(MAX_ENTITIES);
-let facing_ = new Float32Array(MAX_ENTITIES);
 let type_id_ = new Int32Array(MAX_ENTITIES);
 let hp_ = new Float32Array(MAX_ENTITIES);
 let max_hp_ = new Float32Array(MAX_ENTITIES);
@@ -138,12 +124,15 @@ export let entityClear = (): void => {
 
 let enemyStats: [number, number][] = [
     [0, 0],
-    [5, 3],
-    [20, 1],
-    [5, 2]
+    [5, 3],          // melee
+    [20, 1],         // tank
+    [5, 2],          // ranged
+    [180, 4],        // bullet hell
+    [140, 2],        // brood
+    [220, 8],        // charge
 ];
 
-export let entityAdd = (x: number, y: number, texId: number, scale = 1, flags = FLAG_BILLBOARD | FLAG_ACTIVE, colour = 0xffffffff, z = 0.5, type_id = ENEMY_NONE): number => {
+export let entityAdd = (x: number, y: number, texId: number, scale = 1, flags = FLAG_BILLBOARD | FLAG_ACTIVE, colour = 0xffffffff, z = 0.5, type_id: number = ENEMY_NONE): number => {
     if (freeCount === 0) {
         assert(false, `entity pool exhausted`);
     }
@@ -160,8 +149,8 @@ export let entityAdd = (x: number, y: number, texId: number, scale = 1, flags = 
     texId_[slot] = texId;
     scale_[slot] = scale;
     colour_[slot] = colour;
-    facing_[slot] = 0;
-    phase_[slot] = random() * PI * 2;
+    phase_[slot] = 0;
+    verticalBob_[slot] = random() * PI * 2;
     size_[slot] = 1;
     flags_[slot] = flags | FLAG_ACTIVE;
     data_[slot] = 0;
@@ -185,6 +174,15 @@ export let entityAdd = (x: number, y: number, texId: number, scale = 1, flags = 
 
     active[activeCount] = slot;
     return activeCount++;
+};
+
+export let entityAddBoss = (x: number, y: number, typ: number, texId = TEXTURE_DEMON_LARGE): number => {
+    let id = entityAdd(x, y, texId, 1.2, FLAG_BILLBOARD | FLAG_ACTIVE | FLAG_ENEMY | FLAG_SOLID, 0xffffffff, 0.55, typ);
+    let s = active[id];
+    preferX_[s] = x;          // home
+    preferY_[s] = y;
+    data_[s] = 1.5;           // initial delay
+    return id;
 };
 
 export let entityAddParticle = (x: number, y: number, z = 0.5, size = 1, col = 0xffffffff): number => {
@@ -424,7 +422,7 @@ let respawnDustMote = (slot: number): void => {
     vz_[slot] = (random() - 0.5) * 0.2;
 
     colour_[slot] = 0x00ffffff;
-    phase_[slot] = random() * PI * 2;
+    verticalBob_[slot] = random() * PI * 2;
     size_[slot] = 0.1 + random() * 0.75;
     flags_[slot] = FLAG_ACTIVE | FLAG_DUST_MOTE | FLAG_PARTICLE;
     data_[slot] = 20;
@@ -508,7 +506,7 @@ export let entityUpdate = (dt: number, px: number, py: number): void => {
         }
 
         if (flags_[s] & (FLAG_ENEMY | FLAG_PROJECTILE)) {
-            if (data_[s] > 0) {
+            if (flags_[s] & FLAG_PROJECTILE && data_[s] > 0) {
                 data_[s] -= dt;
                 if (data_[s] <= 0) {
                     flags_[s] = 0;
@@ -560,7 +558,7 @@ export let entityUpdate = (dt: number, px: number, py: number): void => {
                     vy_[s] = ndy * speed * 0.25;
                 }
 
-                if (alert_[s] === 0) {
+                if (typ < ENEMY_BOSS_BULLET && alert_[s] === 0) {
                     if (lastAttackTime__[s] > 0) lastAttackTime__[s] -= dt;
 
                     if (typ === ENEMY_RANGED) {
@@ -588,7 +586,85 @@ export let entityUpdate = (dt: number, px: number, py: number): void => {
                     }
                 }
 
-                facing_[s] = atan2(ndy, ndx);
+                if (typ >= ENEMY_BOSS_BULLET) {
+                    if (typ === ENEMY_BOSS_BULLET) {
+                        // stay near home
+                        let hx = preferX_[s] - x_[s];
+                        let hy = preferY_[s] - y_[s];
+                        vx_[s] = hx * 0.6;
+                        vy_[s] = hy * 0.6;
+
+                        data_[s] -= dt;
+                        if (data_[s] <= 0) {
+                            // fire radial wave
+                            let base = phase_[s];
+                            for (let a = 0; a < PI * 2; a += PI / 12) {   // 15°
+                                let ang = base + a;
+                                spawnProjectile(x_[s], y_[s], cos(ang), sin(ang), damage_[s], 0xff66ffff);
+                            }
+                            phase_[s] += 0.18;          // slight rotate next volley
+                            data_[s] = 1.1 + random() * 0.3;  // pause
+                        }
+                    }
+                    else if (typ === ENEMY_BOSS_BROOD) {
+                        // keep distance
+                        if (dist < 5.5) {
+                            vx_[s] = -ndx * RANGED_SPEED * 0.9;
+                            vy_[s] = -ndy * RANGED_SPEED * 0.9;
+                        } else {
+                            vx_[s] *= 0.9; vy_[s] *= 0.9;
+                        }
+
+                        data_[s] -= dt;
+                        if (data_[s] <= 0 && activeCount < MAX_ENTITIES - 40) {
+                            // spawn 1–2 weak melee near self
+                            let ang = random() * PI * 2;
+                            entityAdd(x_[s] + cos(ang) * 1.2, y_[s] + sin(ang) * 1.2, 1, 0.75, FLAG_BILLBOARD | FLAG_ACTIVE | FLAG_ENEMY | FLAG_SOLID, 0xffaaffcc, 0.5, ENEMY_MELEE);
+                            data_[s] = 2.8 + random() * 1.2;
+                        }
+                    }
+                    else if (typ === ENEMY_BOSS_CHARGE) {
+                        // state machine on phase_ (0=idle/circle, 1=windup, 2=dash, 3=recover)
+                        if (phase_[s] === 0) {
+                            // circle or face
+                            vx_[s] = -ndy * TANK_SPEED * 0.7 + ndx * 0.15;
+                            vy_[s] = ndx * TANK_SPEED * 0.7 + ndy * 0.15;
+                            data_[s] -= dt;
+                            if (data_[s] <= 0) {
+                                phase_[s] = 1;
+                                data_[s] = 0.55;           // wind-up
+                                // optional telegraph particles
+                            }
+                        } else if (phase_[s] === 1) {
+                            vx_[s] = vy_[s] = 0;
+                            data_[s] -= dt;
+                            if (data_[s] <= 0) {
+                                phase_[s] = 2;
+                                data_[s] = 0.85;           // dash duration
+                                // lock direction
+                                preferX_[s] = ndx;
+                                preferY_[s] = ndy;
+                            }
+                        } else if (phase_[s] === 2) {
+                            vx_[s] = preferX_[s] * 3.2;
+                            vy_[s] = preferY_[s] * 3.2;
+                            data_[s] -= dt;
+                            // on wall hit or timer → recover
+                            if (data_[s] <= 0) {
+                                phase_[s] = 3;
+                                data_[s] = 1.4;
+                            }
+                        } else { // recover
+                            vx_[s] *= 0.85; vy_[s] *= 0.85;
+                            data_[s] -= dt;
+                            if (data_[s] <= 0) {
+                                phase_[s] = 0;
+                                data_[s] = 2.0 + random();
+                            }
+                        }
+                    }
+                }
+
                 applySeparation(s);
 
                 let mdx = vx_[s] * dt;
@@ -635,8 +711,8 @@ export let entityUpdate = (dt: number, px: number, py: number): void => {
                 preferY_[s] = sin(ang);
             }
 
-            let drive1 = sin(particleTime * 0.85 + phase_[s]) * 0.22;
-            let drive2 = cos(particleTime * 1.35 + phase_[s] * 0.7) * 0.18;
+            let drive1 = sin(particleTime * 0.85 + verticalBob_[s]) * 0.22;
+            let drive2 = cos(particleTime * 1.35 + verticalBob_[s] * 0.7) * 0.18;
             vz_[s] += (drive1 + drive2) * dt;
 
             if (z_[s] < Z_MIN) vz_[s] += (Z_MIN - z_[s]) * 2.5 * dt;
@@ -661,7 +737,7 @@ export let entityUpdate = (dt: number, px: number, py: number): void => {
             continue;
         }
 
-        phase_[s] += dt * (1.2 + size_[s] * 0.4);
+        verticalBob_[s] += dt * (1.2 + size_[s] * 0.4);
     }
 };
 
@@ -781,7 +857,7 @@ export let entityDraw = (px: number, py: number, angle: number, now: number): vo
         let halfW = height * 0.5;
         let drawStartX = screenX - halfW;
         let drawEndX = screenX + halfW;
-        let bob = sin(now * 3 + phase_[s]) * (height * 0.04);
+        let bob = sin(now * 3 + verticalBob_[s]) * (height * 0.04);
         let drawStartY = (SCREEN_HEIGHT - height) * 0.5 + bob;
 
         let startCol = max(0, floor(drawStartX));
@@ -845,7 +921,7 @@ export let spawnEnemiesInRoom = (rx: number, ry: number, rw: number, rh: number,
         let sy = floorScratchY[i];
 
         let r = random();
-        let typ = ENEMY_MELEE;
+        let typ: number = ENEMY_MELEE;
         let scl = 0.95;
         let col = 0xffffffff;
         if (r > 0.72) {

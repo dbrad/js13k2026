@@ -4,15 +4,11 @@ import { abs, clamp, cos, floor, max, min, sin, sqrt } from "./math";
 import { TEXTURE_CACHE } from "./texture";
 
 let TEXTURE_SIZE = 32;
-export let FOV = 0.75;
+export let FOV = 0.90;
 let MAX_RAY_DEPTH = 50;
 let INTERACTION_DISTANCE = 1.5;
 export let interactionId = -1;
 
-export let FOG_R = 0; // 0.05;
-export let FOG_G = 0; // 0.05;
-export let FOG_B = 0; // 0.08;
-export let FOG_ABGR = 0xff000000; // 0xff140D0D;
 export let FOG_START = 2;
 export let FOG_END = 20;
 
@@ -159,7 +155,7 @@ export let rayRender = (px: number, py: number, angle: number, now: number, dt: 
             let drawStart = max(0, floor(-lineHeight * 0.5 + SCREEN_HEIGHT * 0.5));
             let drawEnd = min(SCREEN_HEIGHT - 1, floor(lineHeight * 0.5 + SCREEN_HEIGHT * 0.5));
             if (drawEnd > drawStart) {
-                glPushColorQuad(x, drawStart, 1, drawEnd - drawStart, FOG_ABGR);
+                glPushColorQuad(x, drawStart, 1, drawEnd - drawStart, 0xff000000);
             }
             continue;
         }

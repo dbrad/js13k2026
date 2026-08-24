@@ -21,8 +21,11 @@ declare module '*.webp' {
 }
 
 type GameState = [
-    GS_PROGRESS: number,
-    GS_RUNCOUNT: number,
+    GS_PLAYER_HP: number,
+    GS_PLAYER_MAX_HP: number,
+    GS_PLAYER_X: number,
+    GS_PLAYER_Y: number,
+    GS_PLAYER_ANGLE: number,
     GS_MUTEMUSIC: number,
     GS_SCREENSHAKE: number,
 ];

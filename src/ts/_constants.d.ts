@@ -133,14 +133,29 @@ declare const EVENT_BOSS_DIED: 6;
 declare const EVENT_SPAWN_PARTICLES: 7;
 declare const EVENT_DELAY: 8;
 
-declare const GS_PROGRESS: 0;
-declare const GS_RUNCOUNT: 1;
-declare const GS_MUTEMUSIC: 2;
-declare const GS_SCREENSHAKE: 3;
+declare const GS_PLAYER_HP: 0;
+declare const GS_PLAYER_MAX_HP: 1;
+declare const GS_PLAYER_X: 2;
+declare const GS_PLAYER_Y: 3;
+declare const GS_PLAYER_ANGLE: 4;
+declare const GS_MUTEMUSIC: 5;
+declare const GS_SCREENSHAKE: 6;
 
 declare const MAX_CHARGE: 1;
+
+declare const FLAG_ACTIVE: 1;
+declare const FLAG_PARTICLE: 2;
+declare const FLAG_DUST_MOTE: 4;
+declare const FLAG_BILLBOARD: 8;
+declare const FLAG_SOLID: 16;
+declare const FLAG_DAMAGE: 32;
+declare const FLAG_PROJECTILE: 64;
+declare const FLAG_ENEMY: 128;
 
 declare const ENEMY_NONE: 0;
 declare const ENEMY_MELEE: 1;
 declare const ENEMY_TANK: 2;
-declare const ENEMY_RANGE: 3;
+declare const ENEMY_RANGED: 3;
+declare const ENEMY_BOSS_BULLET: 4;
+declare const ENEMY_BOSS_BROOD: 5;
+declare const ENEMY_BOSS_CHARGE: 6;
