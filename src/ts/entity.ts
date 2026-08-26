@@ -4,6 +4,7 @@ import { glPushColorCircle, glPushQuad } from "./gl";
 import { AMBIENT, LIGHT_LEVEL_CAP, lightMap, mapData, mapH, mapW } from "./map";
 import { abs, circleOverlap, cos, floor, max, min, PI, randInt, random, sin, sqrt } from "./math";
 import { fogFactor, FOV, rayIsSolid, rayMove, zBuffer } from "./raycast";
+import { shakeTrigger } from "./shake";
 import { TEXTURE_CACHE } from "./texture";
 
 let RAINBOW = [
@@ -84,6 +85,47 @@ export let entityClear = (): void => {
     activeParticleCount = 0;
     freeCount = MAX_ENTITIES;
     for (let i = 0; i < MAX_ENTITIES; i++) free_[i] = i;
+};
+
+export let entityAimAssist = (
+    px: number, py: number,
+    angle: number,
+    maxRange = 10,
+    coneCos = 0.65,   // ~50° half-angle
+    strength = 0.8
+): number => {
+    let dirX = cos(angle);
+    let dirY = sin(angle);
+    let bestCross = 0;
+    let bestScore = 0;
+
+    for (let i = 0; i < activeCount; i++) {
+        let s = active[i];
+        if ((flags_[s] & (FLAG_ACTIVE | FLAG_ENEMY)) !== (FLAG_ACTIVE | FLAG_ENEMY) || hp_[s] <= 0) continue;
+
+        let dx = x_[s] - px;
+        let dy = y_[s] - py;
+        let distSq = dx * dx + dy * dy;
+        if (distSq > maxRange * maxRange || distSq < 0.25) continue;
+
+        if (!hasLineOfSight(px, py, x_[s], y_[s])) continue;
+
+        let inv = 1 / sqrt(distSq);
+        let ndx = dx * inv;
+        let ndy = dy * inv;
+
+        let dot = dirX * ndx + dirY * ndy;
+        if (dot < coneCos) continue;          // outside cone
+
+        let cross = dirX * ndy - dirY * ndx;  // sin(Δθ)
+        // prefer closer + more centered
+        let score = (1 - abs(cross)) * inv;
+        if (score > bestScore) {
+            bestScore = score;
+            bestCross = cross;
+        }
+    }
+    return bestCross * strength;
 };
 
 let enemyStats: [number, number][] = [
@@ -250,6 +292,8 @@ let spawnPseudoMelee = (tx: number, ty: number, dmg: number): void => {
 
 export let fireRainbowBeam = (px: number, py: number, angle: number, charge: number = 1.0): void => {
     zzfxPlay(sfxLaserFire);
+    shakeTrigger(8, 100);
+
     let dmg = BEAM_BASE_DAMAGE * (0.7 + charge * 0.6);
     let range = floor(3 + 2 * charge);
 

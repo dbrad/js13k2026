@@ -288,11 +288,11 @@ export let drawControls = (): void => {
         glPushText("b", bButtonX + halfButtonSize - 0, bButtonY + halfButtonSize + 4, 0xff000000, 3, TEXT_H_ALIGN_CENTER, TEXT_V_ALIGN_MIDDLE);
     }
 
-    let help = !isTouch
-        ? `wasd move / arrows or mouse look / click fire / c cancel`
-        : `left stick move / right stick look / a fire / b cancel`;
+    // let help = !isTouch
+    //     ? `wasd move / arrows or mouse look / click fire / c cancel`
+    //     : `left stick move / right stick look / a fire / b cancel`;
 
-    glPushText(help, SCREEN_WIDTH / 2, SCREEN_HEIGHT - 8, 0xffffffff, 1, TEXT_H_ALIGN_CENTER);
+    // glPushText(help, SCREEN_WIDTH / 2, SCREEN_HEIGHT - 8, 0xffffffff, 1, TEXT_H_ALIGN_CENTER);
 };
 
 export let clearInput = (): void => {

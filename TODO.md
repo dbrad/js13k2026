@@ -17,13 +17,12 @@
     - Add particles / effect / quads / some sort of visual to enemy attacks
 - [x] Add player attack cooldown
 - [ ] Charge levels for attack
-- [ ] Add player health and taking damage
+- [x] Add player health and taking damage
 - [ ] Lose condition
 - [x] Cleanup / Simplify Map Generation
 - [x] Exit placement
     - need to make sure the player and exit are spawned far away from eachother
-- [ ] Add enemy lighting pass
-    - 3x3 purple lighting bump around alert+active enemies
+- [x] Add enemy lighting pass
 - [x] Room to spawn boss in
     - Boss will spawn in the final room to guard the exit (drop a key maybe)
 - [ ] Boss mechanics
@@ -47,3 +46,4 @@
     - screen shake on hit
     - enemies and walls flash white on hit
     - particles on death of enemies
+- [x] Aim assist

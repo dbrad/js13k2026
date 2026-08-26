@@ -1,11 +1,11 @@
-import { playMusic, sfxFootstep, sfxLaserCharge, zzfxPlay } from "@root/ts/audio";
-import { entityCollect, entityDraw, entityPlayerCollide, entityUpdate, fireRainbowBeam } from "@root/ts/entity";
+import { playMusic, sfxFootstep, sfxLaserCharge, sfxPlayerHurt, zzfxPlay } from "@root/ts/audio";
+import { entityAimAssist, entityCollect, entityDraw, entityPlayerCollide, entityUpdate, fireRainbowBeam } from "@root/ts/entity";
 import { gl, glFlush, glPushColorQuad, glPushText, glPushTexture, uShake } from "@root/ts/gl";
 import { A_PRESSED, B_IS_DOWN, B_PRESSED, DOWN_IS_DOWN, isTouch, LEFT_IS_DOWN, lookDeltaX, RIGHT_IS_DOWN, UP_IS_DOWN, updateHardwareInput, updateInputState } from "@root/ts/input";
 import { doorAnimActive, doorAnimT, mapData, mapOffsetData, mapSize, updatePlayerTorch } from "@root/ts/map";
-import { cos, max, min, sin, sqrt } from "@root/ts/math";
+import { abs, cos, max, min, sin, sqrt } from "@root/ts/math";
 import { interactionId, rayMove, rayRender, rayRenderFloorCeiling } from "@root/ts/raycast";
-import { getShakeSum, shakeUpdate, shakeX, shakeY, updateHeadbob, zeroShake } from "@root/ts/shake";
+import { getShakeSum, shakeTrigger, shakeUpdate, shakeX, shakeY, updateHeadbob, zeroShake } from "@root/ts/shake";
 import { gameState } from "../gameState";
 
 let charge = 0;
@@ -102,12 +102,18 @@ export let updateGame = (delta: number, dt: number, now: number) => {
     }
 
     [px, py] = entityPlayerCollide(px, py, 0.25, (idx) => {
-        // damage logic
+        gameState[GS_PLAYER_HP] -= 1;
+        shakeTrigger(16, 100);
+        zzfxPlay(sfxPlayerHurt);
     });
+
+    let assist = entityAimAssist(px, py, angle);
+    if (abs(lookDeltaX) > 0.008) assist *= 0.35;
+
 
     gameState[GS_PLAYER_X] = px;
     gameState[GS_PLAYER_Y] = py;
-    gameState[GS_PLAYER_ANGLE] += lookDeltaX;
+    gameState[GS_PLAYER_ANGLE] += lookDeltaX + assist * dt;
 
     footstepTimer -= dt;
     updatePlayerTorch(isCharging);
@@ -153,10 +159,17 @@ export let renderGame = (delta: number, dt: number, now: number) => {
         glPushText("A to open", SCREEN_HALF_W, SCREEN_HALF_H, 0xffffffff, 1, TEXT_H_ALIGN_CENTER);
     }
 
-    glPushColorQuad(0, SCREEN_HEIGHT - 32, SCREEN_WIDTH, 16, 0xff333333);
+    let hp = gameState[GS_PLAYER_HP] / gameState[GS_PLAYER_MAX_HP];
+    glPushColorQuad(5, 5, 200, 1, 0xffffffff);
+    glPushColorQuad(5, 5, 1, 8, 0xffffffff);
+    glPushColorQuad(7, 7, 200 * hp, 2, 0xff0000ff);
+    glPushColorQuad(7, 7, 200 * hp, 8, 0xdd000088);
+
+    let barWidth = SCREEN_WIDTH - 32;
+    glPushColorQuad(16, SCREEN_HEIGHT - 32, barWidth, 16, 0xff333333);
     if (shootCooldown > 0) {
-        glPushColorQuad(0, SCREEN_HEIGHT - 32, SCREEN_WIDTH * shootCooldown, 16, 0xff0000ff);
+        glPushColorQuad(16, SCREEN_HEIGHT - 32, barWidth * shootCooldown, 16, 0xff0000ff);
     } else {
-        glPushColorQuad(0, SCREEN_HEIGHT - 32, SCREEN_WIDTH * charge, 16, 0xff00ff00);
+        glPushColorQuad(16, SCREEN_HEIGHT - 32, barWidth * charge, 16, 0xff00ff00);
     }
 };
