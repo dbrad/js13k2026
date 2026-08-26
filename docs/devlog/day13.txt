@@ -1,0 +1,25 @@
+Day 13 - 2026-08-25
+
+---
+
+Broke up active entities and perticles into seperate pools.
+Added spot lighting on enemies and projectiles.
+Some amount of code cleanup and space claw back.
+
+---
+
+`-Zab0 -Zlr930 -Zmc4 -Zmd10 -Zpr14 -S0,1,2,3,7,13,25,42,84,229,387,432`
+
+-------------------------------------------------------------------------------
+Language                     files          blank        comment           code
+-------------------------------------------------------------------------------
+TypeScript                      19            526             62           3015
+GLSL                             2             16              0             81
+HTML                             1              2              0              6
+-------------------------------------------------------------------------------
+SUM:                            22            544             62           3102
+-------------------------------------------------------------------------------
+
+The file is under the limit.
+USED: 90.44% | 12040 BYTES
+LEFT:  9.56% |  1272 BYTES

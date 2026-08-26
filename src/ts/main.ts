@@ -34,7 +34,8 @@ window.addEventListener("load", async (): Promise<void> => {
             [gameState[GS_PLAYER_X], gameState[GS_PLAYER_Y]] = generateDungeon(50, 50);
             for (let i = 1; i < rooms.length; i++) {
                 let r = rooms[i];
-                spawnEnemiesInRoom(r.x_, r.y_, r.w_, r.h_, TEXTURE_DEMON);
+                if (r.type_ === ROOM_TYPE_NORMAL)
+                    spawnEnemiesInRoom(r.x_, r.y_, r.w_, r.h_, TEXTURE_DEMON);
             }
             entitySpawnDust(gameState[GS_PLAYER_X], gameState[GS_PLAYER_Y], 220);
 
@@ -87,7 +88,7 @@ window.addEventListener("load", async (): Promise<void> => {
             tickPerformanceMeter(delta);
         } else {
             glClear(0, 0, 0);
-            glPushText("Children of the Horn", SCREEN_HALF_W, SCREEN_HALF_H - 28, 0xffffffff, 3, TEXT_H_ALIGN_CENTER);
+            glPushText("prism break", SCREEN_HALF_W, SCREEN_HALF_H - 28, 0xffffffff, 3, TEXT_H_ALIGN_CENTER);
             glPushText("js13k 2026 entry by david brad", SCREEN_HALF_W, SCREEN_HALF_H, 0xffffffff, 1, TEXT_H_ALIGN_CENTER);
             glPushText("tap to start", SCREEN_HALF_W, SCREEN_HALF_H + 35, 0xffffffff, 1, TEXT_H_ALIGN_CENTER);
             glPushText(VERSION, SCREEN_WIDTH, SCREEN_HEIGHT, 0xffffffff, 1, TEXT_H_ALIGN_RIGHT, TEXT_V_ALIGN_BOTTOM);

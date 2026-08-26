@@ -1,0 +1,32 @@
+What I have now?
+- Proc-gen dungeons
+- Doors connecting rooms
+- Secret rooms accessed with destructable walls
+- Enemy spawning
+- Level exit placement
+- Boss spawning
+- Player movement, looking, and attack
+- Mobile controls
+- Multiple desktop control schemes
+- Music
+- Sound effects
+- Particle system
+- Projectiles
+- Screen shake and head bob
+
+Big thinking points / things to solve:
+- How to make mobile play feel better? Currently feels hard to aim and control the player.
+    - Aim assist?
+    - Tweak movement and loking senstivity?
+    - Slow the overall gameplay down?
+    - Pivot the game to  be turnbased?
+- How to make the game mote engaging? Right now it's a mediocre raycaster FPS at best.
+    - More passive / active attacks for the player via progress?
+        - Radial burst?
+        - More charge levels?
+        - Seeker projectiles?
+    - XP + Progression?
+        - Enemies give xp and player can update hp, move speed, damage, or other stats?
+        - Can maybe also tie into other attacks?
+    - Slow the game down for more exploration focus?
+    - Make it turn based? More like a first person rogue(like)

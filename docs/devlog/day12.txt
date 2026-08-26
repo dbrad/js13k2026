@@ -1,0 +1,29 @@
+Day 12 - 2026-08-24
+
+---
+
+Updated the build system to also work natively in linux.
+Did a lot of brainstorming on how to take the project from engine concept to engaging game.
+Next steps: 
+- Play more with lighting for navigation and gameplay
+- Slow the combat and gameplay down
+- Improve mobile experience
+- See about adding an xp system and powerups for the player
+
+---
+
+`-Zab0 -Zlr930 -Zmc4 -Zmd10 -Zpr14 -S0,1,2,3,6,7,13,21,42,50,340,389`
+
+-------------------------------------------------------------------------------
+Language                     files          blank        comment           code
+-------------------------------------------------------------------------------
+TypeScript                      19            542             64           3031
+GLSL                             2             16              0             81
+HTML                             1              2              0              6
+-------------------------------------------------------------------------------
+SUM:                            22            560             64           3118
+-------------------------------------------------------------------------------
+
+The file is under the limit.
+USED: 91.32% | 12157 BYTES
+LEFT:  8.68% |  1155 BYTES

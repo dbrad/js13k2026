@@ -1,5 +1,5 @@
 import { gl, glPushColorQuad, glPushQuad, uDir, updateLightmap, uPlane, uPlayer } from "./gl";
-import { PLAYER_TORCH_INTENSITY, lightMap, LIGHT_DECAY, lightCalculated, AMBIENT, mapW, mapData, mapH, mapOffsetData, LIGHT_CAP } from "./map";
+import { PLAYER_TORCH_INTENSITY, lightMap, LIGHT_DECAY, lightCalculated, AMBIENT, mapW, mapData, mapH, mapOffsetData, LIGHT_LEVEL_CAP } from "./map";
 import { abs, clamp, cos, floor, max, min, sin, sqrt } from "./math";
 import { TEXTURE_CACHE } from "./texture";
 
@@ -44,9 +44,9 @@ export let rayRender = (px: number, py: number, angle: number, now: number, dt: 
     let playerIdx = playerY * mapW + playerX;
     let desired = PLAYER_TORCH_INTENSITY - fading;
     let lIdx = playerIdx * 3;
-    lightMap[lIdx] += (desired - lightMap[lIdx]) * min(LIGHT_CAP, LIGHT_DECAY * dt);
-    lightMap[lIdx + 1] += (desired - lightMap[lIdx + 1]) * min(LIGHT_CAP, LIGHT_DECAY * dt);
-    lightMap[lIdx + 2] += (desired - lightMap[lIdx + 2]) * min(LIGHT_CAP, LIGHT_DECAY * dt);
+    lightMap[lIdx] += (desired - lightMap[lIdx]) * min(LIGHT_LEVEL_CAP, LIGHT_DECAY * dt);
+    lightMap[lIdx + 1] += (desired - lightMap[lIdx + 1]) * min(LIGHT_LEVEL_CAP, LIGHT_DECAY * dt);
+    lightMap[lIdx + 2] += (desired - lightMap[lIdx + 2]) * min(LIGHT_LEVEL_CAP, LIGHT_DECAY * dt);
     lightCalculated[playerIdx] = 1;
 
     for (let x = 0; x < SCREEN_WIDTH; x++) {
@@ -111,9 +111,9 @@ export let rayRender = (px: number, py: number, angle: number, now: number, dt: 
                 let dist = sqrt(dx * dx + dy * dy);
                 let targetLightLevel = clamp(PLAYER_TORCH_INTENSITY - (0.2 * dist) - fading, AMBIENT, 1);
                 let lIdx = idx * 3;
-                lightMap[lIdx] += (targetLightLevel - lightMap[lIdx]) * min(LIGHT_CAP, LIGHT_DECAY * dt);
-                lightMap[lIdx + 1] += (targetLightLevel - lightMap[lIdx + 1]) * min(LIGHT_CAP, LIGHT_DECAY * dt);
-                lightMap[lIdx + 2] += (targetLightLevel - lightMap[lIdx + 2]) * min(LIGHT_CAP, LIGHT_DECAY * dt);
+                lightMap[lIdx] += (targetLightLevel - lightMap[lIdx]) * min(LIGHT_LEVEL_CAP, LIGHT_DECAY * dt);
+                lightMap[lIdx + 1] += (targetLightLevel - lightMap[lIdx + 1]) * min(LIGHT_LEVEL_CAP, LIGHT_DECAY * dt);
+                lightMap[lIdx + 2] += (targetLightLevel - lightMap[lIdx + 2]) * min(LIGHT_LEVEL_CAP, LIGHT_DECAY * dt);
                 lightCalculated[idx] = 1;
             }
 
@@ -218,9 +218,9 @@ export let rayRender = (px: number, py: number, angle: number, now: number, dt: 
     for (let i = 0; i < lightCalculated.length; i++) {
         if (lightCalculated[i] === 0) {
             let lIdx = i * 3;
-            lightMap[lIdx] += (AMBIENT - lightMap[lIdx]) * min(LIGHT_CAP, LIGHT_DECAY * dt);
-            lightMap[lIdx + 1] += (AMBIENT - lightMap[lIdx + 1]) * min(LIGHT_CAP, LIGHT_DECAY * dt);
-            lightMap[lIdx + 2] += (AMBIENT - lightMap[lIdx + 2]) * min(LIGHT_CAP, LIGHT_DECAY * dt);
+            lightMap[lIdx] += (AMBIENT - lightMap[lIdx]) * min(LIGHT_LEVEL_CAP, LIGHT_DECAY * dt);
+            lightMap[lIdx + 1] += (AMBIENT - lightMap[lIdx + 1]) * min(LIGHT_LEVEL_CAP, LIGHT_DECAY * dt);
+            lightMap[lIdx + 2] += (AMBIENT - lightMap[lIdx + 2]) * min(LIGHT_LEVEL_CAP, LIGHT_DECAY * dt);
         }
     }
     updateLightmap(lightMap);

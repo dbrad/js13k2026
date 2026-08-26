@@ -14,10 +14,10 @@ export let doorAnimActive: Int32Array;
 export let lightMap: Float32Array;
 export let lightCalculated: Int32Array;
 export let LIGHT_DECAY = 6.5;
-export let LIGHT_CAP = 2;
+export let LIGHT_LEVEL_CAP = 2;
 
-export let AMBIENT = 0.1;
-export let PLAYER_TORCH_INTENSITY = 1.0;
+export let AMBIENT = 0.15;
+export let PLAYER_TORCH_INTENSITY = 1.0; // TODO: move into gamestate?
 export let updatePlayerTorch = (charging: boolean) => {
     PLAYER_TORCH_INTENSITY = charging ? 1.2 : 0.9;
 };
@@ -79,7 +79,7 @@ export let generateDungeon = (width: number, height: number): [number, number] =
     let bossRoom = rooms[i];
     bossRoom.type_ = ROOM_TYPE_BOSS;
     bossRoom.n_[WALL_NORTH] = bossRoom.n_[WALL_WEST] = bossRoom.n_[WALL_EAST] = WALL_MAP_BLOCKED;
-    entityAddBoss(bossRoom.x_ + floor(bossRoom.w_ / 2), bossRoom.y_ + floor(bossRoom.h_ / 2), ENEMY_BOSS_BULLET);
+    entityAddBoss(bossRoom.x_ + floor(bossRoom.w_ / 2) + 0.5, bossRoom.y_ + floor(bossRoom.h_ / 2) + 0.5, ENEMY_BOSS_BULLET);
 
     let parent: Room | null = bossRoom;
     while (parent) {

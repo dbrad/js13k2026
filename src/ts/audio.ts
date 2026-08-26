@@ -93,7 +93,6 @@ let zzfxVolume: number = 0.2;
 let zzfxSampleRate: number = 44100;
 let zzfxContext: AudioContext;
 
-// ─── SFX ────────────────────────────────────────────────
 export let sfxFootstep: number[];
 export let sfxLaserCharge: number[];
 export let sfxLaserFire: number[];
@@ -103,7 +102,6 @@ export let sfxEnemyAlert: number[];
 export let sfxEnemyRanged: number[];
 export let sfxEnemyDeath: number[];
 
-// ─── Ambient Music Layers ───────────────────────────────
 let droneA: number[];
 let droneB: number[];
 let pulse: number[];
