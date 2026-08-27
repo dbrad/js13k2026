@@ -1,7 +1,7 @@
 let saveFileName = "js13k2026dbrad";
 let storage = window.localStorage;
 
-export let gameState: GameState = [100, 100, 0, 0, 0, 0, 1];
+export let gameState: GameState = [100, 100, 0, 0, 0, 0, 1, 0];
 
 export let saveFileExists = (): boolean => {
     return storage.getItem(saveFileName) !== null;
@@ -16,6 +16,7 @@ export let newGame = (): void => {
         0, // GS_PLAYER_ANGLE
         0, // GS_MUTEMUSIC
         1, // GS_SCREENSHAKE
+        0, // GS_PLAYER_INVULNERABLE
     ];
 };
 

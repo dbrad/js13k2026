@@ -1,6 +1,6 @@
 const fs = require('fs');
 
-const data = fs.readFileSync("src/.meta/CONSTANTS", 'utf8');
+const data = fs.readFileSync("src/.meta/CONSTANTS", 'utf8').trim();
 const sets = data.split("\n\n").map(set => set.split("\n"));
 
 let jsFile = "// GENERATED CONSTANTS\nexport const DEFINITIONS = {";
@@ -12,16 +12,17 @@ for (const set of sets)
     let index = 0;
     for (const entry of set)
     {
+        if (!entry.trim()) continue;
         let [constant, value] = entry.split("=");
-        if (value !== undefined && value !== null)
+        if (value !== undefined && value.trim() !== '')
         {
-            jsFile += `    ${constant}: '${value}',\n`;
-            dtsFile += `declare const ${constant}: ${value};\n`;
+            jsFile += `    ${constant}: '${value.trim()}',\n`;
+            dtsFile += `declare const ${constant}: ${value.trim()};\n`;
         }
         else
         {
-            jsFile += `    ${entry}: '${index}',\n`;
-            dtsFile += `declare const ${entry}: ${index};\n`;
+            jsFile += `    ${entry.trim()}: '${index}',\n`;
+            dtsFile += `declare const ${entry.trim()}: ${index};\n`;
         }
 
         index++;

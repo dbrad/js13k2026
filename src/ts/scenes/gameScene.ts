@@ -102,14 +102,17 @@ export let updateGame = (delta: number, dt: number, now: number) => {
     }
 
     [px, py] = entityPlayerCollide(px, py, 0.25, (idx) => {
+        if (gameState[GS_PLAYER_INVULNERABLE] > 0) return;
         gameState[GS_PLAYER_HP] -= 1;
         shakeTrigger(16, 100);
         zzfxPlay(sfxPlayerHurt);
+        gameState[GS_PLAYER_INVULNERABLE] = PLAYER_INVULNERABLE_DURATION;
     });
 
     let assist = entityAimAssist(px, py, angle);
     if (abs(lookDeltaX) > 0.008) assist *= 0.35;
 
+    if (gameState[GS_PLAYER_INVULNERABLE] > 0) gameState[GS_PLAYER_INVULNERABLE] = max(0, gameState[GS_PLAYER_INVULNERABLE] - dt);
 
     gameState[GS_PLAYER_X] = px;
     gameState[GS_PLAYER_Y] = py;
@@ -151,7 +154,7 @@ export let renderGame = (delta: number, dt: number, now: number) => {
     rayRender(px, py, angle, now * 0.0001, dt);
     entityCollect(px, py, angle);
     entityDraw(px, py, angle, now * 0.001);
-    glPushTexture(TEXTURE_HORN, SCREEN_HALF_W - 36, SCREEN_HEIGHT - 128, 3);
+    glPushTexture(TEXTURE_HORN, SCREEN_HALF_W - 36, SCREEN_HEIGHT - 128, 3, gameState[GS_PLAYER_INVULNERABLE] > 0 ? 0x00ffffff : 0xffffffff);
     glFlush();
 
     zeroShake();

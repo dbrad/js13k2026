@@ -28,6 +28,7 @@ type GameState = [
     GS_PLAYER_ANGLE: number,
     GS_MUTEMUSIC: number,
     GS_SCREENSHAKE: number,
+    GS_PLAYER_INVULNERABLE: number
 ];
 
 type Texture = {

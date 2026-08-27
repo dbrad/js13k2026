@@ -140,6 +140,7 @@ declare const GS_PLAYER_Y: 3;
 declare const GS_PLAYER_ANGLE: 4;
 declare const GS_MUTEMUSIC: 5;
 declare const GS_SCREENSHAKE: 6;
+declare const GS_PLAYER_INVULNERABLE: 7;
 
 declare const MAX_CHARGE: 1;
 
@@ -189,3 +190,5 @@ declare const SEPARATION_RADIUS: 0.85;
 declare const SEPARATION_STRENGTH: 2.8;
 declare const BEAM_BASE_DAMAGE: 4.5;
 declare const BEAM_HIT_RADIUS: 0.55;
+declare const ENEMY_FLASH_DURATION: 0.1;
+declare const PLAYER_INVULNERABLE_DURATION: 0.2;

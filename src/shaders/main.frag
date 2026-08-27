@@ -69,8 +69,12 @@ void main() {
         oc = vc;
     } else {
         vec4 tex = texture(tx, vu);
-        vec3 lit = tex.rgb * vc.rgb;
-        vec3 col = mix(lit, FOG_COLOR, vf);
-        oc = vec4(col, tex.a * vc.a);
+        if(vc.a == 0.0f) {
+            oc = vec4(vec3(0.8f), tex.a);
+        } else {
+            vec3 lit = tex.rgb * vc.rgb;
+            vec3 col = mix(lit, FOG_COLOR, vf);
+            oc = vec4(col, tex.a * vc.a);
+        }
     }
 }

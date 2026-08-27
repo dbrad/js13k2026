@@ -1,0 +1,28 @@
+Day 14 - 2026-08-26
+
+---
+
+Added player health and health bar
+Player now takes damage on hit
+Screen shakes when the player is hit
+Added aim assist
+Added short player invuln after getting taking damage
+Added short invuln and white flash to enemies when they get hit by the player's beam
+
+---
+
+`-Zab0 -Zlr930 -Zmc4 -Zmd10 -Zpr14 -S0,1,2,3,7,13,20,42,113,138,276,449`
+
+-------------------------------------------------------------------------------
+Language                     files          blank        comment           code
+-------------------------------------------------------------------------------
+TypeScript                      19            536             65           3063
+GLSL                             2             16              0             85
+HTML                             1              2              0              6
+-------------------------------------------------------------------------------
+SUM:                            22            554             65           3154
+-------------------------------------------------------------------------------
+
+The file is under the limit.
+USED: 91.88% | 12231 BYTES
+LEFT:  8.12% |  1081 BYTES

@@ -51,6 +51,7 @@ let targetX_: Float32Array = new Float32Array(MAX_ENTITIES);
 let targetY_: Float32Array = new Float32Array(MAX_ENTITIES);
 let lastAttackTime_: Float32Array = new Float32Array(MAX_ENTITIES);
 let alert_: Float32Array = new Float32Array(MAX_ENTITIES);
+let flashTimer_: Float32Array = new Float32Array(MAX_ENTITIES);
 
 let active: Int32Array = new Int32Array(MAX_ENTITIES * 0.5);
 let activeCount: number = 0;
@@ -87,13 +88,7 @@ export let entityClear = (): void => {
     for (let i = 0; i < MAX_ENTITIES; i++) free_[i] = i;
 };
 
-export let entityAimAssist = (
-    px: number, py: number,
-    angle: number,
-    maxRange = 10,
-    coneCos = 0.65,   // ~50° half-angle
-    strength = 0.8
-): number => {
+export let entityAimAssist = (px: number, py: number, angle: number, maxRange = 10, coneCos = 0.65, strength = 0.8): number => {
     let dirX = cos(angle);
     let dirY = sin(angle);
     let bestCross = 0;
@@ -130,9 +125,9 @@ export let entityAimAssist = (
 
 let enemyStats: [number, number][] = [
     [0, 0],
-    [5, 3],          // melee
+    [15, 3],          // melee
     [20, 1],         // tank
-    [5, 2],          // ranged
+    [10, 2],          // ranged
     [180, 4],        // bullet hell
     [140, 2],        // brood
     [220, 8],        // charge
@@ -341,27 +336,27 @@ export let fireRainbowBeam = (px: number, py: number, angle: number, charge: num
             }
         }
 
-        // Damage on odd rays only (still dense hits)
+        // Damage on odd rays only
         if (i & 1) {
             for (let d = 0.4; d < hitDist; d += 0.45) {
                 let bx = px + dx * d;
                 let by = py + dy * d;
                 for (let ei = activeCount - 1; ei >= 0; ei--) {
                     let es = active[ei];
-                    if ((flags_[es] & (FLAG_ACTIVE | FLAG_ENEMY)) !== (FLAG_ACTIVE | FLAG_ENEMY) || hp_[es] <= 0) continue;
+                    if ((flags_[es] & (FLAG_ACTIVE | FLAG_ENEMY)) !== (FLAG_ACTIVE | FLAG_ENEMY) || hp_[es] <= 0 || flashTimer_[es] > 0) continue;
 
                     let ex = x_[es] - bx;
                     let ey = y_[es] - by;
                     if (ex * ex + ey * ey > BEAM_HIT_RADIUS * BEAM_HIT_RADIUS) continue;
 
+                    flashTimer_[es] = ENEMY_FLASH_DURATION;
                     hp_[es] -= dmg;
-                    // Make enemy flash white, apply cooldown flag to prevent multihit on a single beam fire
+                    zzfxPlay(sfxEnemyAlert);
                     burstParticles(x_[es], y_[es], 0.55, 6, RAINBOW[i], 2.8, 0.25);
 
                     if (hp_[es] <= 0) {
-                        burstParticles(x_[es], y_[es], 0.5, 12, 0xffffffff, 4.0, 0.4);
+                        burstParticles(x_[es], y_[es], 0.5, 12, 0xff0000ff, 4.0, 0.4);
                         burstParticles(x_[es], y_[es], 0.4, 6, RAINBOW[(i + 3) % 7], 2.5, 0.35);
-                        flags_[es] = 0;
                         zzfxPlay(sfxEnemyDeath);
                         entityRemove(ei);
                     }
@@ -540,6 +535,7 @@ export let entityUpdate = (dt: number, px: number, py: number): void => {
             }
 
             if (flags_[s] & FLAG_ENEMY) {
+                if (flashTimer_[s] > 0) flashTimer_[s] = max(0, flashTimer_[s] - dt);
                 let doLight = false;
                 let edx = px - x_[s];
                 let edy = py - y_[s];
@@ -879,7 +875,6 @@ export let entityDraw = (px: number, py: number, angle: number, now: number): vo
             } else {
                 alpha = min(0.7, data_[s] / PSEUDO_LIFETIME * 0.7);
             }
-
             let col = floor(alpha * 255) << 24 | (colour_[s] & 0xffffff);
             let lit = modulateABGR(col, lightR, lightG, lightB);
 
@@ -890,7 +885,8 @@ export let entityDraw = (px: number, py: number, angle: number, now: number): vo
         let tex = TEXTURE_CACHE[texId_[s]];
         assert(tex !== undefined, `missing texture from texture cache. id: ${texId_[s]}`);
 
-        let litColour = modulateABGR(colour_[s], lightR, lightG, lightB);
+        let flashColour = (flashTimer_[s] > 0) ? 0x00ffffff : colour_[s];
+        let litColour = modulateABGR(flashColour, lightR, lightG, lightB);
 
         let halfW = height * 0.5;
         let drawStartX = screenX - halfW;
