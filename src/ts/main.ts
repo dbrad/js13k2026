@@ -2,12 +2,12 @@ import version from "../../VERSION.txt";
 import { drawPerformanceMeter, initPerformanceMeter, performanceMark, tickPerformanceMeter, togglePerformanceDisplay } from "./__debug/debug";
 import { zzfxInit } from "./audio";
 import { initCanvas } from "./canvas";
-import { entitySpawnDust, spawnEnemiesInRoom } from "./entity";
 import { gameState } from "./gameState";
 import { glClear, glFlush, glInit, glPushText } from "./gl";
-import { drawControls, initializeInput, isTouchEvent } from "./input";
-import { generateDungeon, rooms } from "./map";
+import { drawControls, initializeInput, isTouchEvent, updateHardwareInput, updateInputState } from "./input";
+import { createMenuScene, initMapSystem } from "./map";
 import { renderGame, updateGame } from "./scenes/gameScene";
+import { renderMainMenu, updateMainMenu } from "./scenes/menuScene";
 import { loadTextureAtlas } from "./texture";
 
 window.addEventListener("load", async (): Promise<void> => {
@@ -17,7 +17,6 @@ window.addEventListener("load", async (): Promise<void> => {
     await loadTextureAtlas();
     initPerformanceMeter();
 
-    let currentScene = 0;
     let playing = false;
 
     let initializeGame = (e: PointerEvent | TouchEvent): void => {
@@ -31,13 +30,8 @@ window.addEventListener("load", async (): Promise<void> => {
             canvas.removeEventListener("pointerdown", initializeGame);
             playing = true;
 
-            [gameState[GS_PLAYER_X], gameState[GS_PLAYER_Y]] = generateDungeon(50, 50);
-            for (let i = 1; i < rooms.length; i++) {
-                let r = rooms[i];
-                if (r.type_ === ROOM_TYPE_NORMAL)
-                    spawnEnemiesInRoom(r.x_, r.y_, r.w_, r.h_, TEXTURE_DEMON);
-            }
-            entitySpawnDust(gameState[GS_PLAYER_X], gameState[GS_PLAYER_Y], 220);
+            initMapSystem();
+            createMenuScene();
 
             if (DEBUG) {
                 document.addEventListener("keyup", (e: KeyboardEvent): void => {
@@ -62,6 +56,7 @@ window.addEventListener("load", async (): Promise<void> => {
 
         if (playing) {
             performanceMark("start_of_frame");
+            let scene = gameState[GS_SCENE];
             if (delta > 250) {
                 delta = 16.6;
                 dt = delta * 0.001;
@@ -69,14 +64,24 @@ window.addEventListener("load", async (): Promise<void> => {
 
             performanceMark("update_start");
             {
-                updateGame(delta, dt, now);
+                updateHardwareInput();
+                updateInputState(delta, dt);
+                if (scene === 0) {
+                    updateMainMenu(delta, dt, now);
+                } else {
+                    updateGame(delta, dt, now);
+                }
             }
             performanceMark("update_end");
 
             performanceMark("render_start");
             {
                 glClear(0, 0, 0);
-                renderGame(delta, dt, now);
+                if (scene === 0) {
+                    renderMainMenu(delta, dt, now);
+                } else {
+                    renderGame(delta, dt, now);
+                }
                 drawControls();
                 if (DEBUG) {
                     drawPerformanceMeter(gameState[GS_PLAYER_X], gameState[GS_PLAYER_Y]);

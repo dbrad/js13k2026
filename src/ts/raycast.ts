@@ -127,7 +127,6 @@ export let rayRender = (px: number, py: number, angle: number, now: number, dt: 
                         doorHitDist = t;
                         doorWallX = hitX - (rayMapX + mapOffsetData[idx]);
                         hit = 1;
-                        hit = 1;
                         break;
                     }
                 }
@@ -236,7 +235,7 @@ export let rayRenderFloorCeiling = (px: number, py: number, angle: number): void
     gl.uniform2f(uDir, dirX, dirY);
     gl.uniform2f(uPlane, planeX, planeY);
 
-    glPushQuad(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, 10, 0, 11, 1, 0xffffffff);
+    glPushQuad(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, 10, 0, 11, 1);
 };
 
 export let rayIsSolid = (x: number, y: number): boolean => {

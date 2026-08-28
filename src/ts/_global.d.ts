@@ -20,14 +20,21 @@ declare module '*.webp' {
     export default content;
 }
 
+type SaveState = [
+    GS_OPT_MUSIC: number,
+    GS_OPT_BOB: number,
+    GS_OPT_SHAKE: number,
+    GS_OPT_AIM: number
+];
+
 type GameState = [
+    GS_PLAYER_HP: number,
+    GS_PLAYER_HP: number,
     GS_PLAYER_HP: number,
     GS_PLAYER_MAX_HP: number,
     GS_PLAYER_X: number,
     GS_PLAYER_Y: number,
     GS_PLAYER_ANGLE: number,
-    GS_MUTEMUSIC: number,
-    GS_SCREENSHAKE: number,
     GS_PLAYER_INVULNERABLE: number
 ];
 

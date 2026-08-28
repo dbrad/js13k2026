@@ -153,7 +153,7 @@ export let glPushTexture = (texId: number, x: number, y: number, scale = 1, colo
     glPushQuad(x, y, t.w_ * scale, t.h_ * scale, u0, v0, u1, v1, colour, fog);
 };
 
-export let glPushQuad = (x: number, y: number, w: number, h: number, u0: number, v0: number, u1: number, v1: number, colour: number, fog: number = 0): void => {
+export let glPushQuad = (x: number, y: number, w: number, h: number, u0: number, v0: number, u1: number, v1: number, colour: number = 0xffffffff, fog: number = 0): void => {
     if (quadCount >= MAX_QUADS) return;
 
     let i = quadCount * VERTICES_PER_QUAD * FLOATS_PER_VERTEX;

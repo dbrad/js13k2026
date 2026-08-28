@@ -54,8 +54,8 @@ let rawMouseDX = 0, rawMouseDY = 0;
 let touches = [[0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0]];
 
 let keyMap: Record<string, number> = {
-    "KeyW": D_UP,
-    "KeyS": D_DOWN,
+    "KeyW": D_UP, "ArrowUp": D_UP,
+    "KeyS": D_DOWN, "ArrowDown": D_DOWN,
     "KeyA": D_LEFT,
     "KeyD": D_RIGHT,
     "KeyX": A_BUTTON, "KeyE": A_BUTTON,
@@ -287,12 +287,6 @@ export let drawControls = (): void => {
         glPushColorCircle(bButtonX, bButtonY, buttonSize, 0x88ffffff);
         glPushText("b", bButtonX + halfButtonSize - 0, bButtonY + halfButtonSize + 4, 0xff000000, 3, TEXT_H_ALIGN_CENTER, TEXT_V_ALIGN_MIDDLE);
     }
-
-    // let help = !isTouch
-    //     ? `wasd move / arrows or mouse look / click fire / c cancel`
-    //     : `left stick move / right stick look / a fire / b cancel`;
-
-    // glPushText(help, SCREEN_WIDTH / 2, SCREEN_HEIGHT - 8, 0xffffffff, 1, TEXT_H_ALIGN_CENTER);
 };
 
 export let clearInput = (): void => {

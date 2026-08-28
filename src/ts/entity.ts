@@ -1,31 +1,15 @@
 import { assert } from "./__debug/debug";
 import { sfxEnemyAlert, sfxEnemyDeath, sfxEnemyMelee, sfxEnemyRanged, sfxLaserFire, zzfxPlay } from "./audio";
+import { RAINBOW, RAINBOWf } from "./colours";
+import { gameState } from "./gameState";
 import { glPushColorCircle, glPushQuad } from "./gl";
 import { AMBIENT, LIGHT_LEVEL_CAP, lightMap, mapData, mapH, mapW } from "./map";
-import { abs, circleOverlap, cos, floor, max, min, PI, randInt, random, sin, sqrt } from "./math";
+import { abs, circleOverlap, cos, floor, max, min, PI, randInt, random, sin, sqrt, srand, srandInt } from "./math";
 import { fogFactor, FOV, rayIsSolid, rayMove, zBuffer } from "./raycast";
 import { shakeTrigger } from "./shake";
 import { TEXTURE_CACHE } from "./texture";
 
-let RAINBOW = [
-    0xff0000ff,
-    0xff0080ff,
-    0xff00ffff,
-    0xff00ff00,
-    0xffffff00,
-    0xffff0000,
-    0xffff00ff,
-];
 
-let RAINBOWf = [
-    [1.5, 0, 0],
-    [1.5, 0.75, 0],
-    [1.5, 1.5, 0],
-    [0, 1.5, 0],
-    [0, 1.5, 1.5],
-    [0, 0, 1.5],
-    [1.5, 0, 1.5],
-];
 
 let x_: Float32Array = new Float32Array(MAX_ENTITIES);
 let y_: Float32Array = new Float32Array(MAX_ENTITIES);
@@ -196,6 +180,31 @@ export let entityAddParticle = (x: number, y: number, z = 0.5, size = 1, col = 0
     let slot = activeParticles[id];
     size_[slot] = size;
     return id;
+};
+
+export let spawnEnemiesInRoom = (rx: number, ry: number, rw: number, rh: number, texId: number = 1): void => {
+    let count = 1 + floor(srand() * 3);
+
+    for (let i = 0; i < count; i++) {
+        let sx = srandInt(rx + 1, rx + rw - 2) + 0.5;
+        let sy = srandInt(ry + 1, ry + rh - 2) + 0.5;
+
+        let r = srand();
+        let typ: number = ENEMY_MELEE;
+        let scl = 0.95;
+        let col = 0xffffffff;
+        if (r > 0.72) {
+            typ = ENEMY_RANGED;
+            scl = 0.85;
+            col = 0xffaaccff;
+        } else if (r > 0.88) {
+            typ = ENEMY_TANK;
+            scl = 1.25;
+            col = 0xffccaa88;
+        }
+
+        entityAdd(sx, sy, texId, scl, FLAG_ACTIVE | FLAG_ENEMY | FLAG_SOLID, col, 0.5, typ);
+    }
 };
 
 export let entityRemove = (activeIdx: number): void => {
@@ -457,6 +466,7 @@ export let entitySpawnDust = (px: number, py: number, count = 220): void => {
 export let entityPlayerCollide = (px: number, py: number, playerRadius = 0.25, onDamage?: (activeIdx: number, dmg: number) => void): [number, number] => {
     for (let i = 0; i < activeCount; i++) {
         let s = active[i];
+        // TODO: XP_ORB collide logic
         if ((flags_[s] & (FLAG_ACTIVE | FLAG_DAMAGE)) !== (FLAG_ACTIVE | FLAG_DAMAGE)) continue;
 
         let er = (flags_[s] & FLAG_PROJECTILE) ? 0.15 : 0.4 * scale_[s];
@@ -550,148 +560,149 @@ export let entityUpdate = (dt: number, px: number, py: number): void => {
                 let cooldown: number = MELEE_COOLDOWN;
                 let attackRange: number = MELEE_ATTACK_RANGE;
 
-                if (typ === ENEMY_TANK) {
-                    speed = TANK_SPEED;
-                    cooldown = TANK_COOLDOWN;
-                } else if (typ === ENEMY_RANGED) {
-                    speed = RANGED_SPEED;
-                    cooldown = RANGED_COOLDOWN;
-                    attackRange = RANGED_ATTACK_RANGE;
-                }
-
-                if (alert_[s] < 0) {
-                    if (hasLineOfSight(x_[s], y_[s], px, py)) {
-                        zzfxPlay(sfxEnemyAlert);
-                        alert_[s] = NOTICE_DELAY_MIN + random() * (NOTICE_DELAY_MAX - NOTICE_DELAY_MIN);
-                    } else {
-                        if (random() < 0.01) {
-                            let ang = random() * PI * 2;
-                            preferX_[s] = cos(ang);
-                            preferY_[s] = sin(ang);
-                        }
-                        vx_[s] = preferX_[s] * IDLE_WANDER_SPEED;
-                        vy_[s] = preferY_[s] * IDLE_WANDER_SPEED;
+                if (gameState[GS_SCENE] === 1) {
+                    if (typ === ENEMY_TANK) {
+                        speed = TANK_SPEED;
+                        cooldown = TANK_COOLDOWN;
+                    } else if (typ === ENEMY_RANGED) {
+                        speed = RANGED_SPEED;
+                        cooldown = RANGED_COOLDOWN;
+                        attackRange = RANGED_ATTACK_RANGE;
                     }
-                } else if (alert_[s] > 0) {
-                    alert_[s] -= dt;
-                    if (alert_[s] <= 0) alert_[s] = 0;
-                    vx_[s] = ndx * speed * 0.25;
-                    vy_[s] = ndy * speed * 0.25;
-                }
 
-                if (typ < ENEMY_BOSS_BULLET && alert_[s] === 0) {
-                    doLight = true;
-                    if (lastAttackTime_[s] > 0) lastAttackTime_[s] -= dt;
-
-                    if (typ === ENEMY_RANGED) {
-                        if (dist > RANGED_MAX_DIST) {
-                            vx_[s] = ndx * speed;
-                            vy_[s] = ndy * speed;
+                    if (alert_[s] < 0) {
+                        if (hasLineOfSight(x_[s], y_[s], px, py)) {
+                            zzfxPlay(sfxEnemyAlert);
+                            alert_[s] = NOTICE_DELAY_MIN + random() * (NOTICE_DELAY_MAX - NOTICE_DELAY_MIN);
                         } else {
-                            vx_[s] = vx_[s] * 0.85 - ndy * 0.35;
-                            vy_[s] = vy_[s] * 0.85 + ndx * 0.35;
+                            if (random() < 0.01) {
+                                let ang = random() * PI * 2;
+                                preferX_[s] = cos(ang);
+                                preferY_[s] = sin(ang);
+                            }
+                            vx_[s] = preferX_[s] * IDLE_WANDER_SPEED;
+                            vy_[s] = preferY_[s] * IDLE_WANDER_SPEED;
                         }
-                    } else {
-                        vx_[s] = dist > 0.75 ? ndx * speed : 0;
-                        vy_[s] = dist > 0.75 ? ndy * speed : 0;
+                    } else if (alert_[s] > 0) {
+                        alert_[s] -= dt;
+                        if (alert_[s] <= 0) alert_[s] = 0;
+                        vx_[s] = ndx * speed * 0.25;
+                        vy_[s] = ndy * speed * 0.25;
                     }
 
-                    if (dist <= attackRange && lastAttackTime_[s] <= 0) {
-                        lastAttackTime_[s] = cooldown;
+                    if (typ < ENEMY_BOSS_BULLET && alert_[s] === 0) {
+                        doLight = true;
+                        if (lastAttackTime_[s] > 0) lastAttackTime_[s] -= dt;
+
                         if (typ === ENEMY_RANGED) {
-                            zzfxPlay(sfxEnemyRanged);
-                            spawnProjectile(x_[s], y_[s], edx, edy, damage_[s], 0xff2222ff);
+                            if (dist > RANGED_MAX_DIST) {
+                                vx_[s] = ndx * speed;
+                                vy_[s] = ndy * speed;
+                            } else {
+                                vx_[s] = vx_[s] * 0.85 - ndy * 0.35;
+                                vy_[s] = vy_[s] * 0.85 + ndx * 0.35;
+                            }
                         } else {
-                            zzfxPlay(sfxEnemyMelee);
-                            spawnPseudoMelee(px, py, damage_[s]);
+                            vx_[s] = dist > 0.75 ? ndx * speed : 0;
+                            vy_[s] = dist > 0.75 ? ndy * speed : 0;
+                        }
+
+                        if (dist <= attackRange && lastAttackTime_[s] <= 0) {
+                            lastAttackTime_[s] = cooldown;
+                            if (typ === ENEMY_RANGED) {
+                                zzfxPlay(sfxEnemyRanged);
+                                spawnProjectile(x_[s], y_[s], edx, edy, damage_[s], 0xff2222ff);
+                            } else {
+                                zzfxPlay(sfxEnemyMelee);
+                                spawnPseudoMelee(px, py, damage_[s]);
+                            }
                         }
                     }
+
+                    if (typ >= ENEMY_BOSS_BULLET) {
+                        doLight = true;
+                        if (typ === ENEMY_BOSS_BULLET) {
+                            // stay near home
+                            let hx = preferX_[s] - x_[s];
+                            let hy = preferY_[s] - y_[s];
+                            vx_[s] = hx * 0.6;
+                            vy_[s] = hy * 0.6;
+
+                            data_[s] -= dt;
+                            if (data_[s] <= 0) {
+                                // fire radial wave
+                                let base = phase_[s];
+                                for (let a = 0; a < PI * 2; a += PI / 12) {   // 15°
+                                    let ang = base + a;
+                                    spawnProjectile(x_[s], y_[s], cos(ang), sin(ang), damage_[s], 0xff000088);
+                                }
+                                phase_[s] += 0.18;          // slight rotate next volley
+                                data_[s] = 1.1 + random() * 0.3;  // pause
+                            }
+                        }
+                        else if (typ === ENEMY_BOSS_BROOD) {
+                            if (dist < 5.5) {
+                                vx_[s] = -ndx * RANGED_SPEED * 0.9;
+                                vy_[s] = -ndy * RANGED_SPEED * 0.9;
+                            } else {
+                                vx_[s] *= 0.9; vy_[s] *= 0.9;
+                            }
+
+                            data_[s] -= dt;
+                            if (data_[s] <= 0 && activeCount < MAX_ENTITIES - 40) {
+                                let ang = random() * PI * 2;
+                                entityAdd(x_[s] + cos(ang) * 1.2, y_[s] + sin(ang) * 1.2, 1, 0.75, FLAG_ACTIVE | FLAG_ENEMY | FLAG_SOLID, 0xffaaffcc, 0.5, ENEMY_MELEE);
+                                data_[s] = 2.8 + random() * 1.2;
+                            }
+                        }
+                        else if (typ === ENEMY_BOSS_CHARGE) {
+                            // state machine on phase_ (0=idle/circle, 1=windup, 2=dash, 3=recover)
+                            if (phase_[s] === 0) {
+                                // circle or face
+                                vx_[s] = -ndy * TANK_SPEED * 0.7 + ndx * 0.15;
+                                vy_[s] = ndx * TANK_SPEED * 0.7 + ndy * 0.15;
+                                data_[s] -= dt;
+                                if (data_[s] <= 0) {
+                                    phase_[s] = 1;
+                                    data_[s] = 0.55;           // wind-up
+                                    // optional telegraph particles
+                                }
+                            } else if (phase_[s] === 1) {
+                                vx_[s] = vy_[s] = 0;
+                                data_[s] -= dt;
+                                if (data_[s] <= 0) {
+                                    phase_[s] = 2;
+                                    data_[s] = 0.85;           // dash duration
+                                    // lock direction
+                                    preferX_[s] = ndx;
+                                    preferY_[s] = ndy;
+                                }
+                            } else if (phase_[s] === 2) {
+                                vx_[s] = preferX_[s] * 3.2;
+                                vy_[s] = preferY_[s] * 3.2;
+                                data_[s] -= dt;
+                                // on wall hit or timer → recover
+                                if (data_[s] <= 0) {
+                                    phase_[s] = 3;
+                                    data_[s] = 1.4;
+                                }
+                            } else { // recover
+                                vx_[s] *= 0.85; vy_[s] *= 0.85;
+                                data_[s] -= dt;
+                                if (data_[s] <= 0) {
+                                    phase_[s] = 0;
+                                    data_[s] = 2.0 + random();
+                                }
+                            }
+                        }
+                    }
+
+                    applySeparation(s);
+
+                    let mdx = vx_[s] * dt;
+                    let mdy = vy_[s] * dt;
+                    [x_[s], y_[s]] = rayMove(x_[s], y_[s], mdx, mdy, 0.2);
                 }
-
-                if (typ >= ENEMY_BOSS_BULLET) {
-                    doLight = true;
-                    if (typ === ENEMY_BOSS_BULLET) {
-                        // stay near home
-                        let hx = preferX_[s] - x_[s];
-                        let hy = preferY_[s] - y_[s];
-                        vx_[s] = hx * 0.6;
-                        vy_[s] = hy * 0.6;
-
-                        data_[s] -= dt;
-                        if (data_[s] <= 0) {
-                            // fire radial wave
-                            let base = phase_[s];
-                            for (let a = 0; a < PI * 2; a += PI / 12) {   // 15°
-                                let ang = base + a;
-                                spawnProjectile(x_[s], y_[s], cos(ang), sin(ang), damage_[s], 0xff000088);
-                            }
-                            phase_[s] += 0.18;          // slight rotate next volley
-                            data_[s] = 1.1 + random() * 0.3;  // pause
-                        }
-                    }
-                    else if (typ === ENEMY_BOSS_BROOD) {
-                        if (dist < 5.5) {
-                            vx_[s] = -ndx * RANGED_SPEED * 0.9;
-                            vy_[s] = -ndy * RANGED_SPEED * 0.9;
-                        } else {
-                            vx_[s] *= 0.9; vy_[s] *= 0.9;
-                        }
-
-                        data_[s] -= dt;
-                        if (data_[s] <= 0 && activeCount < MAX_ENTITIES - 40) {
-                            let ang = random() * PI * 2;
-                            entityAdd(x_[s] + cos(ang) * 1.2, y_[s] + sin(ang) * 1.2, 1, 0.75, FLAG_ACTIVE | FLAG_ENEMY | FLAG_SOLID, 0xffaaffcc, 0.5, ENEMY_MELEE);
-                            data_[s] = 2.8 + random() * 1.2;
-                        }
-                    }
-                    else if (typ === ENEMY_BOSS_CHARGE) {
-                        // state machine on phase_ (0=idle/circle, 1=windup, 2=dash, 3=recover)
-                        if (phase_[s] === 0) {
-                            // circle or face
-                            vx_[s] = -ndy * TANK_SPEED * 0.7 + ndx * 0.15;
-                            vy_[s] = ndx * TANK_SPEED * 0.7 + ndy * 0.15;
-                            data_[s] -= dt;
-                            if (data_[s] <= 0) {
-                                phase_[s] = 1;
-                                data_[s] = 0.55;           // wind-up
-                                // optional telegraph particles
-                            }
-                        } else if (phase_[s] === 1) {
-                            vx_[s] = vy_[s] = 0;
-                            data_[s] -= dt;
-                            if (data_[s] <= 0) {
-                                phase_[s] = 2;
-                                data_[s] = 0.85;           // dash duration
-                                // lock direction
-                                preferX_[s] = ndx;
-                                preferY_[s] = ndy;
-                            }
-                        } else if (phase_[s] === 2) {
-                            vx_[s] = preferX_[s] * 3.2;
-                            vy_[s] = preferY_[s] * 3.2;
-                            data_[s] -= dt;
-                            // on wall hit or timer → recover
-                            if (data_[s] <= 0) {
-                                phase_[s] = 3;
-                                data_[s] = 1.4;
-                            }
-                        } else { // recover
-                            vx_[s] *= 0.85; vy_[s] *= 0.85;
-                            data_[s] -= dt;
-                            if (data_[s] <= 0) {
-                                phase_[s] = 0;
-                                data_[s] = 2.0 + random();
-                            }
-                        }
-                    }
-                }
-
-                applySeparation(s);
-
-                let mdx = vx_[s] * dt;
-                let mdy = vy_[s] * dt;
-                [x_[s], y_[s]] = rayMove(x_[s], y_[s], mdx, mdy, 0.2);
-
                 if (doLight) {
                     let lidx = (floor(y_[s]) * mapW + floor(x_[s])) * 3;
                     lightMap[lidx] = min(LIGHT_LEVEL_CAP, lightMap[lidx] + 0.01);
@@ -891,7 +902,8 @@ export let entityDraw = (px: number, py: number, angle: number, now: number): vo
         let halfW = height * 0.5;
         let drawStartX = screenX - halfW;
         let drawEndX = screenX + halfW;
-        let bob = sin(now * 3 + verticalBob_[s]) * (height * 0.04);
+        const phase = now * 0.001 * 1.5 + verticalBob_[s];   // 0.8 = cycles per second
+        let bob = sin(phase) * (height * 0.04);
         let drawStartY = (SCREEN_HEIGHT - height) * 0.5 + bob;
 
         let startCol = max(0, floor(drawStartX));
@@ -906,30 +918,5 @@ export let entityDraw = (px: number, py: number, angle: number, now: number): vo
             let texU = tex.u0_ + uSpan * ((col - drawStartX) * invW);
             glPushQuad(col, drawStartY, 1, height, texU, tex.v0_, texU, tex.v1_, litColour, fog);
         }
-    }
-};
-
-export let spawnEnemiesInRoom = (rx: number, ry: number, rw: number, rh: number, texId: number = 1): void => {
-    let count = 1 + floor(random() * 3);
-
-    for (let i = 0; i < count; i++) {
-        let sx = randInt(rx + 1, rx + rw - 2) + 0.5;
-        let sy = randInt(ry + 1, ry + rh - 2) + 0.5;
-
-        let r = random();
-        let typ: number = ENEMY_MELEE;
-        let scl = 0.95;
-        let col = 0xffffffff;
-        if (r > 0.72) {
-            typ = ENEMY_RANGED;
-            scl = 0.85;
-            col = 0xffaaccff;
-        } else if (r > 0.88) {
-            typ = ENEMY_TANK;
-            scl = 1.25;
-            col = 0xffccaa88;
-        }
-
-        entityAdd(sx, sy, texId, scl, FLAG_ACTIVE | FLAG_ENEMY | FLAG_SOLID, col, 0.5, typ);
     }
 };

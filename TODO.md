@@ -16,34 +16,34 @@
     - Make enemies take damage from rainbow beam.
     - Add particles / effect / quads / some sort of visual to enemy attacks
 - [x] Add player attack cooldown
-- [ ] Charge levels for attack
 - [x] Add player health and taking damage
-- [ ] Lose condition
 - [x] Cleanup / Simplify Map Generation
 - [x] Exit placement
     - need to make sure the player and exit are spawned far away from eachother
 - [x] Add enemy lighting pass
 - [x] Room to spawn boss in
     - Boss will spawn in the final room to guard the exit (drop a key maybe)
-- [ ] Boss mechanics
-    - On screen hp bar for boss, more complex / dangerous fight ai
-- [ ] Win condition
 - [x] Add zzfx back in
     - took abou 5% remaining space
 - [x] Sound effects
     - Use audio.ts and https://killedbyapixel.github.io/ZzFX/ to generate sound effects
 - [x] Music
-- [ ] Power ups? Leveling? progression?
-    - Think about pickups, levels, stats, added charge levels, or something to give player sense of progression
-    - Healing packs
-    - Key to exit the level
 - [x] Cleanup shader files
     - shorten all param and uniform names
-- [ ] Psuedo-scenes (Menu, options, gameplay)
+- [x] Psuedo-scenes (Menu, options, gameplay)
 - [x] Cleanup / Simplify Proc-gen Textures
 - [x] Consider removing tween and event systems
+- [x] Aim assist
 - [ ] Juice
     - screen shake on hit
     - enemies and walls flash white on hit
     - particles on death of enemies
-- [x] Aim assist
+- [ ] Health Packs
+- [ ] Unify light update into a helper
+- [ ] Unify entity removal
+- [ ] Boss mechanics
+    - On screen hp bar for boss, more complex / dangerous fight ai
+- [ ] Win condition
+- [ ] Lose condition
+- [ ] Charge levels for attack
+- [ ] Reduce input flags, use the input array2

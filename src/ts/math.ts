@@ -190,7 +190,7 @@ export let srandSeed = (seed: number): void => {
   _srandSeed = seed;
 };
 
-let srand = (): number => {
+export let srand = (): number => {
   _srandSeed = (3967 * _srandSeed + 11) % 16127;
   return _srandSeed / 16127;
 };

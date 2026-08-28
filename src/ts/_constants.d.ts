@@ -133,13 +133,18 @@ declare const EVENT_BOSS_DIED: 6;
 declare const EVENT_SPAWN_PARTICLES: 7;
 declare const EVENT_DELAY: 8;
 
-declare const GS_PLAYER_HP: 0;
-declare const GS_PLAYER_MAX_HP: 1;
-declare const GS_PLAYER_X: 2;
-declare const GS_PLAYER_Y: 3;
-declare const GS_PLAYER_ANGLE: 4;
-declare const GS_MUTEMUSIC: 5;
-declare const GS_SCREENSHAKE: 6;
+declare const GS_OPT_MUSIC: 0;
+declare const GS_OPT_BOB: 1;
+declare const GS_OPT_SHAKE: 2;
+declare const GS_OPT_AIM: 3;
+
+declare const GS_SCENE: 0;
+declare const GS_SEED: 1;
+declare const GS_PLAYER_HP: 2;
+declare const GS_PLAYER_MAX_HP: 3;
+declare const GS_PLAYER_X: 4;
+declare const GS_PLAYER_Y: 5;
+declare const GS_PLAYER_ANGLE: 6;
 declare const GS_PLAYER_INVULNERABLE: 7;
 
 declare const MAX_CHARGE: 1;
@@ -192,3 +197,11 @@ declare const BEAM_BASE_DAMAGE: 4.5;
 declare const BEAM_HIT_RADIUS: 0.55;
 declare const ENEMY_FLASH_DURATION: 0.1;
 declare const PLAYER_INVULNERABLE_DURATION: 0.2;
+
+declare const RED: 0;
+declare const ORANGE: 1;
+declare const YELLOW: 2;
+declare const GREEN: 3;
+declare const BLUE: 4;
+declare const INDIGO: 5;
+declare const VIOLET: 6;
