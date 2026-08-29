@@ -1,13 +1,16 @@
 import { assert } from "@debug";
 import textureAltas from "@res/sheet.webp";
+import { gameState } from "./gameState";
 import { characterCodeMap, glUploadAtlas } from "./gl";
-import { floor, randInt } from "./math";
+import { floor } from "./math";
 import { genBrick, genShadowCreature, genStone, genUnicornHorn, genWood } from "./procedural-textures";
 
 export let TEXTURE_CACHE: TextureCache = [];
 
 let procBuf: ImageDataArray | null = null;
 let procBufCapacity = 0;
+let canvas: HTMLCanvasElement;
+let ctx: CanvasRenderingContext2D;
 
 let stampProcedural = (ctx: CanvasRenderingContext2D, texId: number, gen: (w: number, h: number, seed: number, out: Uint8Array, mod?: boolean) => void, x: number, y: number, w: number, h: number, seed: number, mod = false, frame = 0): void => {
   let needed = w * h * 4;
@@ -35,8 +38,8 @@ export let loadTextureAtlas = async (): Promise<HTMLCanvasElement> => {
     assert(IMAGE_WIDTH === imageBitmap.width, `ATLAS IMAGE WIDTH CHANGED (expected: ${IMAGE_WIDTH} actual: ${imageBitmap.width})`);
     assert(IMAGE_HEIGHT === imageBitmap.height, `ATLAS IMAGE HEIGHT CHANGED (expected: ${IMAGE_HEIGHT} actual: ${imageBitmap.height})`);
 
-    let canvas = document.createElement("canvas",);
-    let ctx = canvas.getContext("2d")!!;
+    canvas = document.createElement("canvas",);
+    ctx = canvas.getContext("2d")!!;
     canvas.width = ATLAS_WIDTH;
     canvas.height = ATLAS_HEIGHT;
 
@@ -51,29 +54,31 @@ export let loadTextureAtlas = async (): Promise<HTMLCanvasElement> => {
       ctx.drawImage(imageBitmap, sx, sy, 8, 8, dx, dy, 8, 8);
       TEXTURE_CACHE[100 + i] = newTexture(8, 8, dx / ATLAS_WIDTH, dy / ATLAS_HEIGHT, (dx + 8) / ATLAS_WIDTH, (dy + 8) / ATLAS_HEIGHT);
     };
-
-    let S = 32;
-    let xOffset = 8;
-    let seed = randInt(0, 100000);
-
-    stampProcedural(ctx, TEXTURE_BRICK, genBrick, xOffset, 32, S, S, seed);
-    xOffset += S + 8;
-    stampProcedural(ctx, TEXTURE_BRICK_CRACK, genBrick, xOffset, 32, S, S, seed, true);
-    xOffset += S + 8;
-    stampProcedural(ctx, TEXTURE_STONE, genStone, xOffset, 32, S, S, seed);
-    xOffset += S + 8;
-    stampProcedural(ctx, TEXTURE_WOOD, genWood, xOffset, 32, S, S, seed);
-    xOffset += S + 8;
-    stampProcedural(ctx, TEXTURE_HORN, genUnicornHorn, xOffset, 32, 24, 48, seed);
-
-    xOffset = 0;
-    stampProcedural(ctx, TEXTURE_DEMON, genShadowCreature, xOffset, 96, 16, 16, seed);
-    xOffset += 16 + 8;
-    stampProcedural(ctx, TEXTURE_DEMON_MEDIUM, genShadowCreature, xOffset, 96, 24, 24, seed);
-    xOffset += 24 + 8;
-    stampProcedural(ctx, TEXTURE_DEMON_LARGE, genShadowCreature, xOffset, 96, 32, 32, seed);
-
-    glUploadAtlas(canvas);
+    generateProcTextures();
     resolve(canvas);
   });
+};
+
+export let generateProcTextures = () => {
+  let S = 32;
+  let xOffset = 8;
+  let seed = gameState[GS_SEED];
+
+  stampProcedural(ctx, TEXTURE_BRICK, genBrick, xOffset, 32, S, S, seed);
+  xOffset += S + 8;
+  stampProcedural(ctx, TEXTURE_BRICK_CRACK, genBrick, xOffset, 32, S, S, seed, true);
+  xOffset += S + 8;
+  stampProcedural(ctx, TEXTURE_STONE, genStone, xOffset, 32, S, S, seed);
+  xOffset += S + 8;
+  stampProcedural(ctx, TEXTURE_WOOD, genWood, xOffset, 32, S, S, seed);
+  xOffset += S + 8;
+  stampProcedural(ctx, TEXTURE_HORN, genUnicornHorn, xOffset, 32, 24, 48, seed);
+
+  xOffset = 0;
+  stampProcedural(ctx, TEXTURE_DEMON, genShadowCreature, xOffset, 96, 16, 16, seed);
+  xOffset += 16 + 8;
+  stampProcedural(ctx, TEXTURE_DEMON_MEDIUM, genShadowCreature, xOffset, 96, 24, 24, seed);
+  xOffset += 24 + 8;
+  stampProcedural(ctx, TEXTURE_DEMON_LARGE, genShadowCreature, xOffset, 96, 32, 32, seed);
+  glUploadAtlas(canvas);
 };

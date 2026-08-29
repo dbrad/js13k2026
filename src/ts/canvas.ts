@@ -30,7 +30,7 @@ export let initCanvas = (): HTMLCanvasElement => {
   return canvas;
 };
 
-export let requestFullscreen = (canvas: HTMLCanvasElement): void => {
+export let requestFullscreen = (): void => {
   if (document.fullscreenEnabled) {
     if (!document.fullscreenElement) {
       document.body.requestFullscreen();

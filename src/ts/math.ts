@@ -16,21 +16,6 @@ export let math = Math,
 export let EULER = 2.71828 as const;
 export let PI = 3.14159 as const;
 
-export let vecCalc = new Float32Array(5);
-export let calcVec = (x1: number, y1: number, x2: number, y2: number): boolean => {
-  vecCalc[DX] = x2 - x1;
-  vecCalc[DY] = y2 - y1;
-  vecCalc[DIST] = hypot(vecCalc[0], vecCalc[1]);
-  if (vecCalc[DIST] === 0) {
-    vecCalc[NX] = 0;
-    vecCalc[NY] = 0;
-    return false;
-  }
-  vecCalc[NX] = vecCalc[DX] / vecCalc[DIST];
-  vecCalc[NY] = vecCalc[DY] / vecCalc[DIST];
-  return true;
-};
-
 export let roundTo = (value: number, nearest: number): number => {
   return round(value / nearest) * nearest;
 };
@@ -67,62 +52,6 @@ export let circleOverlap = (
   let dy = ay - by;
   let r = ar + br;
   return dx * dx + dy * dy < r * r;
-};
-
-export let raySegmentIntersection = (
-  ox: number, oy: number,
-  dx: number, dy: number,
-  ax: number, ay: number,
-  bx: number, by: number
-): number => {
-  // v2 = end - start
-  let v2x = bx - ax;
-  let v2y = by - ay;
-
-  // v3 = perpendicular to ray direction
-  let v3x = -dy;
-  let v3y = dx;
-
-  // d = dot(v2, v3)
-  let d = v2x * v3x + v2y * v3y;
-
-  // parallel (or almost)
-  if (d > -1e-6 && d < 1e-6) return -1;
-
-  // v1 = origin - start
-  let v1x = ox - ax;
-  let v1y = oy - ay;
-
-  // t1 = cross(v2, v1) / d
-  // cross(a,b) = a.x*b.y - a.y*b.x
-  let t1 = (v2x * v1y - v2y * v1x) / d;
-
-  // t2 = dot(v1, v3) / d
-  let t2 = (v1x * v3x + v1y * v3y) / d;
-
-  if (t1 >= 0 && t2 >= 0 && t2 <= 1) return t1;
-  return -1;
-};
-
-export let pointSegDistSq = (
-  px: number, py: number,
-  x1: number, y1: number, x2: number, y2: number
-): number => {
-  let dx = x2 - x1;
-  let dy = y2 - y1;
-  let lenSq = dx * dx + dy * dy;
-  if (lenSq < 1e-8) {
-    dx = px - x1;
-    dy = py - y1;
-    return dx * dx + dy * dy;
-  }
-  let t = ((px - x1) * dx + (py - y1) * dy) / lenSq;
-  t = t < 0 ? 0 : t > 1 ? 1 : t;
-  let cx = x1 + t * dx;
-  let cy = y1 + t * dy;
-  dx = px - cx;
-  dy = py - cy;
-  return dx * dx + dy * dy;
 };
 
 // Vector

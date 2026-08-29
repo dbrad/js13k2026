@@ -164,62 +164,97 @@ export let genStone = (w: number, h: number, seed: number, out: Uint8Array): voi
 };
 
 export let genWood = (w: number, h: number, seed: number, out: Uint8Array): void => {
-  let plankH = 8;
-  let plankLen = max(14, floor(w * 0.75));
-  let joint = 1;
-  let lastRow = 0;
+  // vertical plank width + two horizontal rails
+  let plankW = max(5, floor(w / 6));
+  let railH = max(3, floor(h / 10));
+  let bottomRailH = max(3, floor(h / 12));
+  let joint = 1; // dark seam width
+
+  // rail positions (top of each rail)
+  let rail1Y = floor(h * 0.28);
+  let rail2Y = floor(h * 0.62);
+  let bottomY = h - bottomRailH;
 
   for (let y = 0; y < h; y++) {
-    let row = floor(y / plankH);
-    let localY = y % plankH;
-    if (row > lastRow) {
-      plankLen = randInt(floor(w * 0.55), floor(w * 0.85));
-      lastRow = row;
-    }
-    let rowShift = (row & 1) * (plankLen >> 1);
+    let isRail =
+      (y >= rail1Y && y < rail1Y + railH) ||
+      (y >= rail2Y && y < rail2Y + railH) ||
+      (y >= bottomY);
 
     for (let x = 0; x < w; x++) {
-      let shiftedX = x + rowShift;
-      let plankIdx = floor(shiftedX / plankLen);
-      let localX = ((shiftedX % plankLen) + plankLen) % plankLen;
+      let r: number, g: number, b: number;
 
-      let pSeed = hash2(plankIdx, row, seed);
+      if (isRail) {
+        // horizontal rail – grain runs left-right
+        let localY = isRail
+          ? y >= bottomY
+            ? y - bottomY
+            : y >= rail2Y
+              ? y - rail2Y
+              : y - rail1Y
+          : 0;
+        let railId = y >= bottomY ? 2 : y >= rail2Y ? 1 : 0;
 
-      // base colour (baseV was hardcoded 1.0)
-      let baseR = 148, baseG = 98, baseB = 52;
+        let baseR = 142, baseG = 92, baseB = 48;
+        let grain = valueNoise(x * 0.42 + railId * 3.1, localY * 0.9, seed + 33);
+        let gMod = 0.78 + 0.40 * grain;
 
-      // vertical grain
-      let grain = valueNoise(x * 0.38 + plankIdx * 2.3, row * 4.1, seed + 11);
-      let gMod = 0.80 + 0.40 * grain;
+        r = floor(baseR * gMod);
+        g = floor(baseG * gMod);
+        b = floor(baseB * gMod);
 
-      let r = floor(baseR * gMod);
-      let g = floor(baseG * gMod);
-      let b = floor(baseB * gMod);
+        // top/bottom edge of rail
+        if (localY < joint || localY >= (y >= bottomY ? bottomRailH : railH) - joint) {
+          [r, g, b] = mul(r, g, b, 0.52);
+        } else {
+          // slight bevel
+          let edgeDist = min(localY - joint, (y >= bottomY ? bottomRailH : railH) - joint - 1 - localY);
+          if (edgeDist < 2) {
+            [r, g, b] = mul(r, g, b, 1.0 + (2 - edgeDist) * 0.08);
+          }
+        }
 
-      let onLongEdge = localY < joint || localY >= plankH - joint;
-      let onEndJoint = (localX < joint || localX >= plankLen - joint) && x > 1 && x < w;
-
-      if (onLongEdge || onEndJoint) {
-        let dark = onEndJoint ? 0.42 : 0.55;
-        [r, g, b] = mul(r, g, b, dark);
+        // occasional darker streak
+        if ((hash2(x, y, seed + 77) & 31) === 0) {
+          [r, g, b] = mul(r, g, b, 0.72);
+        }
       } else {
-        let edgeDist = min(localX - joint, plankLen - joint - 1 - localX,
-          localY - joint, plankH - joint - 1 - localY);
-        if (edgeDist < 2) {
-          let bevel = 1.0 + (2 - edgeDist) * 0.07;
-          [r, g, b] = mul(r, g, b, bevel);
+        // vertical plank
+        let plankIdx = floor(x / plankW);
+        let localX = x % plankW;
+
+        let baseR = 148, baseG = 98, baseB = 52;
+        // vertical grain
+        let grain = valueNoise(plankIdx * 2.7 + 1.3, y * 0.38, seed + 11);
+        let gMod = 0.80 + 0.40 * grain;
+
+        r = floor(baseR * gMod);
+        g = floor(baseG * gMod);
+        b = floor(baseB * gMod);
+
+        // left/right seam between planks
+        if (localX < joint || localX >= plankW - joint) {
+          [r, g, b] = mul(r, g, b, 0.48);
+        } else {
+          // edge bevel
+          let edgeDist = min(localX - joint, plankW - joint - 1 - localX);
+          if (edgeDist < 2) {
+            [r, g, b] = mul(r, g, b, 1.0 + (2 - edgeDist) * 0.07);
+          }
+        }
+
+        // subtle vertical variation / weathering
+        let n = valueNoise(x * 0.15, y * 0.09, seed + 55);
+        if (n > 0.78) {
+          [r, g, b] = mul(r, g, b, 0.88);
         }
       }
 
-      // occasional knot
-      let knotX = (pSeed >>> 8) % max(1, plankLen - 6) + 3;
-      let dist = abs(localX - knotX);
-      if (dist < 2.5 && localY > joint + 1 && localY < plankH - joint - 1) {
-        let k = 1 - dist / 2.5;
-        r = floor(r * (1 - 0.48 * k));
-        g = floor(g * (1 - 0.48 * k));
-        b = floor(b * (1 - 0.38 * k));
-      }
+      // fine grit everywhere (same as original)
+      let gr = grit(x, y, seed);
+      r = clamp(r + gr, 0, 255);
+      g = clamp(g + gr, 0, 255);
+      b = clamp(b + gr, 0, 255);
 
       put(out, (y * w + x) * 4, r, g, b);
     }

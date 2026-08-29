@@ -28,7 +28,8 @@ type SaveState = [
 ];
 
 type GameState = [
-    GS_PLAYER_HP: number,
+    GS_PAUSE_GAME: number,
+    GS_SCENE: number,
     GS_PLAYER_HP: number,
     GS_PLAYER_HP: number,
     GS_PLAYER_MAX_HP: number,

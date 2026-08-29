@@ -23,6 +23,7 @@ let uTexture: WebGLUniformLocation | null;
 let uLight: WebGLUniformLocation | null;
 let uRes: WebGLUniformLocation | null;
 
+export let uTransition: WebGLUniformLocation | null;
 export let uPlayer: WebGLUniformLocation | null;
 export let uDir: WebGLUniformLocation | null;
 export let uPlane: WebGLUniformLocation | null;
@@ -86,6 +87,7 @@ export let glInit = (canvas: HTMLCanvasElement): void => {
     uDir = gl.getUniformLocation(program, "d");
     uPlane = gl.getUniformLocation(program, "pn");
     uShake = gl.getUniformLocation(program, "s");
+    uTransition = gl.getUniformLocation(program, "t");
 
     uTexture = gl.getUniformLocation(program, "tx");
     uLight = gl.getUniformLocation(program, "l");

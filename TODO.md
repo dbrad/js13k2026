@@ -34,16 +34,20 @@
 - [x] Cleanup / Simplify Proc-gen Textures
 - [x] Consider removing tween and event systems
 - [x] Aim assist
-- [ ] Juice
+- [x] Juice
     - screen shake on hit
     - enemies and walls flash white on hit
     - particles on death of enemies
-- [ ] Health Packs
-- [ ] Unify light update into a helper
-- [ ] Unify entity removal
-- [ ] Boss mechanics
-    - On screen hp bar for boss, more complex / dangerous fight ai
+- [x] Unify light update into a helper
+- [x] Unify entity removal
+- [x] Lose condition
+- [x] Reduce input flags, use the input array
+- [x] Inline the 2 game scenes to share code
+- [x] Boss mechanics
+- [ ] On screen hp bar for boss
+- [ ] Finish implementing locked doors and exit tile
+- [ ] Improve map randomization
 - [ ] Win condition
-- [ ] Lose condition
 - [ ] Charge levels for attack
-- [ ] Reduce input flags, use the input array2
+- [ ] Health Packs
+- [ ] Clean up dead params

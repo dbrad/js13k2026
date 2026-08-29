@@ -17,7 +17,7 @@ export let lightCalculated: Int32Array;
 export let LIGHT_DECAY = 6.5;
 export let LIGHT_LEVEL_CAP = 2;
 
-export let AMBIENT = 0.15; // TODO: move into gamestate?
+export let AMBIENT = 0.1; // TODO: move into gamestate?
 export let PLAYER_TORCH_INTENSITY = 0.9; // TODO: move into gamestate?
 export let updatePlayerTorch = (charging: boolean) => {
     PLAYER_TORCH_INTENSITY = charging ? 1.2 : 0.9;
@@ -25,6 +25,18 @@ export let updatePlayerTorch = (charging: boolean) => {
 
 type Room = { id_: number; type_: number; x_: number; y_: number; w_: number; h_: number; n_: number[]; };
 export let rooms: Room[] = [];
+
+export let updateLight = (idx: number, r: number = 0, g: number = 0, b: number = 0) => {
+    lightMap[idx] = min(LIGHT_LEVEL_CAP, max(lightMap[idx], lightMap[idx] + r));
+    lightMap[idx + 1] = min(LIGHT_LEVEL_CAP, max(lightMap[idx + 1], lightMap[idx + 1] + g));
+    lightMap[idx + 2] = min(LIGHT_LEVEL_CAP, max(lightMap[idx + 2], lightMap[idx + 2] + b));
+};
+
+export let decayLight = (idx: number, v: number, dt: number) => {
+    lightMap[idx] += (v - lightMap[idx]) * min(LIGHT_LEVEL_CAP, LIGHT_DECAY * dt);
+    lightMap[idx + 1] += (v - lightMap[idx + 1]) * min(LIGHT_LEVEL_CAP, LIGHT_DECAY * dt);
+    lightMap[idx + 2] += (v - lightMap[idx + 2]) * min(LIGHT_LEVEL_CAP, LIGHT_DECAY * dt);
+};
 
 export let initMapSystem = () => {
     mapW = 50;
@@ -39,8 +51,8 @@ export let initMapSystem = () => {
     doorAnimActive = new Int32Array(mapSize);
 };
 
-export let generateDungeon = (seed: number) => {
-    srandSeed(seed);
+export let generateDungeon = () => {
+    srandSeed(gameState[GS_SCENE]);
 
     PLAYER_TORCH_INTENSITY = 0.9;
     mapData.fill(CELL_WALL);
@@ -91,7 +103,7 @@ export let generateDungeon = (seed: number) => {
     let bossRoom = rooms[i];
     bossRoom.type_ = ROOM_TYPE_BOSS;
     bossRoom.n_[WALL_NORTH] = bossRoom.n_[WALL_WEST] = bossRoom.n_[WALL_EAST] = WALL_MAP_BLOCKED;
-    entityAddBoss(bossRoom.x_ + floor(bossRoom.w_ / 2) + 0.5, bossRoom.y_ + floor(bossRoom.h_ / 2) + 0.5, ENEMY_BOSS_BULLET);
+    entityAddBoss(bossRoom.x_ + floor(bossRoom.w_ / 2) + 0.5, bossRoom.y_ + floor(bossRoom.h_ / 2) + 0.5, ENEMY_BOSS_CHARGE);
 
     let parent: Room | null = bossRoom;
     while (parent) {
@@ -178,7 +190,6 @@ export let generateDungeon = (seed: number) => {
     }
 
     entitySpawnDust(gameState[GS_PLAYER_X], gameState[GS_PLAYER_Y], 220);
-
 
     gameState[GS_PLAYER_X] = rooms[best].x_ + rooms[best].w_ / 2;
     gameState[GS_PLAYER_Y] = rooms[best].y_ + rooms[best].h_ - 0.5;

@@ -138,14 +138,15 @@ declare const GS_OPT_BOB: 1;
 declare const GS_OPT_SHAKE: 2;
 declare const GS_OPT_AIM: 3;
 
-declare const GS_SCENE: 0;
-declare const GS_SEED: 1;
-declare const GS_PLAYER_HP: 2;
-declare const GS_PLAYER_MAX_HP: 3;
-declare const GS_PLAYER_X: 4;
-declare const GS_PLAYER_Y: 5;
-declare const GS_PLAYER_ANGLE: 6;
-declare const GS_PLAYER_INVULNERABLE: 7;
+declare const GS_PAUSE_GAME: 0;
+declare const GS_SCENE: 1;
+declare const GS_SEED: 2;
+declare const GS_PLAYER_HP: 3;
+declare const GS_PLAYER_MAX_HP: 4;
+declare const GS_PLAYER_X: 5;
+declare const GS_PLAYER_Y: 6;
+declare const GS_PLAYER_ANGLE: 7;
+declare const GS_PLAYER_INVULNERABLE: 8;
 
 declare const MAX_CHARGE: 1;
 
@@ -179,7 +180,7 @@ declare const BEAM_STEP: 0.1;
 declare const MELEE_SPEED: 1.55;
 declare const TANK_SPEED: 0.95;
 declare const RANGED_SPEED: 1.15;
-declare const PROJECTILE_SPEED: 3.0;
+declare const PROJECTILE_SPEED: 8;
 declare const MELEE_ATTACK_RANGE: 1.15;
 declare const RANGED_ATTACK_RANGE: 7.5;
 declare const RANGED_MAX_DIST: 6.2;
@@ -196,7 +197,7 @@ declare const SEPARATION_STRENGTH: 2.8;
 declare const BEAM_BASE_DAMAGE: 4.5;
 declare const BEAM_HIT_RADIUS: 0.55;
 declare const ENEMY_FLASH_DURATION: 0.1;
-declare const PLAYER_INVULNERABLE_DURATION: 0.2;
+declare const PLAYER_INVULNERABLE_DURATION: 0.5;
 
 declare const RED: 0;
 declare const ORANGE: 1;
