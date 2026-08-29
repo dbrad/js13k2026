@@ -3,12 +3,13 @@ import { sfxEnemyAlert, sfxEnemyDeath, sfxEnemyMelee, sfxEnemyRanged, sfxLaserFi
 import { RAINBOW, RAINBOWf } from "./colours";
 import { gameState } from "./gameState";
 import { glPushColorCircle, glPushQuad } from "./gl";
-import { lightMap, mapData, mapH, mapW, updateLight } from "./map";
+import { doorAnimActive, exitDoorIdx, lightMap, mapData, mapH, mapW, rooms, updateLight } from "./map";
 import { abs, circleOverlap, cos, floor, max, min, PI, randInt, random, sin, sqrt, srand, srandInt } from "./math";
 import { fogFactor, FOV, rayIsSolid, rayMove, zBuffer } from "./raycast";
 import { shakeTrigger } from "./shake";
 import { TEXTURE_CACHE } from "./texture";
 
+let texId_: Int32Array = new Int32Array(MAX_ENTITIES);
 let x_: Float32Array = new Float32Array(MAX_ENTITIES);
 let y_: Float32Array = new Float32Array(MAX_ENTITIES);
 let z_: Float32Array = new Float32Array(MAX_ENTITIES);
@@ -19,20 +20,19 @@ let preferX_: Float32Array = new Float32Array(MAX_ENTITIES);
 let preferY_: Float32Array = new Float32Array(MAX_ENTITIES);
 let scale_: Float32Array = new Float32Array(MAX_ENTITIES);
 let size_: Float32Array = new Float32Array(MAX_ENTITIES);
-let phase_: Float32Array = new Float32Array(MAX_ENTITIES);
-let verticalBob_: Float32Array = new Float32Array(MAX_ENTITIES);
-let data_: Float32Array = new Float32Array(MAX_ENTITIES);
 let colour_: Int32Array = new Int32Array(MAX_ENTITIES);
-let texId_: Int32Array = new Int32Array(MAX_ENTITIES);
+
 let flags_: Int32Array = new Int32Array(MAX_ENTITIES);
 let type_id_: Int32Array = new Int32Array(MAX_ENTITIES);
+let data_: Float32Array = new Float32Array(MAX_ENTITIES);
+let phase_: Float32Array = new Float32Array(MAX_ENTITIES);
+let verticalBob_: Float32Array = new Float32Array(MAX_ENTITIES);
 let hp_: Float32Array = new Float32Array(MAX_ENTITIES);
 let max_hp_: Float32Array = new Float32Array(MAX_ENTITIES);
-let targetX_: Float32Array = new Float32Array(MAX_ENTITIES);
-let targetY_: Float32Array = new Float32Array(MAX_ENTITIES);
 let lastAttackTime_: Float32Array = new Float32Array(MAX_ENTITIES);
 let alert_: Float32Array = new Float32Array(MAX_ENTITIES);
 let flashTimer_: Float32Array = new Float32Array(MAX_ENTITIES);
+let roomId_: Int32Array = new Int32Array(MAX_ENTITIES);
 
 let active: Int32Array = new Int32Array(MAX_ENTITIES * 0.5);
 let activeCount: number = 0;
@@ -51,6 +51,16 @@ let visHeight_: Float32Array = new Float32Array(MAX_VISIBLE);
 let visibleCount: number = 0;
 
 let particleTime: number = 0;
+
+let enemyStats: number[] = [
+    0,
+    15,         // melee
+    20,         // tank
+    10,         // ranged
+    1,        // bullet hell
+    1,        // brood
+    2,        // charge
+];
 
 let modulateABGR = (abgr: number, r: number, g: number, b: number): number => {
     let outR = min(255, ((abgr >>> 0) & 0xff) * r);
@@ -104,16 +114,6 @@ export let entityAimAssist = (px: number, py: number, angle: number, maxRange = 
     return bestCross * strength;
 };
 
-let enemyStats: number[] = [
-    0,
-    15,         // melee
-    20,         // tank
-    10,         // ranged
-    180,        // bullet hell
-    140,        // brood
-    220,        // charge
-];
-
 export let entityAdd = (x: number, y: number, texId: number, scale = 1, flags: number = FLAG_ACTIVE, colour = 0xffffffff, z = 0.5, type_id: number = ENEMY_NONE): number => {
     if (freeCount === 0) {
         assert(false, `entity pool exhausted`);
@@ -139,8 +139,6 @@ export let entityAdd = (x: number, y: number, texId: number, scale = 1, flags: n
     type_id_[slot] = type_id;
     hp_[slot] = 0;
     max_hp_[slot] = 0;
-    targetX_[slot] = 0;
-    targetY_[slot] = 0;
     lastAttackTime_[slot] = 0;
     alert_[slot] = 0;
 
@@ -176,9 +174,9 @@ export let entityAddParticle = (x: number, y: number, z = 0.5, size = 1, col = 0
     return id;
 };
 
-export let spawnEnemiesInRoom = (rx: number, ry: number, rw: number, rh: number, texId: number = 1): void => {
+export let spawnEnemiesInRoom = (rid: number, rx: number, ry: number, rw: number, rh: number, texId: number = 1): void => {
     let count = 1 + floor(srand() * 3);
-
+    rooms[rid].enemyCount_ = count;
     for (let i = 0; i < count; i++) {
         let sx = srandInt(rx + 1, rx + rw - 2) + 0.5;
         let sy = srandInt(ry + 1, ry + rh - 2) + 0.5;
@@ -197,7 +195,8 @@ export let spawnEnemiesInRoom = (rx: number, ry: number, rw: number, rh: number,
             col = 0xffccaa88;
         }
 
-        entityAdd(sx, sy, texId, scl, FLAG_ACTIVE | FLAG_ENEMY | FLAG_SOLID, col, 0.5, typ);
+        let id = entityAdd(sx, sy, texId, scl, FLAG_ACTIVE | FLAG_ENEMY | FLAG_SOLID, col, 0.5, typ);
+        roomId_[id] = rid;
     }
 };
 
@@ -346,6 +345,11 @@ export let fireRainbowBeam = (px: number, py: number, angle: number, charge: num
                         burstParticles(x_[es], y_[es], 0.5, 12, 0xff0000ff, 4.0, 0.4);
                         burstParticles(x_[es], y_[es], 0.4, 6, RAINBOW[(i + 3) % 7], 2.5, 0.35);
                         zzfxPlay(sfxEnemyDeath);
+                        rooms[roomId_[es]].enemyCount_ -= 1;
+                        if (roomId_[es] === 0 && rooms[0].enemyCount_ === 0) {
+                            console.log("opening door");
+                            doorAnimActive[exitDoorIdx] = 1;
+                        }
                         activeCount = entityRemove(ei, active, activeCount);
                     }
                 }
@@ -817,7 +821,6 @@ export let entityCollect = (px: number, py: number, angle: number): void => {
     collectEntities(px, py, angle, active, activeCount);
     collectEntities(px, py, angle, activeParticles, activeParticleCount);
 
-    // Sort
     for (let i = 1; i < visibleCount; i++) {
         let tIdx = visIdx_[i];
         let tDist = visDist_[i];
@@ -890,7 +893,7 @@ export let entityDraw = (px: number, py: number, angle: number, now: number): vo
         let halfW = height * 0.5;
         let drawStartX = screenX - halfW;
         let drawEndX = screenX + halfW;
-        const phase = now * 0.001 * 1.5 + verticalBob_[s];   // 0.8 = cycles per second
+        const phase = now * 0.001 * 1.5 + verticalBob_[s];
         let bob = sin(phase) * (height * 0.04);
         let drawStartY = (SCREEN_HEIGHT - height) * 0.5 + bob;
 

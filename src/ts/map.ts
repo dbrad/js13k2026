@@ -23,8 +23,9 @@ export let updatePlayerTorch = (charging: boolean) => {
     PLAYER_TORCH_INTENSITY = charging ? 1.2 : 0.9;
 };
 
-type Room = { id_: number; type_: number; x_: number; y_: number; w_: number; h_: number; n_: number[]; };
+type Room = { id_: number; type_: number; enemyCount_: number, x_: number; y_: number; w_: number; h_: number; n_: number[]; };
 export let rooms: Room[] = [];
+export let exitDoorIdx: number = -1;
 
 export let updateLight = (idx: number, r: number = 0, g: number = 0, b: number = 0) => {
     lightMap[idx] = min(LIGHT_LEVEL_CAP, max(lightMap[idx], lightMap[idx] + r));
@@ -65,7 +66,7 @@ export let generateDungeon = () => {
         for (let ry = y + 1; ry <= y + h - 2; ry++)
             for (let rx = x + 1; rx <= x + w - 2; rx++)
                 mapData[ry * mapW + rx] = CELL_FLOOR;
-        let r: Room = { id_: rooms.length, type_: ROOM_TYPE_NORMAL, x_: x + 1, y_: y + 1, w_: w - 2, h_: h - 2, n_: [WALL_FREE, WALL_FREE, WALL_FREE, WALL_FREE] };
+        let r: Room = { id_: rooms.length, type_: ROOM_TYPE_NORMAL, enemyCount_: 0, x_: x + 1, y_: y + 1, w_: w - 2, h_: h - 2, n_: [WALL_FREE, WALL_FREE, WALL_FREE, WALL_FREE] };
         if (x < 4) r.n_[WALL_WEST] = WALL_MAP_BLOCKED;
         if (y < 4) r.n_[WALL_NORTH] = WALL_MAP_BLOCKED;
         if (x + w >= 46) r.n_[WALL_EAST] = WALL_MAP_BLOCKED;
@@ -81,7 +82,8 @@ export let generateDungeon = () => {
     let addDoor = (a: number, b: number, wall: number, type = 0) => {
         if (type === 1) {
             let r = rooms[a], x = srandInt(r.x_ + 1, r.x_ + r.w_ - 2);
-            mapData[(r.y_ - 1) * mapW + x] = CELL_HORIZONTAL_DOOR;
+            mapData[(r.y_ - 1) * mapW + x] = CELL_LOCKED_H;
+            exitDoorIdx = (r.y_ - 1) * mapW + x;
             mapData[(r.y_ - 2) * mapW + x] = CELL_EXIT;
         } else {
             let r1 = rooms[a], r2 = rooms[b], x = 0, y = 0;
@@ -103,6 +105,7 @@ export let generateDungeon = () => {
     let bossRoom = rooms[i];
     bossRoom.type_ = ROOM_TYPE_BOSS;
     bossRoom.n_[WALL_NORTH] = bossRoom.n_[WALL_WEST] = bossRoom.n_[WALL_EAST] = WALL_MAP_BLOCKED;
+    bossRoom.enemyCount_ = 1;
     entityAddBoss(bossRoom.x_ + floor(bossRoom.w_ / 2) + 0.5, bossRoom.y_ + floor(bossRoom.h_ / 2) + 0.5, ENEMY_BOSS_CHARGE);
 
     let parent: Room | null = bossRoom;
@@ -186,17 +189,20 @@ export let generateDungeon = () => {
     for (let i = 1; i < rooms.length; i++) {
         let r = rooms[i];
         if (r.type_ === ROOM_TYPE_NORMAL)
-            spawnEnemiesInRoom(r.x_, r.y_, r.w_, r.h_, TEXTURE_DEMON);
+            spawnEnemiesInRoom(i, r.x_, r.y_, r.w_, r.h_, TEXTURE_DEMON);
     }
 
     entitySpawnDust(gameState[GS_PLAYER_X], gameState[GS_PLAYER_Y], 220);
 
-    gameState[GS_PLAYER_X] = rooms[best].x_ + rooms[best].w_ / 2;
-    gameState[GS_PLAYER_Y] = rooms[best].y_ + rooms[best].h_ - 0.5;
+    gameState[GS_PLAYER_X] = bossRoom.x_ + bossRoom.w_ / 2;
+    gameState[GS_PLAYER_Y] = bossRoom.y_ + bossRoom.h_ - 0.5;
+
+    // gameState[GS_PLAYER_X] = rooms[best].x_ + rooms[best].w_ / 2;
+    // gameState[GS_PLAYER_Y] = rooms[best].y_ + rooms[best].h_ - 0.5;
     gameState[GS_PLAYER_ANGLE] = -PI * 0.5;
 };
 
-export let createMenuScene = () => {
+export let createMenuMap = () => {
     mapData.fill(CELL_WALL);
     for (let y = 1; y < 6; y++) {
         for (let x = 1; x < 5; x++) {

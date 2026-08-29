@@ -113,7 +113,7 @@ export let rayRender = (px: number, py: number, angle: number, now: number, dt: 
                 lightCalculated[idx] = 1;
             }
 
-            if (cell === CELL_HORIZONTAL_DOOR) {
+            if (cell === CELL_HORIZONTAL_DOOR || cell === CELL_LOCKED_H) {
                 let doorY = rayMapY + 0.5;
                 let t = (doorY - py) / (rayDirY || 1e-10);
                 if (t > 0 && t < sideDistX && t < sideDistY) {
@@ -126,7 +126,7 @@ export let rayRender = (px: number, py: number, angle: number, now: number, dt: 
                         break;
                     }
                 }
-            } else if (cell === CELL_VERTICAL_DOOR) {
+            } else if (cell === CELL_VERTICAL_DOOR || cell === CELL_LOCKED_H) {
                 let doorX = rayMapX + 0.5;
                 let t = (doorX - px) / (rayDirX || 1e-10);
                 if (t > 0 && t < sideDistX && t < sideDistY) {
@@ -236,7 +236,7 @@ export let rayIsSolid = (x: number, y: number): boolean => {
     let mx = floor(x);
     let my = floor(y);
     if (mx < 0 || my < 0 || mx >= mapW || my >= mapH) return true;
-    return mapData[my * mapW + mx] > 0;
+    return mapData[my * mapW + mx] > 0 && mapData[my * mapW + mx] !== CELL_EXIT;
 };
 
 export let rayMove = (px: number, py: number, dx: number, dy: number, radius = 0.25): [number, number] => {

@@ -1,0 +1,28 @@
+Day 17 - 2026-08-29
+
+---
+
+Mostly a day off for family stuff.
+Started work on the exit door automatically opening and the exit tile logic.
+Trying to brainstorm some ways to guide the player through the level.
+    - Fog of war affected map
+    - Using lighting to guide the player
+    - Lighting up rooms the player has cleared
+
+---
+
+`-Zab0 -Zlr1020 -Zmc4 -Zmd10 -Zpr14 -S0,1,2,3,6,7,13,21,42,138,337,344`
+
+-------------------------------------------------------------------------------
+Language                     files          blank        comment           code
+-------------------------------------------------------------------------------
+TypeScript                      17            516             61           2991
+GLSL                             2             17              0             95
+HTML                             1              2              0              6
+-------------------------------------------------------------------------------
+SUM:                            20            535             61           3092
+-------------------------------------------------------------------------------
+
+The file is under the limit.
+USED: 92.17% | 12270 BYTES
+LEFT:  7.83% |  1042 BYTES

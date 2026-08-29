@@ -147,6 +147,7 @@ declare const GS_PLAYER_X: 5;
 declare const GS_PLAYER_Y: 6;
 declare const GS_PLAYER_ANGLE: 7;
 declare const GS_PLAYER_INVULNERABLE: 8;
+declare const GS_DOOR_UNLOCKED: 9;
 
 declare const MAX_CHARGE: 1;
 

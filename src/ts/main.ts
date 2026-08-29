@@ -7,7 +7,7 @@ import { entityAimAssist, entityClear, entityCollect, entityDraw, entityPlayerCo
 import { gameState, loadGame, saveGame } from "./gameState";
 import { gl, glClear, glFlush, glInit, glPushColorQuad, glPushText, glPushTexture, uShake, uTransition } from "./gl";
 import { initializeInput, keyState, lookDeltaX, updateHardwareInput, updateInputState } from "./input";
-import { createMenuScene, doorAnimActive, doorAnimT, generateDungeon, initMapSystem, mapData, mapOffsetData, mapSize, updatePlayerTorch } from "./map";
+import { createMenuMap, doorAnimActive, doorAnimT, generateDungeon, initMapSystem, mapData, mapOffsetData, mapSize, updatePlayerTorch } from "./map";
 import { abs, clamp, cos, max, min, randInt, sin, sqrt } from "./math";
 import { interactionId, rayMove, rayRender, rayRenderFloorCeiling } from "./raycast";
 import { getShakeSum, shakeTrigger, shakeUpdate, shakeX, shakeY, updateHeadbob, zeroShake } from "./shake";
@@ -37,7 +37,7 @@ window.addEventListener("load", async (): Promise<void> => {
 
             loadGame();
             initMapSystem();
-            createMenuScene();
+            createMenuMap();
             gameState[GS_PAUSE_GAME] = 1;
 
             if (DEBUG) {
@@ -250,7 +250,7 @@ window.addEventListener("load", async (): Promise<void> => {
                         generateProcTextures();
                         generateDungeon();
                     } else {
-                        createMenuScene();
+                        createMenuMap();
                     }
                     targetScene = -1;
 
