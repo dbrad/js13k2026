@@ -44,10 +44,12 @@
 - [x] Reduce input flags, use the input array
 - [x] Inline the 2 game scenes to share code
 - [x] Boss mechanics
-- [ ] On screen hp bar for boss
-- [ ] Finish implementing locked doors and exit tile
+- [ ] On screen hp bar for boss while the boss is active / alerted
+- [x] Finish implementing locked doors and exit tileentityAddBoss
+- [x] Win condition
+- [ ] Add map with fog of war
 - [ ] Improve map randomization
-- [ ] Win condition
 - [ ] Charge levels for attack
 - [ ] Health Packs
 - [ ] Clean up dead params
+- [ ] Faster music for boss fight

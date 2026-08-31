@@ -67,6 +67,7 @@ declare const LOOK_LEFT: 4;
 declare const LOOK_RIGHT: 5;
 declare const A_BUTTON: 6;
 declare const B_BUTTON: 7;
+declare const MAP_BUTTON: 8;
 
 declare const KEY_IS_UP: 0;
 declare const KEY_WAS_DOWN: 1;
@@ -104,7 +105,8 @@ declare const CELL_HORIZONTAL_DOOR: 3;
 declare const CELL_VERTICAL_DOOR: 4;
 declare const CELL_LOCKED_H: 5;
 declare const CELL_LOCKED_V: 6;
-declare const CELL_EXIT: 7;
+declare const CELL_BOSS_DOOR: 7;
+declare const CELL_EXIT: 8;
 
 declare const WALL_NORTH: 0;
 declare const WALL_EAST: 1;
@@ -137,17 +139,18 @@ declare const GS_OPT_MUSIC: 0;
 declare const GS_OPT_BOB: 1;
 declare const GS_OPT_SHAKE: 2;
 declare const GS_OPT_AIM: 3;
+declare const GS_OPT_KEYMAP: 4;
 
 declare const GS_PAUSE_GAME: 0;
 declare const GS_SCENE: 1;
 declare const GS_SEED: 2;
-declare const GS_PLAYER_HP: 3;
-declare const GS_PLAYER_MAX_HP: 4;
-declare const GS_PLAYER_X: 5;
-declare const GS_PLAYER_Y: 6;
-declare const GS_PLAYER_ANGLE: 7;
-declare const GS_PLAYER_INVULNERABLE: 8;
-declare const GS_DOOR_UNLOCKED: 9;
+declare const GS_LIVES: 3;
+declare const GS_PLAYER_HP: 4;
+declare const GS_PLAYER_MAX_HP: 5;
+declare const GS_PLAYER_X: 6;
+declare const GS_PLAYER_Y: 7;
+declare const GS_PLAYER_ANGLE: 8;
+declare const GS_PLAYER_INVULNERABLE: 9;
 
 declare const MAX_CHARGE: 1;
 
@@ -181,7 +184,7 @@ declare const BEAM_STEP: 0.1;
 declare const MELEE_SPEED: 1.55;
 declare const TANK_SPEED: 0.95;
 declare const RANGED_SPEED: 1.15;
-declare const PROJECTILE_SPEED: 8;
+declare const PROJECTILE_SPEED: 7;
 declare const MELEE_ATTACK_RANGE: 1.15;
 declare const RANGED_ATTACK_RANGE: 7.5;
 declare const RANGED_MAX_DIST: 6.2;
@@ -195,10 +198,12 @@ declare const NOTICE_DELAY_MAX: 1;
 declare const IDLE_WANDER_SPEED: 0.35;
 declare const SEPARATION_RADIUS: 0.85;
 declare const SEPARATION_STRENGTH: 2.8;
-declare const BEAM_BASE_DAMAGE: 4.5;
+declare const BEAM_BASE_DAMAGE: 1;
 declare const BEAM_HIT_RADIUS: 0.55;
 declare const ENEMY_FLASH_DURATION: 0.1;
 declare const PLAYER_INVULNERABLE_DURATION: 0.5;
+declare const LIGHT_DECAY: 6.5;
+declare const LIGHT_LEVEL_CAP: 1;
 
 declare const RED: 0;
 declare const ORANGE: 1;

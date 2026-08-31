@@ -1,10 +1,11 @@
+import { saveState } from "./gameState";
 
 let canvasRef: HTMLCanvasElement;
 let pointerLocked = false;
 
-let hardwareKeyState = [0, 0, 0, 0, 0, 0, 0, 0];
-export let keyState = [0, 0, 0, 0, 0, 0, 0, 0];
-let rateLimit = [0, 0, 0, 0, 0, 0, 0, 0];
+let hardwareKeyState = [0, 0, 0, 0, 0, 0, 0, 0, 0];
+export let keyState = [0, 0, 0, 0, 0, 0, 0, 0, 0];
+let rateLimit = [0, 0, 0, 0, 0, 0, 0, 0, 0];
 
 export let lookDeltaX = 0;
 export let lookDeltaY = 0;
@@ -12,16 +13,33 @@ export let lookDeltaY = 0;
 let mouseButtons = 0;
 let mouseWasDown = false;
 let rawMouseDX = 0, rawMouseDY = 0;
-
-let keyMap: Record<string, number> = {
-    "KeyW": D_UP, "ArrowUp": D_UP,
+let shared: Record<string, number> = {
+    "ArrowUp": D_UP,
     "KeyS": D_DOWN, "ArrowDown": D_DOWN,
-    "KeyA": D_LEFT,
     "KeyD": D_RIGHT,
-    "KeyX": A_BUTTON, "KeyE": A_BUTTON,
-    "KeyC": B_BUTTON, "Space": B_BUTTON,
+    "KeyE": A_BUTTON, "Enter": A_BUTTON,
+    "Space": B_BUTTON,
     "ArrowLeft": LOOK_LEFT,
     "ArrowRight": LOOK_RIGHT,
+    "KeyM": MAP_BUTTON
+};
+
+let WASD: Record<string, number> = {
+    "KeyW": D_UP, "KeyA": D_LEFT,
+};
+
+let ZQSD: Record<string, number> = {
+    "KeyZ": D_UP, "KeyQ": D_LEFT,
+};
+
+let keyMap: Record<string, number> = {};
+
+export let setKeyMap = () => {
+    if (saveState[GS_OPT_KEYMAP] === 0) {
+        keyMap = { ...shared, ...WASD };
+    } else {
+        keyMap = { ...shared, ...ZQSD };
+    }
 };
 
 export let initializeInput = (canvas: HTMLCanvasElement): void => {
@@ -85,7 +103,7 @@ export let updateHardwareInput = (): void => {
     rawMouseDY = 0;
 };
 
-export let updateInputState = (delta: number, _dt: number): void => {
+export let updateInputState = (delta: number): void => {
     for (let key = 0; key < 8; key++) {
         if (rateLimit[key] > 0) rateLimit[key] -= delta;
 

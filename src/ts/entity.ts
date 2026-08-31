@@ -2,7 +2,7 @@ import { assert } from "./__debug/debug";
 import { sfxEnemyAlert, sfxEnemyDeath, sfxEnemyMelee, sfxEnemyRanged, sfxLaserFire, zzfxPlay } from "./audio";
 import { RAINBOW, RAINBOWf } from "./colours";
 import { gameState } from "./gameState";
-import { glPushColorCircle, glPushQuad } from "./gl";
+import { glPushColorCircle, glPushColorQuad, glPushQuad } from "./gl";
 import { doorAnimActive, exitDoorIdx, lightMap, mapData, mapH, mapW, rooms, updateLight } from "./map";
 import { abs, circleOverlap, cos, floor, max, min, PI, randInt, random, sin, sqrt, srand, srandInt } from "./math";
 import { fogFactor, FOV, rayIsSolid, rayMove, zBuffer } from "./raycast";
@@ -52,14 +52,16 @@ let visibleCount: number = 0;
 
 let particleTime: number = 0;
 
-let enemyStats: number[] = [
+let bossId = -1;
+
+let enemyHealth: number[] = [
     0,
-    15,         // melee
-    20,         // tank
-    10,         // ranged
-    1,        // bullet hell
-    1,        // brood
-    2,        // charge
+    2,       // melee
+    3,       // tank
+    1,       // ranged
+    10,      // bullet hell
+    10,      // brood
+    10,      // charge
 ];
 
 let modulateABGR = (abgr: number, r: number, g: number, b: number): number => {
@@ -143,8 +145,8 @@ export let entityAdd = (x: number, y: number, texId: number, scale = 1, flags: n
     alert_[slot] = 0;
 
     if (type_id > ENEMY_NONE) {
-        hp_[slot] = enemyStats[type_id];
-        max_hp_[slot] = enemyStats[type_id];
+        hp_[slot] = enemyHealth[type_id];
+        max_hp_[slot] = enemyHealth[type_id];
         flags_[slot] |= FLAG_ENEMY | FLAG_SOLID;
         alert_[slot] = -1;
     }
@@ -161,9 +163,9 @@ export let entityAdd = (x: number, y: number, texId: number, scale = 1, flags: n
 export let entityAddBoss = (x: number, y: number, typ: number, texId = TEXTURE_DEMON_LARGE): number => {
     let id = entityAdd(x, y, texId, 1.2, FLAG_ACTIVE | FLAG_ENEMY | FLAG_SOLID, 0xffffffff, 0.55, typ);
     let s = active[id];
+    bossId = s;
     preferX_[s] = x;
     preferY_[s] = y;
-    data_[s] = 1.5;
     return id;
 };
 
@@ -185,18 +187,18 @@ export let spawnEnemiesInRoom = (rid: number, rx: number, ry: number, rw: number
         let typ: number = ENEMY_MELEE;
         let scl = 0.95;
         let col = 0xffffffff;
-        if (r > 0.72) {
+        if (r > 0.80) {
             typ = ENEMY_RANGED;
             scl = 0.85;
             col = 0xffaaccff;
-        } else if (r > 0.88) {
+        } else if (r > 0.60) {
             typ = ENEMY_TANK;
             scl = 1.25;
             col = 0xffccaa88;
         }
 
         let id = entityAdd(sx, sy, texId, scl, FLAG_ACTIVE | FLAG_ENEMY | FLAG_SOLID, col, 0.5, typ);
-        roomId_[id] = rid;
+        roomId_[active[id]] = rid;
     }
 };
 
@@ -272,11 +274,11 @@ let spawnPseudoMelee = (tx: number, ty: number): void => {
     burstParticles(tx, ty, 0.35, 4, 0xffffffff, 1.8, 0.18);
 };
 
-export let fireRainbowBeam = (px: number, py: number, angle: number, charge: number = 1.0): void => {
+export let fireRainbowBeam = (px: number, py: number, angle: number, charge: number = 0): void => {
     zzfxPlay(sfxLaserFire);
     shakeTrigger(8, 100);
 
-    let dmg = BEAM_BASE_DAMAGE * (0.7 + charge * 0.6);
+    let dmg = BEAM_BASE_DAMAGE * (0.5 + charge * 0.5);
     let range = floor(3 + 2 * charge);
 
     for (let i = 0; i < 7; i++) {
@@ -337,6 +339,7 @@ export let fireRainbowBeam = (px: number, py: number, angle: number, charge: num
                     if (ex * ex + ey * ey > BEAM_HIT_RADIUS * BEAM_HIT_RADIUS) continue;
 
                     flashTimer_[es] = ENEMY_FLASH_DURATION;
+                    alert_[es] = 0;
                     hp_[es] -= dmg;
                     zzfxPlay(sfxEnemyAlert);
                     burstParticles(x_[es], y_[es], 0.55, 6, RAINBOW[i], 2.8, 0.25);
@@ -347,7 +350,6 @@ export let fireRainbowBeam = (px: number, py: number, angle: number, charge: num
                         zzfxPlay(sfxEnemyDeath);
                         rooms[roomId_[es]].enemyCount_ -= 1;
                         if (roomId_[es] === 0 && rooms[0].enemyCount_ === 0) {
-                            console.log("opening door");
                             doorAnimActive[exitDoorIdx] = 1;
                         }
                         activeCount = entityRemove(ei, active, activeCount);
@@ -519,8 +521,8 @@ export let entityUpdate = (dt: number, px: number, py: number): void => {
             continue;
         }
 
-        if (flags_[s] & (FLAG_ENEMY | FLAG_PROJECTILE)) {
-            if (flags_[s] & FLAG_PROJECTILE && data_[s] > 0) {
+        if (flags_[s] & (FLAG_ENEMY | FLAG_PROJECTILE | FLAG_DAMAGE)) {
+            if ((flags_[s] & FLAG_PROJECTILE || flags_[s] & FLAG_DAMAGE) && data_[s] > 0) {
                 data_[s] -= dt;
                 if (data_[s] <= 0) {
                     flags_[s] = 0;
@@ -555,10 +557,11 @@ export let entityUpdate = (dt: number, px: number, py: number): void => {
                         attackRange = RANGED_ATTACK_RANGE;
                     }
 
+                    // Enemy wake-up timer on sight
                     if (alert_[s] < 0) {
                         if (hasLineOfSight(x_[s], y_[s], px, py)) {
                             zzfxPlay(sfxEnemyAlert);
-                            alert_[s] = NOTICE_DELAY_MIN + random() * (NOTICE_DELAY_MAX - NOTICE_DELAY_MIN);
+                            alert_[s] = NOTICE_DELAY_MIN + random() * (NOTICE_DELAY_MAX - NOTICE_DELAY_MIN) + (typ >= ENEMY_BOSS_BULLET ? 3 : 0);
                         } else {
                             if (random() < 0.01) {
                                 let ang = random() * PI * 2;
@@ -575,6 +578,7 @@ export let entityUpdate = (dt: number, px: number, py: number): void => {
                         vy_[s] = ndy * speed * 0.25;
                     }
 
+                    // Noraml enemy types logic
                     if (typ < ENEMY_BOSS_BULLET && alert_[s] === 0) {
                         doLight = true;
                         if (lastAttackTime_[s] > 0) lastAttackTime_[s] -= dt;
@@ -604,6 +608,7 @@ export let entityUpdate = (dt: number, px: number, py: number): void => {
                         }
                     }
 
+                    // Boss enemy types logic
                     if (typ >= ENEMY_BOSS_BULLET && alert_[s] === 0) {
                         doLight = true;
                         if (typ === ENEMY_BOSS_BULLET) {
@@ -615,15 +620,14 @@ export let entityUpdate = (dt: number, px: number, py: number): void => {
 
                             data_[s] -= dt;
                             if (data_[s] <= 0) {
-                                // fire radial wave
                                 let base = phase_[s];
-                                for (let a = 0; a < PI * 2; a += PI / 12) {   // 15°
+                                for (let a = 0; a < PI * 2; a += PI / 12) {
                                     let ang = base + a;
                                     spawnProjectile(x_[s], y_[s], cos(ang), sin(ang), 0xff000088);
                                 }
                                 zzfxPlay(sfxEnemyRanged);
 
-                                phase_[s] += 0.18;          // slight rotate next volley
+                                phase_[s] += 0.18;
                                 data_[s] = 1.1 + random() * 0.3;  // pause
                             }
                         }
@@ -697,7 +701,7 @@ export let entityUpdate = (dt: number, px: number, py: number): void => {
                 }
 
                 if (doLight) {
-                    updateLight((floor(y_[s]) * mapW + floor(x_[s])) * 3, 0.01);
+                    updateLight((floor(y_[s]) * mapW + floor(x_[s])) * 3, 0.05);
                 }
                 continue;
             }
@@ -715,7 +719,7 @@ export let entityUpdate = (dt: number, px: number, py: number): void => {
                 continue;
             }
 
-            updateLight((floor(y_[s]) * mapW + floor(x_[s])) * 3, 0.01);
+            updateLight((floor(y_[s]) * mapW + floor(x_[s])) * 3, 0.05);
         }
     }
 
@@ -909,5 +913,12 @@ export let entityDraw = (px: number, py: number, angle: number, now: number): vo
             let texU = tex.u0_ + uSpan * ((col - drawStartX) * invW);
             glPushQuad(col, drawStartY, 1, height, texU, tex.v0_, texU, tex.v1_, litColour, fog);
         }
+    }
+};
+
+export let renderBossBar = () => {
+    if (bossId >= 0 && alert_[bossId] === 0) {
+        glPushColorQuad(5, 5, SCREEN_WIDTH - 10, 16, 0xaa333333);
+        glPushColorQuad(7, 7, (SCREEN_WIDTH - 14) * (hp_[bossId] / max_hp_[bossId]), 12, 0x883333ff);
     }
 };

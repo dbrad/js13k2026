@@ -1,0 +1,27 @@
+Day 18 - 2026-08-30
+
+---
+
+- Some lighting improvements
+- Exit door and exit tile working
+- french azerty keyboard support
+- Some combat balancing
+- UI Tweaks and Boss HP bar
+
+---
+
+`-Zab0 -Zlr930 -Zmc4 -Zmd10 -S0,1,2,3,6,7,13,21,42,113,219,452`
+
+-------------------------------------------------------------------------------
+Language                     files          blank        comment           code
+-------------------------------------------------------------------------------
+TypeScript                      17            524             64           3060
+GLSL                             2             17              0             95
+HTML                             1              2              0              6
+-------------------------------------------------------------------------------
+SUM:                            20            543             64           3161
+-------------------------------------------------------------------------------
+
+The file is under the limit.
+USED: 93.55% | 12454 BYTES
+LEFT:  6.45% |   858 BYTES

@@ -14,32 +14,31 @@ export let doorAnimActive: Int32Array;
 
 export let lightMap: Float32Array;
 export let lightCalculated: Int32Array;
-export let LIGHT_DECAY = 6.5;
-export let LIGHT_LEVEL_CAP = 2;
 
-export let AMBIENT = 0.1; // TODO: move into gamestate?
-export let PLAYER_TORCH_INTENSITY = 0.9; // TODO: move into gamestate?
+export let AMBIENT = 0.1;
+export let PLAYER_TORCH_INTENSITY = 0.9;
 export let updatePlayerTorch = (charging: boolean) => {
-    PLAYER_TORCH_INTENSITY = charging ? 1.2 : 0.9;
+    PLAYER_TORCH_INTENSITY = charging ? 1 : 0.9;
 };
 
 type Room = { id_: number; type_: number; enemyCount_: number, x_: number; y_: number; w_: number; h_: number; n_: number[]; };
 export let rooms: Room[] = [];
 export let exitDoorIdx: number = -1;
+export let bossDoorIdx: number = -1;
 
-export let updateLight = (idx: number, r: number = 0, g: number = 0, b: number = 0) => {
-    lightMap[idx] = min(LIGHT_LEVEL_CAP, max(lightMap[idx], lightMap[idx] + r));
-    lightMap[idx + 1] = min(LIGHT_LEVEL_CAP, max(lightMap[idx + 1], lightMap[idx + 1] + g));
-    lightMap[idx + 2] = min(LIGHT_LEVEL_CAP, max(lightMap[idx + 2], lightMap[idx + 2] + b));
+export let updateLight = (cellIdx: number, r: number = 0, g: number = 0, b: number = 0) => {
+    lightMap[cellIdx] = min(LIGHT_LEVEL_CAP, max(lightMap[cellIdx], lightMap[cellIdx] + r));
+    lightMap[cellIdx + 1] = min(LIGHT_LEVEL_CAP, max(lightMap[cellIdx + 1], lightMap[cellIdx + 1] + g));
+    lightMap[cellIdx + 2] = min(LIGHT_LEVEL_CAP, max(lightMap[cellIdx + 2], lightMap[cellIdx + 2] + b));
 };
 
-export let decayLight = (idx: number, v: number, dt: number) => {
-    lightMap[idx] += (v - lightMap[idx]) * min(LIGHT_LEVEL_CAP, LIGHT_DECAY * dt);
-    lightMap[idx + 1] += (v - lightMap[idx + 1]) * min(LIGHT_LEVEL_CAP, LIGHT_DECAY * dt);
-    lightMap[idx + 2] += (v - lightMap[idx + 2]) * min(LIGHT_LEVEL_CAP, LIGHT_DECAY * dt);
+export let decayLight = (cellIdx: number, desiredValue: number, dt: number) => {
+    lightMap[cellIdx] += (desiredValue - lightMap[cellIdx]) * min(LIGHT_LEVEL_CAP, LIGHT_DECAY * dt);
+    lightMap[cellIdx + 1] += (desiredValue - lightMap[cellIdx + 1]) * min(LIGHT_LEVEL_CAP, LIGHT_DECAY * dt);
+    lightMap[cellIdx + 2] += (desiredValue - lightMap[cellIdx + 2]) * min(LIGHT_LEVEL_CAP, LIGHT_DECAY * dt);
 };
 
-export let initMapSystem = () => {
+export let initMap = () => {
     mapW = 50;
     mapH = 50;
     mapSize = 50 * 50;
@@ -53,7 +52,7 @@ export let initMapSystem = () => {
 };
 
 export let generateDungeon = () => {
-    srandSeed(gameState[GS_SCENE]);
+    srandSeed(gameState[GS_SEED]);
 
     PLAYER_TORCH_INTENSITY = 0.9;
     mapData.fill(CELL_WALL);
@@ -79,14 +78,17 @@ export let generateDungeon = () => {
         return r.id_;
     };
 
-    let addDoor = (a: number, b: number, wall: number, type = 0) => {
+    let addDoor = (roomA: number, roomB: number, wall: number, type = 0) => {
         if (type === 1) {
-            let r = rooms[a], x = srandInt(r.x_ + 1, r.x_ + r.w_ - 2);
-            mapData[(r.y_ - 1) * mapW + x] = CELL_LOCKED_H;
+            let r = rooms[roomA], x = r.x_ + floor(r.w_ * 0.5);
             exitDoorIdx = (r.y_ - 1) * mapW + x;
+            mapData[(r.y_ - 1) * mapW + x] = CELL_LOCKED_H;
             mapData[(r.y_ - 2) * mapW + x] = CELL_EXIT;
+            mapData[(r.y_ - 3) * mapW + x] = CELL_EXIT;
+            mapData[(r.y_ - 2) * mapW + x - 1] = CELL_EXIT;
+            mapData[(r.y_ - 2) * mapW + x + 1] = CELL_EXIT;
         } else {
-            let r1 = rooms[a], r2 = rooms[b], x = 0, y = 0;
+            let r1 = rooms[roomA], r2 = rooms[roomB], x = 0, y = 0;
             if (wall === WALL_NORTH || wall === WALL_SOUTH) {
                 x = max(0, srandInt(max(r1.x_, r2.x_), min(r1.x_ + r1.w_ - 1, r2.x_ + r2.w_ - 1)));
                 y = max(0, wall === WALL_NORTH ? r1.y_ - 1 : r1.y_ + r1.h_);
@@ -96,30 +98,34 @@ export let generateDungeon = () => {
                 y = max(0, srandInt(max(r1.y_, r2.y_), min(r1.y_ + r1.h_ - 1, r2.y_ + r2.h_ - 1)));
                 mapData[y * mapW + x] = CELL_VERTICAL_DOOR;
             }
+            if (roomA === 0) {
+                bossDoorIdx = y * mapW + x;
+                mapData[y * mapW + x] = CELL_BOSS_DOOR;
+            }
         }
     };
 
-    // TODO: srandize the corner of the boss room
+    // TODO: randomize the corner of the boss room
     let i = addRoom(2, 2, 12, 12, -1, -1);
-    addDoor(i, -1, srand() > .5 ? WALL_NORTH : WALL_WEST, 1);
+    addDoor(i, -1, WALL_NORTH, 1);
     let bossRoom = rooms[i];
     bossRoom.type_ = ROOM_TYPE_BOSS;
     bossRoom.n_[WALL_NORTH] = bossRoom.n_[WALL_WEST] = bossRoom.n_[WALL_EAST] = WALL_MAP_BLOCKED;
-    bossRoom.enemyCount_ = 1;
-    entityAddBoss(bossRoom.x_ + floor(bossRoom.w_ / 2) + 0.5, bossRoom.y_ + floor(bossRoom.h_ / 2) + 0.5, ENEMY_BOSS_CHARGE);
+    bossRoom.enemyCount_ = 1; // TODO: Some levels are a group battle instead of a boss, need to calc the real enemy counts
+    entityAddBoss(bossRoom.x_ + floor(bossRoom.w_ / 2) + 0.5, bossRoom.y_ + floor(bossRoom.h_ / 2) + 0.5, ENEMY_BOSS_BULLET);
 
-    let parent: Room | null = bossRoom;
-    while (parent) {
+    let parentRoom: Room | null = bossRoom;
+    while (parentRoom) {
         let wall = -1;
-        for (let w = 0; w < 4; w++) if (parent.n_[w] === WALL_FREE) { wall = w; break; }
+        for (let w = 0; w < 4; w++) if (parentRoom.n_[w] === WALL_FREE) { wall = w; break; }
         if (wall > -1) {
             let w = 5, h = 5, x = 0, y = 0, maxW = srandInt(8, 14), maxH = srandInt(8, 14);
             if (wall === WALL_NORTH || wall === WALL_SOUTH) {
-                x = max(0, srandInt(parent.x_ - 3, parent.x_ + parent.w_ - 3));
-                y = max(0, wall === WALL_NORTH ? parent.y_ - h : parent.y_ + parent.h_);
+                x = max(0, srandInt(parentRoom.x_ - 3, parentRoom.x_ + parentRoom.w_ - 3));
+                y = max(0, wall === WALL_NORTH ? parentRoom.y_ - h : parentRoom.y_ + parentRoom.h_);
             } else {
-                x = max(0, wall === WALL_WEST ? parent.x_ - w : parent.x_ + parent.w_);
-                y = max(0, srandInt(parent.y_ - 3, parent.y_ + parent.h_ - 3));
+                x = max(0, wall === WALL_WEST ? parentRoom.x_ - w : parentRoom.x_ + parentRoom.w_);
+                y = max(0, srandInt(parentRoom.y_ - 3, parentRoom.y_ + parentRoom.h_ - 3));
             }
             let testX = x, testY = y, testW = w, testH = h;
             for (; ;) {
@@ -142,23 +148,23 @@ export let generateDungeon = () => {
                 }
             }
             if (w === 5 && h === 5 && testW === 5 && testH === 5) {
-                parent.n_[wall] = WALL_BLOCKED;
+                parentRoom.n_[wall] = WALL_BLOCKED;
                 continue;
             }
-            let nid = addRoom(x, y, w, h, parent.id_, wall);
-            addDoor(parent.id_, nid, wall);
+            let nid = addRoom(x, y, w, h, parentRoom.id_, wall);
+            addDoor(parentRoom.id_, nid, wall);
         }
-        parent = null;
+        parentRoom = null;
         for (let ri = 0; ri < rooms.length; ri++) {
             let n = rooms[ri].n_;
             if (n[WALL_NORTH] === WALL_FREE || n[WALL_EAST] === WALL_FREE || n[WALL_SOUTH] === WALL_FREE || n[WALL_WEST] === WALL_FREE) {
-                parent = rooms[ri];
+                parentRoom = rooms[ri];
                 break;
             }
         }
     }
 
-    for (let my = 0; my < mapH - 5; my++)
+    for (let my = 0; my < mapH - 5; my++) {
         for (let mx = 0; mx < mapW - 5; mx++) {
             let ok = 1;
             o: for (let ry = my; ry < my + 5; ry++)
@@ -174,6 +180,7 @@ export let generateDungeon = () => {
                 mx += 4;
             }
         }
+    }
 
     let best = -1, maxD = -1, boss = rooms[0], bx = boss.x_ + boss.w_ / 2, by = boss.y_ + boss.h_ / 2;
     for (let i = 0; i < rooms.length; i++) {

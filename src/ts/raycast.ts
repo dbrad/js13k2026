@@ -1,5 +1,5 @@
 import { gl, glPushColorQuad, glPushQuad, uDir, uPlane, uPlayer, updateLightmap } from "./gl";
-import { AMBIENT, PLAYER_TORCH_INTENSITY, decayLight, lightCalculated, lightMap, mapData, mapH, mapOffsetData, mapW } from "./map";
+import { AMBIENT, PLAYER_TORCH_INTENSITY, bossDoorIdx, decayLight, lightCalculated, lightMap, mapData, mapH, mapOffsetData, mapW, updateLight } from "./map";
 import { abs, clamp, cos, floor, max, min, sin, sqrt } from "./math";
 import { TEXTURE_CACHE } from "./texture";
 
@@ -38,6 +38,9 @@ export let rayRender = (px: number, py: number, angle: number, now: number, dt: 
     let playerX = floor(px);
     let playerY = floor(py);
 
+    let doorPhase = sin(now * 20);
+    let doorFade = 0.00375 * doorPhase;
+
     let phase = sin(now * 40);
     let fading = 0.05 * phase;
 
@@ -46,6 +49,9 @@ export let rayRender = (px: number, py: number, angle: number, now: number, dt: 
     let lIdx = playerIdx * 3;
     decayLight(lIdx, desired, dt);
     lightCalculated[playerIdx] = 1;
+    if (mapData[bossDoorIdx] === CELL_BOSS_DOOR) {
+        updateLight(bossDoorIdx * 3, doorFade);
+    }
 
     for (let x = 0; x < SCREEN_WIDTH; x++) {
         let cameraX = (2 * x) / SCREEN_WIDTH - 1;
@@ -113,7 +119,7 @@ export let rayRender = (px: number, py: number, angle: number, now: number, dt: 
                 lightCalculated[idx] = 1;
             }
 
-            if (cell === CELL_HORIZONTAL_DOOR || cell === CELL_LOCKED_H) {
+            if (cell === CELL_HORIZONTAL_DOOR || cell === CELL_LOCKED_H || cell === CELL_BOSS_DOOR) {
                 let doorY = rayMapY + 0.5;
                 let t = (doorY - py) / (rayDirY || 1e-10);
                 if (t > 0 && t < sideDistX && t < sideDistY) {
@@ -126,7 +132,7 @@ export let rayRender = (px: number, py: number, angle: number, now: number, dt: 
                         break;
                     }
                 }
-            } else if (cell === CELL_VERTICAL_DOOR || cell === CELL_LOCKED_H) {
+            } else if (cell === CELL_VERTICAL_DOOR || cell === CELL_LOCKED_V) {
                 let doorX = rayMapX + 0.5;
                 let t = (doorX - px) / (rayDirX || 1e-10);
                 if (t > 0 && t < sideDistX && t < sideDistY) {
@@ -174,7 +180,7 @@ export let rayRender = (px: number, py: number, angle: number, now: number, dt: 
         wallX -= floor(wallX);
         zBuffer[x] = perpWallDist;
 
-        if (x >= 315 && x <= 325 && (cell === CELL_HORIZONTAL_DOOR || cell == CELL_VERTICAL_DOOR) && perpWallDist <= INTERACTION_DISTANCE) {
+        if (x >= 315 && x <= 325 && (cell === CELL_HORIZONTAL_DOOR || cell == CELL_VERTICAL_DOOR || cell == CELL_BOSS_DOOR) && perpWallDist <= INTERACTION_DISTANCE) {
             if (mapOffsetData[idx] === 0) {
                 interactionId = idx;
             }
@@ -190,27 +196,36 @@ export let rayRender = (px: number, py: number, angle: number, now: number, dt: 
         let drawEnd = min(SCREEN_HEIGHT - 1, floor(fullEnd));
         if (drawEnd <= drawStart) continue;
 
-        let vStart = (drawStart - fullStart) / lineHeight;
-        let vEnd = (drawEnd - fullStart) / lineHeight;
-
-        if (cell < CELL_HORIZONTAL_DOOR && ((side === 0 && rayDirX > 0) || (side === 1 && rayDirY < 0))) wallX = 1 - wallX;
-        let textureX = floor(wallX * TEXTURE_SIZE);
-
-        let wallTexture =
-            cell === CELL_WALL ? TEXTURE_CACHE[TEXTURE_BRICK] :
-                cell === CELL_CRACKED ? TEXTURE_CACHE[TEXTURE_BRICK_CRACK] :
-                    TEXTURE_CACHE[TEXTURE_WOOD];
-        let u0 = wallTexture.u0_ + (textureX / TEXTURE_SIZE) * (wallTexture.u1_ - wallTexture.u0_);
-
         let lightingIdx = (rayMapY * mapW + rayMapX) * 3;
 
-        let textureV0 = wallTexture.v0_ + vStart * (wallTexture.v1_ - wallTexture.v0_);
-        let textureV1 = wallTexture.v0_ + vEnd * (wallTexture.v1_ - wallTexture.v0_);
+        if (cell === CELL_EXIT) {
+            let brightWhite = shadeFogABGR(lightMap[lightingIdx], lightMap[lightingIdx + 1], lightMap[lightingIdx + 2]);
+            glPushColorQuad(x, drawStart, 1, drawEnd - drawStart, brightWhite);
+        } else {
+            let vStart = (drawStart - fullStart) / lineHeight;
+            let vEnd = (drawEnd - fullStart) / lineHeight;
 
-        glPushQuad(x, drawStart, 1, drawEnd - drawStart, u0, textureV0, u0, textureV1, shadeFogABGR(lightMap[lightingIdx], lightMap[lightingIdx + 1], lightMap[lightingIdx + 2]), fogFactor(distForFog));
+            if (cell < CELL_HORIZONTAL_DOOR && ((side === 0 && rayDirX > 0) || (side === 1 && rayDirY < 0))) wallX = 1 - wallX;
+            let textureX = floor(wallX * TEXTURE_SIZE);
+
+            let wallTexture =
+                cell === CELL_WALL ? TEXTURE_CACHE[TEXTURE_BRICK] :
+                    cell === CELL_CRACKED ? TEXTURE_CACHE[TEXTURE_BRICK_CRACK] :
+                        TEXTURE_CACHE[TEXTURE_WOOD];
+            let u0 = wallTexture.u0_ + (textureX / TEXTURE_SIZE) * (wallTexture.u1_ - wallTexture.u0_);
+
+            let textureV0 = wallTexture.v0_ + vStart * (wallTexture.v1_ - wallTexture.v0_);
+            let textureV1 = wallTexture.v0_ + vEnd * (wallTexture.v1_ - wallTexture.v0_);
+
+            glPushQuad(x, drawStart, 1, drawEnd - drawStart, u0, textureV0, u0, textureV1, shadeFogABGR(lightMap[lightingIdx], lightMap[lightingIdx + 1], lightMap[lightingIdx + 2]), fogFactor(distForFog));
+        }
     };
 
     for (let i = 0; i < lightCalculated.length; i++) {
+        if (mapData[i] === CELL_EXIT) {
+            let l = 0.50 + fading;
+            updateLight(i * 3, l, l, l);
+        }
         if (lightCalculated[i] === 0) {
             let lIdx = i * 3;
             decayLight(lIdx, AMBIENT, dt);

@@ -24,13 +24,15 @@ type SaveState = [
     GS_OPT_MUSIC: number,
     GS_OPT_BOB: number,
     GS_OPT_SHAKE: number,
-    GS_OPT_AIM: number
+    GS_OPT_AIM: number,
+    GS_OPT_KEYMAP: number,
 ];
 
 type GameState = [
     GS_PAUSE_GAME: number,
     GS_SCENE: number,
-    GS_PLAYER_HP: number,
+    GS_SEED: number,
+    GS_LIVES: number,
     GS_PLAYER_HP: number,
     GS_PLAYER_MAX_HP: number,
     GS_PLAYER_X: number,
