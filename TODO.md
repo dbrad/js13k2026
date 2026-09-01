@@ -44,12 +44,26 @@
 - [x] Reduce input flags, use the input array
 - [x] Inline the 2 game scenes to share code
 - [x] Boss mechanics
-- [ ] On screen hp bar for boss while the boss is active / alerted
+- [x] On screen hp bar for boss while the boss is active / alerted
 - [x] Finish implementing locked doors and exit tileentityAddBoss
 - [x] Win condition
-- [ ] Add map with fog of war
-- [ ] Improve map randomization
+- [x] Add toggable map with fog of war (toggled with MAP_BUTTON)
+    - Add new array to track whether the player has cast a ray over a given tile yet.
+    - Can just store the tile CELL_ value and use at to pick a colour to render the tile as.
+- [x] Improve map randomization
+    - Randomly pick a corner to place the boss room in, instead of always picking the top-left corner
+    - Top corners, exit goes on north wall, boss door on the south wall. 
+    - Bottom corners, exit goes on south wall, boss door on the north wall.
 - [ ] Charge levels for attack
-- [ ] Health Packs
-- [ ] Clean up dead params
+    - After beating a boss, text on screen briefly "The powers of light and dark surge through you"
+    - Max charge level goes up after that.
+    - 0 -> 1 charge linear
+- [x] Health Packs
+    - Spawn only in secret rooms
+    - Exact middle of the room
+    - Use the "+" character from the atlas
+    - Green colour
+    - Green particles shimmering off of the pack
+    - Heal on pickup, doesn't pickup at full hp, cannot exceed max hp
 - [ ] Faster music for boss fight
+    - Need a faster paced song to play during the boss fight

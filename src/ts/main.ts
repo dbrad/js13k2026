@@ -4,10 +4,10 @@ import { playMusic, sfxFootstep, sfxLaserCharge, sfxPlayerHurt, zzfxInit, zzfxPl
 import { initCanvas } from "./canvas";
 import { RAINBOW } from "./colours";
 import { entityAimAssist, entityClear, entityCollect, entityDraw, entityPlayerCollide, entityUpdate, fireRainbowBeam, renderBossBar } from "./entity";
-import { gameState, loadGame, saveGame, saveState } from "./gameState";
+import { gameState, loadOptions, newGame, saveOptions, saveState } from "./gameState";
 import { gl, glClear, glFlush, glInit, glPushColorQuad, glPushText, glPushTexture, uShake, uTransition } from "./gl";
 import { initializeInput, keyState, lookDeltaX, setKeyMap, updateHardwareInput, updateInputState } from "./input";
-import { createMenuMap, doorAnimActive, doorAnimT, generateDungeon, initMap, mapData, mapOffsetData, mapSize, mapW, updatePlayerTorch } from "./map";
+import { createMainMenuScene, doorAnimActive, doorAnimT, generateDungeon, initMap, mapData, mapOffsetData, mapSize, mapW, renderMap, updatePlayerTorch } from "./map";
 import { abs, clamp, cos, floor, max, min, randInt, sin, sqrt } from "./math";
 import { interactionId, rayMove, rayRender, rayRenderFloorCeiling } from "./raycast";
 import { getShakeSum, shakeTrigger, shakeUpdate, shakeX, shakeY, updateHeadbob, zeroShake } from "./shake";
@@ -35,10 +35,10 @@ window.addEventListener("load", async (): Promise<void> => {
             canvas.removeEventListener("pointerdown", initializeGame);
             playing = true;
 
-            loadGame();
+            loadOptions();
             setKeyMap();
             initMap();
-            createMenuMap();
+            createMainMenuScene();
             gameState[GS_PAUSE_GAME] = 1;
 
             if (DEBUG) {
@@ -65,6 +65,7 @@ window.addEventListener("load", async (): Promise<void> => {
     ];
     let selected: number = 0;
 
+    let currentScene = 0;
     let targetScene = -1;
 
     let charge = 0;
@@ -85,7 +86,6 @@ window.addEventListener("load", async (): Promise<void> => {
 
         if (playing) {
             performanceMark("start_of_frame");
-            let scene = gameState[GS_SCENE];
             if (delta > 250) {
                 delta = 16.6;
                 dt = delta * 0.001;
@@ -101,7 +101,7 @@ window.addEventListener("load", async (): Promise<void> => {
                     t = 0.00001;
                 }
 
-                if (scene === 0) {
+                if (currentScene === 0) {
                     // Main Menu Scene
                     playMusic(delta);
                     if (targetScene === -1) {
@@ -109,8 +109,8 @@ window.addEventListener("load", async (): Promise<void> => {
                             if (selected === 0) {
                                 targetScene = 1;
                             } else {
-                                saveGame();
-                                // TODO: OPTION TOGGLING
+                                saveState[selected - 1] = (saveState[selected - 1] + 1) % 2;
+                                saveOptions();
                             }
                         } else if (keyState[D_UP] === KEY_WAS_DOWN) {
                             selected = max(0, --selected);
@@ -135,6 +135,10 @@ window.addEventListener("load", async (): Promise<void> => {
                     let dirX = cos(angle);
                     let dirY = sin(angle);
 
+                    if (keyState[MAP_BUTTON] === KEY_WAS_DOWN) {
+                        gameState[GS_OPEN_MAP] = (gameState[GS_OPEN_MAP] + 1) % 2;
+                    }
+
                     if (keyState[A_BUTTON] === KEY_WAS_DOWN) {
                         if (interactionId > -1) {
                             doorAnimActive[interactionId] = 1;
@@ -156,7 +160,7 @@ window.addEventListener("load", async (): Promise<void> => {
                     }
 
                     if (isCharging) {
-                        charge = min(charge + chargeSpeed * dt, MAX_CHARGE);
+                        charge = min(charge + chargeSpeed * dt, gameState[GS_MAX_CHARGE]);
                     }
 
                     let moveX = 0;
@@ -243,21 +247,21 @@ window.addEventListener("load", async (): Promise<void> => {
                     entityUpdate(dt, px, py);
                 }
 
+                // Scene transistion
                 if (transition && t > 0 && t < 1) {
                     t += dt;
                 } else if (!transition && t > 0) {
                     t -= dt;
                 } else if (transition) {
-                    gameState[GS_SCENE] = targetScene;
+                    currentScene = targetScene;
                     entityClear();
                     if (targetScene === 1) {
-                        gameState[GS_PLAYER_HP] = gameState[GS_PLAYER_MAX_HP];
-                        gameState[GS_PAUSE_GAME] = 0;
+                        newGame();
                         gameState[GS_SEED] = randInt(1, 1000000);
                         generateProcTextures();
                         generateDungeon();
                     } else {
-                        createMenuMap();
+                        createMainMenuScene();
                     }
                     targetScene = -1;
 
@@ -280,7 +284,7 @@ window.addEventListener("load", async (): Promise<void> => {
                 entityCollect(px, py, angle);
                 entityDraw(px, py, angle, now);
 
-                if (scene === 0) {
+                if (currentScene === 0) {
                     // Main Menu Scene
                     glPushText("prism break", 20, 20, 0x99ffffff, 4);
                     for (let r = 0; r < 7; r++) {
@@ -304,9 +308,9 @@ window.addEventListener("load", async (): Promise<void> => {
 
                     zeroShake();
                     if (interactionId > -1) {
-                        let str = "f to open";
+                        let str = "e to open";
                         if (mapData[interactionId] === CELL_BOSS_DOOR)
-                            str = "f to open boss door";
+                            str = "e to open boss door";
                         glPushText(str, SCREEN_HALF_W, SCREEN_HALF_H, 0xffffffff, 1, TEXT_H_ALIGN_CENTER);
                     }
 
@@ -329,6 +333,9 @@ window.addEventListener("load", async (): Promise<void> => {
                         }
                     }
                     renderBossBar();
+                    if (gameState[GS_OPEN_MAP]) {
+                        renderMap(px, py);
+                    }
                 }
 
                 if (DEBUG) {

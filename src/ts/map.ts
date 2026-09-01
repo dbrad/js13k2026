@@ -1,6 +1,7 @@
 import { assert } from "./__debug/debug";
-import { entityAdd, entityAddBoss, entitySpawnDust, spawnEnemiesInRoom } from "./entity";
+import { entityAdd, entityAddBoss, entityAddHealthPack, entitySpawnDust, spawnEnemiesInRoom } from "./entity";
 import { gameState } from "./gameState";
+import { glPushColorQuad } from "./gl";
 import { floor, max, min, PI, srand, srandInt, srandSeed } from "./math";
 
 export let mapW = 0;
@@ -8,6 +9,8 @@ export let mapH = 0;
 export let mapSize = 0;
 export let mapData: Int32Array;
 export let mapOffsetData: Float32Array;
+export let minimapData: Int32Array;
+export let viewData: Int32Array;
 
 export let doorAnimT: Float32Array;
 export let doorAnimActive: Int32Array;
@@ -46,6 +49,8 @@ export let initMap = () => {
     lightMap = new Float32Array(mapSize * 3).fill(AMBIENT);
     lightCalculated = new Int32Array(mapSize);
     mapData = new Int32Array(mapSize).fill(CELL_WALL);
+    minimapData = new Int32Array(mapSize).fill(-1);
+    viewData = new Int32Array(mapSize).fill(-1);
     mapOffsetData = new Float32Array(mapSize);
     doorAnimT = new Float32Array(mapSize);
     doorAnimActive = new Int32Array(mapSize);
@@ -56,6 +61,7 @@ export let generateDungeon = () => {
 
     PLAYER_TORCH_INTENSITY = 0.9;
     mapData.fill(CELL_WALL);
+    minimapData.fill(-1);
     mapOffsetData.fill(0);
     doorAnimT.fill(0);
     doorAnimActive.fill(0);
@@ -80,13 +86,16 @@ export let generateDungeon = () => {
 
     let addDoor = (roomA: number, roomB: number, wall: number, type = 0) => {
         if (type === 1) {
-            let r = rooms[roomA], x = r.x_ + floor(r.w_ * 0.5);
-            exitDoorIdx = (r.y_ - 1) * mapW + x;
-            mapData[(r.y_ - 1) * mapW + x] = CELL_LOCKED_H;
-            mapData[(r.y_ - 2) * mapW + x] = CELL_EXIT;
-            mapData[(r.y_ - 3) * mapW + x] = CELL_EXIT;
-            mapData[(r.y_ - 2) * mapW + x - 1] = CELL_EXIT;
-            mapData[(r.y_ - 2) * mapW + x + 1] = CELL_EXIT;
+            let r = rooms[roomA],
+                x = r.x_ + floor(r.w_ * 0.5),
+                y = wall === WALL_NORTH ? r.y_ - 1 : r.y_ + r.h_,
+                dy = wall === WALL_NORTH ? -1 : 1;
+            exitDoorIdx = y * mapW + x;
+            mapData[y * mapW + x] = CELL_LOCKED_H;
+            mapData[(y + dy) * mapW + x] = CELL_EXIT;
+            mapData[(y + 2 * dy) * mapW + x] = CELL_EXIT;
+            mapData[(y + dy) * mapW + x - 1] = CELL_EXIT;
+            mapData[(y + dy) * mapW + x + 1] = CELL_EXIT;
         } else {
             let r1 = rooms[roomA], r2 = rooms[roomB], x = 0, y = 0;
             if (wall === WALL_NORTH || wall === WALL_SOUTH) {
@@ -105,13 +114,15 @@ export let generateDungeon = () => {
         }
     };
 
-    // TODO: randomize the corner of the boss room
-    let i = addRoom(2, 2, 12, 12, -1, -1);
-    addDoor(i, -1, WALL_NORTH, 1);
-    let bossRoom = rooms[i];
+    let c = srandInt(0, 3),
+        i = addRoom(c & 1 ? 36 : 2, c > 1 ? 36 : 2, 12, 12, -1, -1),
+        bossRoom = rooms[i],
+        exitW = c > 1 ? WALL_SOUTH : WALL_NORTH;
+
+    addDoor(i, -1, exitW, 1);
     bossRoom.type_ = ROOM_TYPE_BOSS;
-    bossRoom.n_[WALL_NORTH] = bossRoom.n_[WALL_WEST] = bossRoom.n_[WALL_EAST] = WALL_MAP_BLOCKED;
-    bossRoom.enemyCount_ = 1; // TODO: Some levels are a group battle instead of a boss, need to calc the real enemy counts
+    bossRoom.n_[exitW] = bossRoom.n_[WALL_WEST] = bossRoom.n_[WALL_EAST] = WALL_MAP_BLOCKED;
+    bossRoom.enemyCount_ = 1;
     entityAddBoss(bossRoom.x_ + floor(bossRoom.w_ / 2) + 0.5, bossRoom.y_ + floor(bossRoom.h_ / 2) + 0.5, ENEMY_BOSS_BULLET);
 
     let parentRoom: Room | null = bossRoom;
@@ -173,6 +184,7 @@ export let generateDungeon = () => {
             if (ok) {
                 let sid = addRoom(mx, my, 5, 5, -1, -1);
                 rooms[sid].type_ = ROOM_TYPE_SECRET;
+                entityAddHealthPack(mx + 5 * 0.5, my + 5 * 0.5);
                 if (my > 0 && mapData[(my - 1) * mapW + mx + 2] === CELL_FLOOR) mapData[my * mapW + mx + 2] = CELL_CRACKED;
                 if (my + 5 < mapH && mapData[(my + 5) * mapW + mx + 2] === CELL_FLOOR) mapData[(my + 4) * mapW + mx + 2] = CELL_CRACKED;
                 if (mx > 0 && mapData[(my + 2) * mapW + mx - 1] === CELL_FLOOR) mapData[(my + 2) * mapW + mx] = CELL_CRACKED;
@@ -201,15 +213,15 @@ export let generateDungeon = () => {
 
     entitySpawnDust(gameState[GS_PLAYER_X], gameState[GS_PLAYER_Y], 220);
 
-    gameState[GS_PLAYER_X] = bossRoom.x_ + bossRoom.w_ / 2;
-    gameState[GS_PLAYER_Y] = bossRoom.y_ + bossRoom.h_ - 0.5;
+    // gameState[GS_PLAYER_X] = bossRoom.x_ + bossRoom.w_ / 2;
+    // gameState[GS_PLAYER_Y] = bossRoom.y_ + bossRoom.h_ - 0.5;
 
-    // gameState[GS_PLAYER_X] = rooms[best].x_ + rooms[best].w_ / 2;
-    // gameState[GS_PLAYER_Y] = rooms[best].y_ + rooms[best].h_ - 0.5;
+    gameState[GS_PLAYER_X] = rooms[best].x_ + rooms[best].w_ / 2;
+    gameState[GS_PLAYER_Y] = rooms[best].y_ + rooms[best].h_ - 0.5;
     gameState[GS_PLAYER_ANGLE] = -PI * 0.5;
 };
 
-export let createMenuMap = () => {
+export let createMainMenuScene = () => {
     mapData.fill(CELL_WALL);
     for (let y = 1; y < 6; y++) {
         for (let x = 1; x < 5; x++) {
@@ -224,4 +236,37 @@ export let createMenuMap = () => {
     gameState[GS_PLAYER_X] = 1.5;
     gameState[GS_PLAYER_Y] = 3.5;
     gameState[GS_PLAYER_ANGLE] = 0;
+};
+
+export let renderMap = (px: number, py: number) => {
+    glPushColorQuad(15, 15, SCREEN_WIDTH - 30, SCREEN_HEIGHT - 30, 0x66000000);
+    for (let x = 0; x < mapW; x++) {
+        for (let y = 0; y < mapH; y++) {
+            let idx = y * mapW + x;
+            let col = 0x00000000;
+            let vcol = 0x00000000;
+            if (viewData[idx] > 0) {
+                vcol = 0x33ffffff;
+            }
+            if (minimapData[idx] < 0) {
+            } else if (minimapData[idx] === CELL_BOSS_DOOR) {
+                col = 0xff0000ff;
+            } else if (minimapData[idx] === CELL_WALL || minimapData[idx] === CELL_CRACKED) {
+                col = 0xff666666;
+            } else if (minimapData[idx] === CELL_FLOOR) {
+                col = 0xff333333;
+            } else if (minimapData[idx] === CELL_HORIZONTAL_DOOR || minimapData[idx] === CELL_VERTICAL_DOOR) {
+                col = 0xff00ffff;
+            } else if (minimapData[idx] === CELL_LOCKED_H) {
+                col = 0xff00ff00;
+            }
+            if (px >= x && px < x + 1 && py >= y && py < y + 1) {
+                col = 0xffffffff;
+            }
+            if (col > 0) {
+                glPushColorQuad(170 + x * 6, 30 + y * 6, 6, 6, col);
+                if (vcol > 0) glPushColorQuad(170 + x * 6, 30 + y * 6, 6, 6, vcol);
+            }
+        }
+    }
 };

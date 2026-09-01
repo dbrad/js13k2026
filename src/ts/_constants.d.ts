@@ -142,17 +142,16 @@ declare const GS_OPT_AIM: 3;
 declare const GS_OPT_KEYMAP: 4;
 
 declare const GS_PAUSE_GAME: 0;
-declare const GS_SCENE: 1;
-declare const GS_SEED: 2;
+declare const GS_SEED: 1;
+declare const GS_OPEN_MAP: 2;
 declare const GS_LIVES: 3;
-declare const GS_PLAYER_HP: 4;
-declare const GS_PLAYER_MAX_HP: 5;
-declare const GS_PLAYER_X: 6;
-declare const GS_PLAYER_Y: 7;
-declare const GS_PLAYER_ANGLE: 8;
-declare const GS_PLAYER_INVULNERABLE: 9;
-
-declare const MAX_CHARGE: 1;
+declare const GS_MAX_CHARGE: 4;
+declare const GS_PLAYER_HP: 5;
+declare const GS_PLAYER_MAX_HP: 6;
+declare const GS_PLAYER_X: 7;
+declare const GS_PLAYER_Y: 8;
+declare const GS_PLAYER_ANGLE: 9;
+declare const GS_PLAYER_INVULNERABLE: 10;
 
 declare const FLAG_ACTIVE: 1;
 declare const FLAG_PARTICLE: 2;
@@ -161,6 +160,7 @@ declare const FLAG_SOLID: 8;
 declare const FLAG_DAMAGE: 16;
 declare const FLAG_PROJECTILE: 32;
 declare const FLAG_ENEMY: 64;
+declare const FLAG_HEALTH_PACK: 128;
 
 declare const ENEMY_NONE: 0;
 declare const ENEMY_MELEE: 1;

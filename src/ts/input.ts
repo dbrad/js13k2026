@@ -104,7 +104,7 @@ export let updateHardwareInput = (): void => {
 };
 
 export let updateInputState = (delta: number): void => {
-    for (let key = 0; key < 8; key++) {
+    for (let key = 0; key < 9; key++) {
         if (rateLimit[key] > 0) rateLimit[key] -= delta;
 
         if (hardwareKeyState[key] === KEY_IS_DOWN) {
@@ -125,7 +125,7 @@ export let updateInputState = (delta: number): void => {
 };
 
 export let clearInput = (): void => {
-    for (let i = 0; i < 8; i++) {
+    for (let i = 0; i < 9; i++) {
         hardwareKeyState[i] = KEY_IS_UP;
         keyState[i] = KEY_IS_UP;
         rateLimit[i] = 0;

@@ -176,6 +176,14 @@ export let entityAddParticle = (x: number, y: number, z = 0.5, size = 1, col = 0
     return id;
 };
 
+export let entityAddHealthPack = (x: number, y: number): number => {
+    let id = entityAdd(x, y, 143, 0.55, FLAG_ACTIVE | FLAG_HEALTH_PACK, 0xff22ff44, 0.42);
+    let s = active[id];
+    size_[s] = 0.7;
+    verticalBob_[s] = random() * PI * 2;
+    return id;
+};
+
 export let spawnEnemiesInRoom = (rid: number, rx: number, ry: number, rw: number, rh: number, texId: number = 1): void => {
     let count = 1 + floor(srand() * 3);
     rooms[rid].enemyCount_ = count;
@@ -274,11 +282,18 @@ let spawnPseudoMelee = (tx: number, ty: number): void => {
     burstParticles(tx, ty, 0.35, 4, 0xffffffff, 1.8, 0.18);
 };
 
+let dmgCalc = (x: number) => {
+    if (x <= 1) {
+        return x * 0.5;
+    } else {
+        return 1.5 * x - 1;
+    }
+};
 export let fireRainbowBeam = (px: number, py: number, angle: number, charge: number = 0): void => {
     zzfxPlay(sfxLaserFire);
     shakeTrigger(8, 100);
 
-    let dmg = BEAM_BASE_DAMAGE * (0.5 + charge * 0.5);
+    let dmg = 0.5 + dmgCalc(charge);
     let range = floor(3 + 2 * charge);
 
     for (let i = 0; i < 7; i++) {
@@ -449,7 +464,19 @@ export let entitySpawnDust = (px: number, py: number, count = 220): void => {
 export let entityPlayerCollide = (px: number, py: number, playerRadius = 0.20, onDamage?: () => void): [number, number] => {
     for (let i = 0; i < activeCount; i++) {
         let s = active[i];
-        // TODO: HEALTH_PACK collide logic
+        if ((flags_[s] & (FLAG_ACTIVE | FLAG_HEALTH_PACK)) === (FLAG_ACTIVE | FLAG_HEALTH_PACK)) {
+            if (circleOverlap(px, py, playerRadius, x_[s], y_[s], 0.35 * scale_[s])) {
+                let hp = gameState[GS_PLAYER_HP];
+                let mx = gameState[GS_PLAYER_MAX_HP];
+                if (hp < mx) {
+                    gameState[GS_PLAYER_HP] = min(mx, hp + 2);
+                    burstParticles(x_[s], y_[s], 0.45, 10, 0xff44ff66, 2.2, 0.28);
+                    flags_[s] = 0;
+                }
+            }
+            continue;
+        }
+
         if ((flags_[s] & (FLAG_ACTIVE | FLAG_DAMAGE)) !== (FLAG_ACTIVE | FLAG_DAMAGE)) continue;
 
         let er = (flags_[s] & FLAG_PROJECTILE) ? 0.1 : 0.4 * scale_[s];
@@ -518,6 +545,24 @@ export let entityUpdate = (dt: number, px: number, py: number): void => {
         let s = active[i];
         if ((flags_[s] & FLAG_ACTIVE) === 0) {
             activeCount = entityRemove(i, active, activeCount);
+            continue;
+        }
+
+        if (flags_[s] & FLAG_HEALTH_PACK) {
+            if (random() < dt * 6) {
+                spawnBeamParticle(
+                    x_[s] + (random() - 0.5) * 0.2,
+                    y_[s] + (random() - 0.5) * 0.2,
+                    0.45 + random() * 0.15,
+                    0.6 + random() * 0.5,
+                    0xff44ff66,
+                    0.4 + random() * 0.3,
+                    (random() - 0.5) * 0.6,
+                    (random() - 0.5) * 0.6,
+                    0.4 + random() * 0.8
+                );
+            }
+            updateLight((floor(y_[s]) * mapW + floor(x_[s])) * 3, 0, 0.03);
             continue;
         }
 
@@ -917,7 +962,7 @@ export let entityDraw = (px: number, py: number, angle: number, now: number): vo
 };
 
 export let renderBossBar = () => {
-    if (bossId >= 0 && alert_[bossId] === 0) {
+    if (bossId >= 0 && alert_[bossId] === 0 && hp_[bossId] > 0) {
         glPushColorQuad(5, 5, SCREEN_WIDTH - 10, 16, 0xaa333333);
         glPushColorQuad(7, 7, (SCREEN_WIDTH - 14) * (hp_[bossId] / max_hp_[bossId]), 12, 0x883333ff);
     }

@@ -1,5 +1,5 @@
 import { gl, glPushColorQuad, glPushQuad, uDir, uPlane, uPlayer, updateLightmap } from "./gl";
-import { AMBIENT, PLAYER_TORCH_INTENSITY, bossDoorIdx, decayLight, lightCalculated, lightMap, mapData, mapH, mapOffsetData, mapW, updateLight } from "./map";
+import { AMBIENT, PLAYER_TORCH_INTENSITY, bossDoorIdx, decayLight, lightCalculated, lightMap, mapData, mapH, mapOffsetData, mapW, minimapData, updateLight, viewData } from "./map";
 import { abs, clamp, cos, floor, max, min, sin, sqrt } from "./math";
 import { TEXTURE_CACHE } from "./texture";
 
@@ -29,6 +29,7 @@ let shadeFogABGR = (r: number, g: number, b: number): number => {
 
 export let rayRender = (px: number, py: number, angle: number, now: number, dt: number): void => {
     lightCalculated.fill(0);
+    viewData.fill(-1);
     interactionId = -1;
 
     let dirX = cos(angle);
@@ -118,6 +119,9 @@ export let rayRender = (px: number, py: number, angle: number, now: number, dt: 
                 decayLight(lIdx, targetLightLevel, dt);
                 lightCalculated[idx] = 1;
             }
+
+            minimapData[idx] = cell;
+            viewData[idx] = 1;
 
             if (cell === CELL_HORIZONTAL_DOOR || cell === CELL_LOCKED_H || cell === CELL_BOSS_DOOR) {
                 let doorY = rayMapY + 0.5;

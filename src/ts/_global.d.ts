@@ -30,9 +30,10 @@ type SaveState = [
 
 type GameState = [
     GS_PAUSE_GAME: number,
-    GS_SCENE: number,
     GS_SEED: number,
+    GS_OPEN_MAP: number,
     GS_LIVES: number,
+    GS_MAX_CHARGE: number,
     GS_PLAYER_HP: number,
     GS_PLAYER_MAX_HP: number,
     GS_PLAYER_X: number,
