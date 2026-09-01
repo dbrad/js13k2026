@@ -5,21 +5,22 @@ Day 19 - 2026-08-31
 Improved map generation randomization.
 Add togglable fog of war map.
 Added health packs.
+Fixed boss wandering bug.
 
 ---
 
-`-Zab0 -Zlr1064 -Zmc4 -Zmd14 -Zpr16 -S0,1,2,3,7,13,22,25,42,165,344,386`
+`-Zab0 -Zlr1064 -Zmc4 -Zmd21 -Zpr16 -S0,1,2,3,7,13,22,25,42,165,344,386`
 
 -------------------------------------------------------------------------------
 Language                     files          blank        comment           code
 -------------------------------------------------------------------------------
-TypeScript                      17            529             62           3158
+TypeScript                      17            529             63           3161
 GLSL                             2             17              0             95
 HTML                             1              2              0              6
 -------------------------------------------------------------------------------
-SUM:                            20            548             62           3259
+SUM:                            20            548             63           3262
 -------------------------------------------------------------------------------
 
 The file is under the limit.
-USED: 96.09% | 12791 BYTES
-LEFT:  3.91% |   521 BYTES
+USED: 96.12% | 12796 BYTES
+LEFT:  3.88% |   516 BYTES

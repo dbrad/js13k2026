@@ -607,7 +607,8 @@ export let entityUpdate = (dt: number, px: number, py: number): void => {
                         if (hasLineOfSight(x_[s], y_[s], px, py)) {
                             zzfxPlay(sfxEnemyAlert);
                             alert_[s] = NOTICE_DELAY_MIN + random() * (NOTICE_DELAY_MAX - NOTICE_DELAY_MIN) + (typ >= ENEMY_BOSS_BULLET ? 3 : 0);
-                        } else {
+                        } else if (typ < ENEMY_BOSS_BULLET) {
+                            // bosses hold home in prefer_, never wander
                             if (random() < 0.01) {
                                 let ang = random() * PI * 2;
                                 preferX_[s] = cos(ang);
@@ -615,6 +616,9 @@ export let entityUpdate = (dt: number, px: number, py: number): void => {
                             }
                             vx_[s] = preferX_[s] * IDLE_WANDER_SPEED;
                             vy_[s] = preferY_[s] * IDLE_WANDER_SPEED;
+                        } else {
+                            vx_[s] = 0;
+                            vy_[s] = 0;
                         }
                     } else if (alert_[s] > 0) {
                         alert_[s] -= dt;
