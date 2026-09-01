@@ -19,13 +19,8 @@ export let fogFactor = (dist: number): number => {
     return t * t;
 };
 
-let shadeFogABGR = (r: number, g: number, b: number): number => {
-    let out = (255 & 0xff) << 8 >>> 0;
-    out = (out | floor(b * 255)) << 8 >>> 0;
-    out = (out | floor(g * 255)) << 8 >>> 0;
-    out = (out | floor(r * 255)) >>> 0;
-    return out;
-};
+let shadeFogABGR = (r: number, g: number, b: number): number =>
+    255 << 24 | floor(b * 255) << 16 | floor(g * 255) << 8 | floor(r * 255);
 
 export let rayRender = (px: number, py: number, angle: number, now: number, dt: number): void => {
     lightCalculated.fill(0);

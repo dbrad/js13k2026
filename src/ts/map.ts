@@ -28,6 +28,7 @@ type Room = { id_: number; type_: number; enemyCount_: number, x_: number; y_: n
 export let rooms: Room[] = [];
 export let exitDoorIdx: number = -1;
 export let bossDoorIdx: number = -1;
+let bossBag = [ENEMY_BOSS_BULLET, ENEMY_BOSS_BROOD, ENEMY_BOSS_CHARGE];
 
 export let updateLight = (cellIdx: number, r: number = 0, g: number = 0, b: number = 0) => {
     lightMap[cellIdx] = min(LIGHT_LEVEL_CAP, max(lightMap[cellIdx], lightMap[cellIdx] + r));
@@ -58,6 +59,12 @@ export let initMap = () => {
 
 export let generateDungeon = () => {
     srandSeed(gameState[GS_SEED]);
+    if (gameState[GS_LEVEL] === 0)
+        for (let b = 2; b > 0; b--) {
+            let j = srandInt(0, b + 1), t = bossBag[b];
+            bossBag[b] = bossBag[j];
+            bossBag[j] = t;
+        }
 
     PLAYER_TORCH_INTENSITY = 0.9;
     mapData.fill(CELL_WALL);
@@ -123,7 +130,7 @@ export let generateDungeon = () => {
     bossRoom.type_ = ROOM_TYPE_BOSS;
     bossRoom.n_[exitW] = bossRoom.n_[WALL_WEST] = bossRoom.n_[WALL_EAST] = WALL_MAP_BLOCKED;
     bossRoom.enemyCount_ = 1;
-    entityAddBoss(bossRoom.x_ + floor(bossRoom.w_ / 2) + 0.5, bossRoom.y_ + floor(bossRoom.h_ / 2) + 0.5, ENEMY_BOSS_BULLET);
+    entityAddBoss(bossRoom.x_ + floor(bossRoom.w_ / 2) + 0.5, bossRoom.y_ + floor(bossRoom.h_ / 2) + 0.5, bossBag[gameState[GS_LEVEL]]);
 
     let parentRoom: Room | null = bossRoom;
     while (parentRoom) {
@@ -213,11 +220,11 @@ export let generateDungeon = () => {
 
     entitySpawnDust(gameState[GS_PLAYER_X], gameState[GS_PLAYER_Y], 220);
 
-    // gameState[GS_PLAYER_X] = bossRoom.x_ + bossRoom.w_ / 2;
-    // gameState[GS_PLAYER_Y] = bossRoom.y_ + bossRoom.h_ - 0.5;
+    gameState[GS_PLAYER_X] = bossRoom.x_ + bossRoom.w_ / 2;
+    gameState[GS_PLAYER_Y] = bossRoom.y_ + bossRoom.h_ - 0.5;
 
-    gameState[GS_PLAYER_X] = rooms[best].x_ + rooms[best].w_ / 2;
-    gameState[GS_PLAYER_Y] = rooms[best].y_ + rooms[best].h_ - 0.5;
+    // gameState[GS_PLAYER_X] = rooms[best].x_ + rooms[best].w_ / 2;
+    // gameState[GS_PLAYER_Y] = rooms[best].y_ + rooms[best].h_ - 0.5;
     gameState[GS_PLAYER_ANGLE] = -PI * 0.5;
 };
 

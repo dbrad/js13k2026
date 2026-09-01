@@ -7,7 +7,7 @@ let hash2 = (x: number, y: number, seed: number): number => {
 };
 
 let valueNoise = (x: number, y: number, seed: number): number => {
-  let ix = x | 0, iy = y | 0;
+  let ix = floor(x), iy = floor(y);
   let fx = x - ix, fy = y - iy;
   let a = (hash2(ix, iy, seed) & 0xffff) / 0xffff;
   let b = (hash2(ix + 1, iy, seed) & 0xffff) / 0xffff;
@@ -126,7 +126,6 @@ export let genStone = (w: number, h: number, seed: number, out: Uint8Array): voi
         let m = 36 + (hash2(x, y, seed) & 12);
         r = g = b = m;
       } else {
-        // generated tones instead of array
         let tileHash = hash2(tx, ty, seed);
         let base = 62 + (tileHash & 3) * 22;
         let tr = base, tg = base - 2, tb = base + 4;
@@ -163,7 +162,7 @@ export let genStone = (w: number, h: number, seed: number, out: Uint8Array): voi
   }
 };
 
-export let genWood = (w: number, h: number, seed: number, out: Uint8Array): void => {
+export let genDoor = (w: number, h: number, seed: number, out: Uint8Array): void => {
   // vertical plank width + two horizontal rails
   let plankW = max(5, floor(w / 6));
   let railH = max(3, floor(h / 10));

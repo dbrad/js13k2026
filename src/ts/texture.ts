@@ -3,7 +3,7 @@ import textureAltas from "@res/sheet.webp";
 import { gameState } from "./gameState";
 import { characterCodeMap, glUploadAtlas } from "./gl";
 import { floor } from "./math";
-import { genBrick, genShadowCreature, genStone, genUnicornHorn, genWood } from "./procedural-textures";
+import { genBrick, genShadowCreature, genStone, genUnicornHorn, genDoor } from "./procedural-textures";
 
 export let TEXTURE_CACHE: TextureCache = [];
 
@@ -70,7 +70,7 @@ export let generateProcTextures = () => {
   xOffset += S + 8;
   stampProcedural(ctx, TEXTURE_STONE, genStone, xOffset, 32, S, S, seed);
   xOffset += S + 8;
-  stampProcedural(ctx, TEXTURE_WOOD, genWood, xOffset, 32, S, S, seed);
+  stampProcedural(ctx, TEXTURE_WOOD, genDoor, xOffset, 32, S, S, seed);
   xOffset += S + 8;
   stampProcedural(ctx, TEXTURE_HORN, genUnicornHorn, xOffset, 32, 24, 48, seed);
 

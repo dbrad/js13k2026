@@ -33,6 +33,7 @@ type GameState = [
     GS_SEED: number,
     GS_OPEN_MAP: number,
     GS_LIVES: number,
+    GS_LEVEL: number,
     GS_MAX_CHARGE: number,
     GS_PLAYER_HP: number,
     GS_PLAYER_MAX_HP: number,

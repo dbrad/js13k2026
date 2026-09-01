@@ -65,9 +65,9 @@ let enemyHealth: number[] = [
 ];
 
 let modulateABGR = (abgr: number, r: number, g: number, b: number): number => {
-    let outR = min(255, ((abgr >>> 0) & 0xff) * r);
-    let outG = min(255, ((abgr >>> 8) & 0xff) * g);
-    let outB = min(255, ((abgr >>> 16) & 0xff) * b);
+    let outR = min(255, (abgr & 255) * r);
+    let outG = min(255, (abgr >>> 8 & 255) * g);
+    let outB = min(255, (abgr >>> 16 & 255) * b);
     let a = (abgr >>> 24) & 0xff;
     return (a << 24) | (outB << 16) | (outG << 8) | floor(outR);
 };
@@ -715,11 +715,11 @@ export let entityUpdate = (dt: number, px: number, py: number): void => {
                                     preferX_[s] = ndx;
                                     preferY_[s] = ndy;
                                     for (let i = 0; i < 5; i++) {
-                                        const offset = (i - 2) * 0.04;
-                                        const cosA = cos(offset);
-                                        const sinA = sin(offset);
-                                        const rdx = ndx * cosA - ndy * sinA;
-                                        const rdy = ndx * sinA + ndy * cosA;
+                                        let offset = (i - 2) * 0.04;
+                                        let cosA = cos(offset);
+                                        let sinA = sin(offset);
+                                        let rdx = ndx * cosA - ndy * sinA;
+                                        let rdy = ndx * sinA + ndy * cosA;
                                         spawnProjectile(x_[s], y_[s], rdx, rdy, 0xff000088);
                                     }
                                 }
@@ -946,7 +946,7 @@ export let entityDraw = (px: number, py: number, angle: number, now: number): vo
         let halfW = height * 0.5;
         let drawStartX = screenX - halfW;
         let drawEndX = screenX + halfW;
-        const phase = now * 0.001 * 1.5 + verticalBob_[s];
+        let phase = now * 0.001 * 1.5 + verticalBob_[s];
         let bob = sin(phase) * (height * 0.04);
         let drawStartY = (SCREEN_HEIGHT - height) * 0.5 + bob;
 

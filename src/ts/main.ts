@@ -92,7 +92,7 @@ window.addEventListener("load", async (): Promise<void> => {
             }
 
             performanceMark("update_start");
-            {
+            { // UPDATE
                 updateHardwareInput();
                 updateInputState(delta);
 
@@ -152,7 +152,7 @@ window.addEventListener("load", async (): Promise<void> => {
                     } else if (wasBPressed && keyState[B_BUTTON] === KEY_IS_UP) {
                         if (isCharging) {
                             fireRainbowBeam(px, py, angle, charge);
-                            shootCooldown = 1;
+                            shootCooldown = 0.5;
                             charge = 0;
                             isCharging = false;
                         }
@@ -213,7 +213,13 @@ window.addEventListener("load", async (): Promise<void> => {
 
                     if (mapData[floor(py) * mapW + floor(px)] === CELL_EXIT) {
                         gameState[GS_PAUSE_GAME] = 1;
-                        targetScene = 0;
+                        if (targetScene === -1) {
+                            if (gameState[GS_LEVEL]++ < 2) {
+                                targetScene = 1;
+                            } else {
+                                targetScene = 0;
+                            }
+                        }
                     }
 
                     gameState[GS_PLAYER_X] = px;
@@ -253,16 +259,18 @@ window.addEventListener("load", async (): Promise<void> => {
                 } else if (!transition && t > 0) {
                     t -= dt;
                 } else if (transition) {
-                    currentScene = targetScene;
                     entityClear();
                     if (targetScene === 1) {
-                        newGame();
+                        if (currentScene !== targetScene)
+                            newGame();
+                        gameState[GS_PAUSE_GAME] = 0;
                         gameState[GS_SEED] = randInt(1, 1000000);
                         generateProcTextures();
                         generateDungeon();
                     } else {
                         createMainMenuScene();
                     }
+                    currentScene = targetScene;
                     targetScene = -1;
 
                     t = clamp(t, 0, 1);
@@ -273,7 +281,7 @@ window.addEventListener("load", async (): Promise<void> => {
             performanceMark("update_end");
 
             performanceMark("render_start");
-            {
+            { // RENDER
                 glClear(0, 0, 0);
                 let angle = gameState[GS_PLAYER_ANGLE];
                 let px = gameState[GS_PLAYER_X];
