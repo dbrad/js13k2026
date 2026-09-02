@@ -63,10 +63,13 @@
     - Heal on pickup, doesn't pickup at full hp, cannot exceed max hp
 - [x] Chain levels together
 - [x] Randomize boss selection
-- [ ] Guard statements to make options work
-- [ ] Charge levels for attack
+- [x] Guard statements to make options work
+- [x] Charge levels for attack
     - After beating a boss, text on screen briefly "The powers of light and dark surge through you"
     - Max charge level goes up after that.
-    - Can just piggyback off of GS_LEVEL maybe
+    - Can just piggyback off of GS_LEVEL instead of using its own game state value>
+    - Charge time goes up linearly, damage is calculated by dmgCalc()
+    - Need to update the logic around the attack charge bar in main.ts
+    - Drawing thin lines as the max goes up on the bar to indicate the charge levels
 - [ ] Faster music for boss fight
     - Need a faster paced song to play during the boss fight

@@ -2,7 +2,7 @@ import { assert } from "./__debug/debug";
 import { entityAdd, entityAddBoss, entityAddHealthPack, entitySpawnDust, spawnEnemiesInRoom } from "./entity";
 import { gameState } from "./gameState";
 import { glPushColorQuad } from "./gl";
-import { floor, max, min, PI, srand, srandInt, srandSeed } from "./math";
+import { floor, max, min, PI, srand, srandInt, srandSeed, srandShuffle } from "./math";
 
 export let mapW = 0;
 export let mapH = 0;
@@ -60,11 +60,7 @@ export let initMap = () => {
 export let generateDungeon = () => {
     srandSeed(gameState[GS_SEED]);
     if (gameState[GS_LEVEL] === 0)
-        for (let b = 2; b > 0; b--) {
-            let j = srandInt(0, b + 1), t = bossBag[b];
-            bossBag[b] = bossBag[j];
-            bossBag[j] = t;
-        }
+        bossBag = srandShuffle(bossBag);
 
     PLAYER_TORCH_INTENSITY = 0.9;
     mapData.fill(CELL_WALL);
@@ -220,11 +216,11 @@ export let generateDungeon = () => {
 
     entitySpawnDust(gameState[GS_PLAYER_X], gameState[GS_PLAYER_Y], 220);
 
-    gameState[GS_PLAYER_X] = bossRoom.x_ + bossRoom.w_ / 2;
-    gameState[GS_PLAYER_Y] = bossRoom.y_ + bossRoom.h_ - 0.5;
+    // gameState[GS_PLAYER_X] = bossRoom.x_ + bossRoom.w_ / 2;
+    // gameState[GS_PLAYER_Y] = bossRoom.y_ + bossRoom.h_ - 0.5;
 
-    // gameState[GS_PLAYER_X] = rooms[best].x_ + rooms[best].w_ / 2;
-    // gameState[GS_PLAYER_Y] = rooms[best].y_ + rooms[best].h_ - 0.5;
+    gameState[GS_PLAYER_X] = rooms[best].x_ + rooms[best].w_ / 2;
+    gameState[GS_PLAYER_Y] = rooms[best].y_ + rooms[best].h_ - 0.5;
     gameState[GS_PLAYER_ANGLE] = -PI * 0.5;
 };
 

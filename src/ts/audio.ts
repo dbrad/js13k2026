@@ -1,3 +1,4 @@
+import { saveState } from "./gameState";
 import { abs, cos, floor, max, min, PI, random, round, sin, tan } from "./math";
 
 export let zzfxPlay = (sample: number[]): void => {
@@ -187,7 +188,7 @@ let timer = 0;
 let bpm = (1 / (55 / 60) * 1000) * 0.25;
 
 export let playMusic = (delta: number) => {
-    // if (gameState[GS_MUTEMUSIC]) return;
+    if (!saveState[GS_OPT_MUSIC]) return;
 
     timer -= delta;
     if (timer <= 0) {

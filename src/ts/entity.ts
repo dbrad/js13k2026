@@ -363,6 +363,7 @@ export let fireRainbowBeam = (px: number, py: number, angle: number, charge: num
                         burstParticles(x_[es], y_[es], 0.5, 12, 0xff0000ff, 4.0, 0.4);
                         burstParticles(x_[es], y_[es], 0.4, 6, RAINBOW[(i + 3) % 7], 2.5, 0.35);
                         zzfxPlay(sfxEnemyDeath);
+                        if (es === bossId) gameState[GS_MAX_CHARGE] = min(3, gameState[GS_MAX_CHARGE] + 1);
                         rooms[roomId_[es]].enemyCount_ -= 1;
                         if (roomId_[es] === 0 && rooms[0].enemyCount_ === 0) {
                             doorAnimActive[exitDoorIdx] = 1;
@@ -693,6 +694,7 @@ export let entityUpdate = (dt: number, px: number, py: number): void => {
                             if (data_[s] <= 0 && activeCount < MAX_ENTITIES - 40) {
                                 let ang = random() * PI * 2;
                                 entityAdd(x_[s] + cos(ang) * 1.3, y_[s] + sin(ang) * 1.3, TEXTURE_DEMON, 0.75, FLAG_ACTIVE | FLAG_ENEMY | FLAG_SOLID, 0xffaaffcc, 0.5, ENEMY_MELEE);
+                                rooms[0].enemyCount_++;
                                 data_[s] = 2.8 + random() * 1.2;
                             }
                         }

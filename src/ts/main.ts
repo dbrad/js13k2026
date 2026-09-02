@@ -69,6 +69,8 @@ window.addEventListener("load", async (): Promise<void> => {
     let targetScene = -1;
 
     let charge = 0;
+    let chargeToast = 0;
+    let seenMaxCharge = 1;
     let chargeSpeed = 1.5;
     let isCharging = false;
     let wasBPressed = false;
@@ -124,6 +126,10 @@ window.addEventListener("load", async (): Promise<void> => {
                 } else {
                     // Game Scene
                     playMusic(delta);
+                    if (gameState[GS_MAX_CHARGE] > seenMaxCharge) {
+                        chargeToast = 3;
+                        seenMaxCharge = gameState[GS_MAX_CHARGE];
+                    }
                     shootCooldown = max(0, shootCooldown - dt);
                     let speed = 3 * dt;
                     let moving = false;
@@ -206,8 +212,11 @@ window.addEventListener("load", async (): Promise<void> => {
                         }
                     });
 
-                    let assist = entityAimAssist(px, py, angle);
-                    if (abs(lookDeltaX) > 0.008) assist *= 0.35;
+                    let assist = 0;
+                    if (saveState[GS_OPT_AIM]) {
+                        assist = entityAimAssist(px, py, angle);
+                        if (abs(lookDeltaX) > 0.008) assist *= 0.35;
+                    }
 
                     if (gameState[GS_PLAYER_INVULNERABLE] > 0) gameState[GS_PLAYER_INVULNERABLE] = max(0, gameState[GS_PLAYER_INVULNERABLE] - dt);
 
@@ -227,6 +236,7 @@ window.addEventListener("load", async (): Promise<void> => {
                     gameState[GS_PLAYER_ANGLE] += lookDeltaX + assist * dt;
 
                     footstepTimer -= dt;
+                    chargeToast = max(0, chargeToast - dt);
                     updatePlayerTorch(isCharging);
                     if (moving && footstepTimer <= 0) {
                         zzfxPlay(sfxFootstep);
@@ -246,8 +256,12 @@ window.addEventListener("load", async (): Promise<void> => {
                         }
                     }
 
-                    updateHeadbob(delta, moving, speed);
-                    shakeUpdate(delta);
+                    if (saveState[GS_OPT_BOB])
+                        updateHeadbob(delta, moving, speed);
+
+                    if (saveState[GS_OPT_SHAKE])
+                        shakeUpdate(delta);
+
                     getShakeSum();
                     gl.uniform2f(uShake, shakeX, shakeY);
                     entityUpdate(dt, px, py);
@@ -263,6 +277,9 @@ window.addEventListener("load", async (): Promise<void> => {
                     if (targetScene === 1) {
                         if (currentScene !== targetScene)
                             newGame();
+                        charge = 0;
+                        isCharging = false;
+                        seenMaxCharge = gameState[GS_MAX_CHARGE];
                         gameState[GS_PAUSE_GAME] = 0;
                         gameState[GS_SEED] = randInt(1, 1000000);
                         generateProcTextures();
@@ -330,15 +347,24 @@ window.addEventListener("load", async (): Promise<void> => {
                     glPushColorQuad(7, SCREEN_HEIGHT - 7 - 8, 200 * hp, 2, RAINBOW[GREEN]);
                     glPushColorQuad(7, SCREEN_HEIGHT - 7 - 8, 200 * hp, 8, 0xdd008800);
 
-                    let barWidth = SCREEN_WIDTH - 52;
-                    if (shootCooldown > 0) {
+                    let maxCharge = gameState[GS_MAX_CHARGE];
+                    if (shootCooldown > 0 || charge > 0) {
+                        let barWidth = SCREEN_WIDTH - 52;
                         glPushColorQuad(25, SCREEN_HEIGHT - 37, barWidth + 2, 16, 0xee2d2d2d);
-                        glPushColorQuad(26, SCREEN_HEIGHT - 37, barWidth * shootCooldown, 16, RAINBOW[RED]);
-                    } else if (charge > 0) {
-                        glPushColorQuad(25, SCREEN_HEIGHT - 37, barWidth + 2, 16, 0xee2d2d2d);
-                        for (let r = 0; r < 7; r++) {
-                            glPushColorQuad(26, SCREEN_HEIGHT - 36 + (r * 2), barWidth * charge, 2, (255 * charge) << 24 | (RAINBOW[r] & 0xffffff));
+                        if (shootCooldown > 0) {
+                            glPushColorQuad(26, SCREEN_HEIGHT - 37, barWidth * shootCooldown, 16, RAINBOW[RED]);
+                        } else {
+                            let c = charge / maxCharge;
+                            for (let r = 0; r < 7; r++) {
+                                glPushColorQuad(26, SCREEN_HEIGHT - 36 + (r * 2), barWidth * c, 2, (255 * c) << 24 | (RAINBOW[r] & 0xffffff));
+                            }
                         }
+                        for (let lvl = 1; lvl < maxCharge; lvl++) {
+                            glPushColorQuad(25 + floor(barWidth * lvl / maxCharge), SCREEN_HEIGHT - 37, 1, 16, 0xffffffff);
+                        }
+                    }
+                    if (chargeToast > 0) {
+                        glPushText("The powers of light and dark surge through you", SCREEN_HALF_W, SCREEN_HALF_H + 40, min(255 * chargeToast, 255) << 24 | 0xffffff, 1, TEXT_H_ALIGN_CENTER);
                     }
                     renderBossBar();
                     if (gameState[GS_OPEN_MAP]) {
