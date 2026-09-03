@@ -216,11 +216,11 @@ export let generateDungeon = () => {
 
     entitySpawnDust(gameState[GS_PLAYER_X], gameState[GS_PLAYER_Y], 220);
 
-    // gameState[GS_PLAYER_X] = bossRoom.x_ + bossRoom.w_ / 2;
-    // gameState[GS_PLAYER_Y] = bossRoom.y_ + bossRoom.h_ - 0.5;
+    gameState[GS_PLAYER_X] = bossRoom.x_ + bossRoom.w_ / 2;
+    gameState[GS_PLAYER_Y] = bossRoom.y_ + bossRoom.h_ - 0.5;
 
-    gameState[GS_PLAYER_X] = rooms[best].x_ + rooms[best].w_ / 2;
-    gameState[GS_PLAYER_Y] = rooms[best].y_ + rooms[best].h_ - 0.5;
+    // gameState[GS_PLAYER_X] = rooms[best].x_ + rooms[best].w_ / 2;
+    // gameState[GS_PLAYER_Y] = rooms[best].y_ + rooms[best].h_ - 0.5;
     gameState[GS_PLAYER_ANGLE] = -PI * 0.5;
 };
 

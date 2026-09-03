@@ -1,3 +1,4 @@
+import { bossActive } from "./entity";
 import { saveState } from "./gameState";
 import { abs, cos, floor, max, min, PI, random, round, sin, tan } from "./math";
 
@@ -109,6 +110,8 @@ let pulse: number[];
 let pad: number[];
 let bass: number[];
 let snare: number[];
+let hihat: number[];
+let tom: number[];
 
 export let zzfxInit = (): void => {
     if (!zzfxContext) {
@@ -181,6 +184,8 @@ export let zzfxInit = (): void => {
 
     snare = zzfxGenerate(...[.9, , 655, , , .09, 3, 1.65, , , , , .02, 3.8, -.1, , .2]);
     bass = zzfxGenerate(...[2.25, , 43, , , .25, , , , , , , , 2]);
+    hihat = zzfxGenerate(...[.7, , 2200, , , .04, 3, 2, , , 800, .02, , 4.8, , .01, .1]);
+    tom = zzfxGenerate(...[.95, .01, 200, .005, .05, .12, 1, 1.6, -2, .9, , , , .4]);
 };
 
 let beat = 0;
@@ -190,26 +195,34 @@ let bpm = (1 / (55 / 60) * 1000) * 0.25;
 export let playMusic = (delta: number) => {
     if (!saveState[GS_OPT_MUSIC]) return;
 
+    const boss = bossActive(); // or whatever your flag is
+
+    const step = boss ? bpm * 0.48 : bpm;
+
     timer -= delta;
     if (timer <= 0) {
-        timer = bpm;
+        timer = step;
 
-        if (beat % 16 === 0) {
-            zzfxPlay(bass);
+        if (boss) {
+            // Aggressive EDM/rock pattern – very dense
+            if (beat % 4 === 0) zzfxPlay(hihat);
+            if (beat % 16 === 0 || beat % 16 === 6 || beat % 16 === 8) zzfxPlay(bass);          // four-on-the-floor kick
+            if (beat % 16 === 4 || beat % 16 === 12 || beat % 16 === 15) zzfxPlay(snare);         // snare on 2 & 4
+            if (beat % 16 === 2 || beat % 16 === 3 || beat % 16 === 10 || beat % 16 === 11 || beat % 16 === 13 || beat % 16 === 14)     // extra snare hits for drive
+                zzfxPlay(tom);
+            // Optional: keep a low drone under it so it still feels ominous
+            if (beat % 32 === 0) zzfxPlay(droneA);
+            if (beat % 32 === 0) zzfxPlay(pulse);
+        } else {
+            // Original slow dreadful loop
+            if (beat % 16 === 0) zzfxPlay(bass);
+            if ((beat - 6) % 16 === 0) zzfxPlay(snare);
+
+            if (beat % 32 === 0) zzfxPlay(droneA);
+            if (beat % 48 === 16) zzfxPlay(droneB);
+            if (beat % 32 === 0) zzfxPlay(pulse);
+            if (beat % 64 === 24) zzfxPlay(pad);
         }
-        if ((beat - 6) % 16 === 0) {
-            zzfxPlay(snare);
-        }
-
-        // Continuous low drones (play every few bars so they overlap and never die)
-        if (beat % 32 === 0) zzfxPlay(droneA);
-        if (beat % 48 === 16) zzfxPlay(droneB);
-
-        // Slow pulse every 8 beats
-        if (beat % 32 === 0) zzfxPlay(pulse);
-
-        // Sparse cold pad
-        if (beat % 64 === 24) zzfxPlay(pad);
 
         beat = (beat + 1) % 128;
     }

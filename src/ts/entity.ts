@@ -967,8 +967,10 @@ export let entityDraw = (px: number, py: number, angle: number, now: number): vo
     }
 };
 
+export let bossActive = () => bossId >= 0 && alert_[bossId] === 0 && hp_[bossId] > 0;
+
 export let renderBossBar = () => {
-    if (bossId >= 0 && alert_[bossId] === 0 && hp_[bossId] > 0) {
+    if (bossActive()) {
         glPushColorQuad(5, 5, SCREEN_WIDTH - 10, 16, 0xaa333333);
         glPushColorQuad(7, 7, (SCREEN_WIDTH - 14) * (hp_[bossId] / max_hp_[bossId]), 12, 0x883333ff);
     }
