@@ -1,4 +1,4 @@
-import { abs, atan2, clamp, cos, floor, max, min, randInt, round } from "./math";
+import { abs, atan2, clamp, cos, floor, max, min, round } from "./math";
 
 let hash2 = (x: number, y: number, seed: number): number => {
   let h = seed + x * 374761393 + y * 668265263;
@@ -53,16 +53,16 @@ export let genBrick = (w: number, h: number, seed: number, out: Uint8Array, crac
 
       let r: number, g: number, b: number;
       if (isMortar) {
-        let m = 20 + (hash2(x, y, seed) & 12);
+        let m = 10 + (hash2(x, y, seed) & 12);
         r = g = b = m;
       } else {
-        r = floor(62 * v);
-        g = floor(60 * v);
-        b = floor(66 * v);
+        r = floor(42 * v);
+        g = floor(40 * v);
+        b = floor(46 * v);
 
         let gr = grit(x, y, seed);
         r = clamp(r + gr, 0, 255);
-        g = clamp(g + gr, 0, 255); // wait, shadowing - fix below
+        g = clamp(g + gr, 0, 255);
         b = clamp(b + gr, 0, 255);
 
         let gy = by / brickH;

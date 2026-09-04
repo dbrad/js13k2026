@@ -208,19 +208,21 @@ export let generateDungeon = () => {
     assert(best !== -1, "somehow no room to spawn player in");
     rooms[best].type_ = ROOM_TYPE_PLAYER;
 
+    let enemyPool = rooms.length * 2;
+    let healthPackPool = 20;
     for (let i = 1; i < rooms.length; i++) {
         let r = rooms[i];
-        if (r.type_ === ROOM_TYPE_NORMAL)
-            spawnEnemiesInRoom(i, r.x_, r.y_, r.w_, r.h_, TEXTURE_DEMON);
+        if (r.type_ === ROOM_TYPE_NORMAL) {
+            if (enemyPool > 0) { enemyPool -= spawnEnemiesInRoom(i, r.x_, r.y_, r.w_, r.h_); }
+            if (srand() > 0.66 && healthPackPool > 0) { healthPackPool--; entityAddHealthPack(floor(r.x_ + r.w_ * 0.5) + 0.5, floor(r.y_ + r.h_ * 0.5) + 0.5); }
+
+        }
     }
 
     entitySpawnDust(gameState[GS_PLAYER_X], gameState[GS_PLAYER_Y], 220);
 
-    gameState[GS_PLAYER_X] = bossRoom.x_ + bossRoom.w_ / 2;
-    gameState[GS_PLAYER_Y] = bossRoom.y_ + bossRoom.h_ - 0.5;
-
-    // gameState[GS_PLAYER_X] = rooms[best].x_ + rooms[best].w_ / 2;
-    // gameState[GS_PLAYER_Y] = rooms[best].y_ + rooms[best].h_ - 0.5;
+    gameState[GS_PLAYER_X] = rooms[best].x_ + rooms[best].w_ / 2;
+    gameState[GS_PLAYER_Y] = rooms[best].y_ + rooms[best].h_ - 0.5;
     gameState[GS_PLAYER_ANGLE] = -PI * 0.5;
 };
 

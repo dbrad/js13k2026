@@ -1,5 +1,5 @@
 import { assert } from "./__debug/debug";
-import { sfxEnemyAlert, sfxEnemyDeath, sfxEnemyMelee, sfxEnemyRanged, sfxLaserFire, zzfxPlay } from "./audio";
+import { sfxEnemyAlert, sfxEnemyDeath, sfxEnemyMelee, sfxEnemyRanged, sfxHeal, sfxLaserFire, sfxWall, zzfxPlay } from "./audio";
 import { RAINBOW, RAINBOWf } from "./colours";
 import { gameState } from "./gameState";
 import { glPushColorCircle, glPushColorQuad, glPushQuad } from "./gl";
@@ -28,11 +28,12 @@ let data_: Float32Array = new Float32Array(MAX_ENTITIES);
 let phase_: Float32Array = new Float32Array(MAX_ENTITIES);
 let verticalBob_: Float32Array = new Float32Array(MAX_ENTITIES);
 let hp_: Float32Array = new Float32Array(MAX_ENTITIES);
-let max_hp_: Float32Array = new Float32Array(MAX_ENTITIES);
 let lastAttackTime_: Float32Array = new Float32Array(MAX_ENTITIES);
 let alert_: Float32Array = new Float32Array(MAX_ENTITIES);
 let flashTimer_: Float32Array = new Float32Array(MAX_ENTITIES);
 let roomId_: Int32Array = new Int32Array(MAX_ENTITIES);
+
+let alertCount_: number = 0;
 
 let active: Int32Array = new Int32Array(MAX_ENTITIES * 0.5);
 let activeCount: number = 0;
@@ -56,9 +57,9 @@ let bossId = -1;
 
 let enemyHealth: number[] = [
     0,
-    2,       // melee
-    3,       // tank
-    1,       // ranged
+    3,       // melee
+    5,       // tank
+    2,       // ranged
     10,      // bullet hell
     10,      // brood
     10,      // charge
@@ -77,6 +78,7 @@ export let entityClear = (): void => {
     for (let i = 0; i < activeParticleCount; i++) flags_[activeParticles[i]] = 0;
     activeCount = 0;
     activeParticleCount = 0;
+    alertCount_ = 0;
     freeCount = MAX_ENTITIES;
     for (let i = 0; i < MAX_ENTITIES; i++) free_[i] = i;
 };
@@ -140,13 +142,11 @@ export let entityAdd = (x: number, y: number, texId: number, scale = 1, flags: n
     data_[slot] = 0;
     type_id_[slot] = type_id;
     hp_[slot] = 0;
-    max_hp_[slot] = 0;
     lastAttackTime_[slot] = 0;
     alert_[slot] = 0;
 
     if (type_id > ENEMY_NONE) {
-        hp_[slot] = enemyHealth[type_id];
-        max_hp_[slot] = enemyHealth[type_id];
+        hp_[slot] = enemyHealth[type_id] * (gameState[GS_LEVEL] + 1);
         flags_[slot] |= FLAG_ENEMY | FLAG_SOLID;
         alert_[slot] = -1;
     }
@@ -184,8 +184,8 @@ export let entityAddHealthPack = (x: number, y: number): number => {
     return id;
 };
 
-export let spawnEnemiesInRoom = (rid: number, rx: number, ry: number, rw: number, rh: number, texId: number = 1): void => {
-    let count = 1 + floor(srand() * 3);
+export let spawnEnemiesInRoom = (rid: number, rx: number, ry: number, rw: number, rh: number): number => {
+    let count = max(1, floor(srand() * (min(3, max(1, rw * rh / 12)) + 1)));
     rooms[rid].enemyCount_ = count;
     for (let i = 0; i < count; i++) {
         let sx = srandInt(rx + 1, rx + rw - 2) + 0.5;
@@ -195,19 +195,20 @@ export let spawnEnemiesInRoom = (rid: number, rx: number, ry: number, rw: number
         let typ: number = ENEMY_MELEE;
         let scl = 0.95;
         let col = 0xffffffff;
-        if (r > 0.80) {
+        if (r > 0.70) {
             typ = ENEMY_RANGED;
             scl = 0.85;
             col = 0xffaaccff;
-        } else if (r > 0.60) {
+        } else if (r > 0.50) {
             typ = ENEMY_TANK;
-            scl = 1.25;
+            scl = 1.1;
             col = 0xffccaa88;
         }
 
-        let id = entityAdd(sx, sy, texId, scl, FLAG_ACTIVE | FLAG_ENEMY | FLAG_SOLID, col, 0.5, typ);
+        let id = entityAdd(sx, sy, typ === ENEMY_TANK ? TEXTURE_DEMON_MEDIUM : TEXTURE_DEMON, scl, FLAG_ACTIVE | FLAG_ENEMY | FLAG_SOLID, col, 0.5, typ);
         roomId_[active[id]] = rid;
     }
+    return count;
 };
 
 let entityRemove = (activeIdx: number, arr: Int32Array, count: number): number => {
@@ -252,7 +253,7 @@ let spawnBeamParticle = (x: number, y: number, z: number, size: number, col: num
     data_[s] = life;
 };
 
-let spawnProjectile = (sx: number, sy: number, dx: number, dy: number, col: number): void => {
+let spawnProjectile = (sx: number, sy: number, dx: number, dy: number, col: number, speed: number = PROJECTILE_SPEED): void => {
     let len = sqrt(dx * dx + dy * dy);
     if (len < 0.001) return;
     let inv = 1 / len;
@@ -261,8 +262,8 @@ let spawnProjectile = (sx: number, sy: number, dx: number, dy: number, col: numb
 
     let id = entityAdd(sx, sy, 0, 0.45, FLAG_PROJECTILE | FLAG_DAMAGE | FLAG_ACTIVE, col, 0.45);
     let s = active[id];
-    vx_[s] = ndx * PROJECTILE_SPEED;
-    vy_[s] = ndy * PROJECTILE_SPEED;
+    vx_[s] = ndx * speed;
+    vy_[s] = ndy * speed;
     data_[s] = PROJECTILE_LIFETIME;
     size_[s] = 0.3;
     colour_[s] = col;
@@ -322,6 +323,7 @@ export let fireRainbowBeam = (px: number, py: number, angle: number, charge: num
 
             if (cell === CELL_CRACKED) {
                 mapData[my * mapW + mx] = CELL_FLOOR;
+                zzfxPlay(sfxWall);
                 hitDist = d;
                 for (let k = 0; k < 8; k++) {
                     spawnBeamParticle(
@@ -354,16 +356,28 @@ export let fireRainbowBeam = (px: number, py: number, angle: number, charge: num
                     if (ex * ex + ey * ey > BEAM_HIT_RADIUS * BEAM_HIT_RADIUS) continue;
 
                     flashTimer_[es] = ENEMY_FLASH_DURATION;
-                    alert_[es] = 0;
+                    if (alert_[es] !== 0) {
+                        alertCount_++;
+                        alert_[es] = 0;
+                    }
                     hp_[es] -= dmg;
                     zzfxPlay(sfxEnemyAlert);
                     burstParticles(x_[es], y_[es], 0.55, 6, RAINBOW[i], 2.8, 0.25);
 
                     if (hp_[es] <= 0) {
+                        alertCount_ = max(0, alertCount_ - 1);
                         burstParticles(x_[es], y_[es], 0.5, 12, 0xff0000ff, 4.0, 0.4);
                         burstParticles(x_[es], y_[es], 0.4, 6, RAINBOW[(i + 3) % 7], 2.5, 0.35);
                         zzfxPlay(sfxEnemyDeath);
-                        if (es === bossId) gameState[GS_MAX_CHARGE] = min(3, gameState[GS_MAX_CHARGE] + 1);
+                        if (es === bossId) {
+                            gameState[GS_MAX_CHARGE] = min(3, gameState[GS_MAX_CHARGE] + 1);
+                            for (let pc = activeCount - 1; pc >= 0; pc--) {
+                                let s = active[pc];
+                                if (flags_[s] & FLAG_PROJECTILE) {
+                                    flags_[s] = 0;
+                                }
+                            }
+                        }
                         rooms[roomId_[es]].enemyCount_ -= 1;
                         if (roomId_[es] === 0 && rooms[0].enemyCount_ === 0) {
                             doorAnimActive[exitDoorIdx] = 1;
@@ -472,6 +486,7 @@ export let entityPlayerCollide = (px: number, py: number, playerRadius = 0.20, o
                 if (hp < mx) {
                     gameState[GS_PLAYER_HP] = min(mx, hp + 2);
                     burstParticles(x_[s], y_[s], 0.45, 10, 0xff44ff66, 2.2, 0.28);
+                    zzfxPlay(sfxHeal);
                     flags_[s] = 0;
                 }
             }
@@ -597,6 +612,7 @@ export let entityUpdate = (dt: number, px: number, py: number): void => {
                     if (typ === ENEMY_TANK) {
                         speed = TANK_SPEED;
                         cooldown = TANK_COOLDOWN;
+                        attackRange = RANGED_ATTACK_RANGE;
                     } else if (typ === ENEMY_RANGED) {
                         speed = RANGED_SPEED;
                         cooldown = RANGED_COOLDOWN;
@@ -623,7 +639,10 @@ export let entityUpdate = (dt: number, px: number, py: number): void => {
                         }
                     } else if (alert_[s] > 0) {
                         alert_[s] -= dt;
-                        if (alert_[s] <= 0) alert_[s] = 0;
+                        if (alert_[s] <= 0) {
+                            alertCount_++;
+                            alert_[s] = 0;
+                        }
                         vx_[s] = ndx * speed * 0.25;
                         vy_[s] = ndy * speed * 0.25;
                     }
@@ -637,9 +656,6 @@ export let entityUpdate = (dt: number, px: number, py: number): void => {
                             if (dist > RANGED_MAX_DIST) {
                                 vx_[s] = ndx * speed;
                                 vy_[s] = ndy * speed;
-                            } else {
-                                vx_[s] = vx_[s] * 0.85 - ndy * 0.35;
-                                vy_[s] = vy_[s] * 0.85 + ndx * 0.35;
                             }
                         } else {
                             vx_[s] = dist > 0.75 ? ndx * speed : 0;
@@ -651,6 +667,9 @@ export let entityUpdate = (dt: number, px: number, py: number): void => {
                             if (typ === ENEMY_RANGED) {
                                 zzfxPlay(sfxEnemyRanged);
                                 spawnProjectile(x_[s], y_[s], edx, edy, 0xff2222ff);
+                            } else if (typ === ENEMY_TANK) {
+                                zzfxPlay(sfxEnemyRanged);
+                                spawnProjectile(x_[s], y_[s], edx, edy, 0xff2222ff, 5);
                             } else {
                                 zzfxPlay(sfxEnemyMelee);
                                 spawnPseudoMelee(px, py);
@@ -673,12 +692,12 @@ export let entityUpdate = (dt: number, px: number, py: number): void => {
                                 let base = phase_[s];
                                 for (let a = 0; a < PI * 2; a += PI / 12) {
                                     let ang = base + a;
-                                    spawnProjectile(x_[s], y_[s], cos(ang), sin(ang), 0xff000088);
+                                    spawnProjectile(x_[s], y_[s], cos(ang), sin(ang), 0xff000088, (1 + (1 - (hp_[bossId] / bossMaxHp()))));
                                 }
                                 zzfxPlay(sfxEnemyRanged);
 
-                                phase_[s] += 0.18;
-                                data_[s] = 1.1 + random() * 0.3;  // pause
+                                phase_[s] += 0.6;
+                                data_[s] = 0.5 + (1.5 * (hp_[bossId] / bossMaxHp()));
                             }
                         }
                         else if (typ === ENEMY_BOSS_BROOD) {
@@ -691,7 +710,7 @@ export let entityUpdate = (dt: number, px: number, py: number): void => {
                             }
 
                             data_[s] -= dt;
-                            if (data_[s] <= 0 && activeCount < MAX_ENTITIES - 40) {
+                            if (data_[s] <= 0 && rooms[0].enemyCount_ < 7) {
                                 let ang = random() * PI * 2;
                                 entityAdd(x_[s] + cos(ang) * 1.3, y_[s] + sin(ang) * 1.3, TEXTURE_DEMON, 0.75, FLAG_ACTIVE | FLAG_ENEMY | FLAG_SOLID, 0xffaaffcc, 0.5, ENEMY_MELEE);
                                 rooms[0].enemyCount_++;
@@ -726,8 +745,8 @@ export let entityUpdate = (dt: number, px: number, py: number): void => {
                                     }
                                 }
                             } else if (phase_[s] === 2) { // charge
-                                vx_[s] = preferX_[s] * 8;
-                                vy_[s] = preferY_[s] * 8;
+                                vx_[s] = preferX_[s] * 7;
+                                vy_[s] = preferY_[s] * 7;
                                 data_[s] -= dt;
                                 if (data_[s] <= 0) {
                                     phase_[s] = 3;
@@ -968,10 +987,12 @@ export let entityDraw = (px: number, py: number, angle: number, now: number): vo
 };
 
 export let bossActive = () => bossId >= 0 && alert_[bossId] === 0 && hp_[bossId] > 0;
+export let inCombat = () => alertCount_ > 0;
 
+let bossMaxHp = () => enemyHealth[type_id_[bossId]] * (gameState[GS_LEVEL] + 1);
 export let renderBossBar = () => {
     if (bossActive()) {
         glPushColorQuad(5, 5, SCREEN_WIDTH - 10, 16, 0xaa333333);
-        glPushColorQuad(7, 7, (SCREEN_WIDTH - 14) * (hp_[bossId] / max_hp_[bossId]), 12, 0x883333ff);
+        glPushColorQuad(7, 7, (SCREEN_WIDTH - 14) * (hp_[bossId] / bossMaxHp()), 12, 0x883333ff);
     }
 };

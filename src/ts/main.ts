@@ -1,6 +1,6 @@
 import version from "../../VERSION.txt";
 import { drawPerformanceMeter, initPerformanceMeter, performanceMark, tickPerformanceMeter, togglePerformanceDisplay } from "./__debug/debug";
-import { playMusic, sfxFootstep, sfxLaserCharge, sfxPlayerHurt, zzfxInit, zzfxPlay } from "./audio";
+import { playMusic, sfxEnemyAlert, sfxEnemyRanged, sfxFootstep, sfxLaserCharge, sfxPlayerHurt, zzfxInit, zzfxPlay } from "./audio";
 import { initCanvas } from "./canvas";
 import { RAINBOW } from "./colours";
 import { entityAimAssist, entityClear, entityCollect, entityDraw, entityPlayerCollide, entityUpdate, fireRainbowBeam, renderBossBar } from "./entity";
@@ -65,11 +65,12 @@ window.addEventListener("load", async (): Promise<void> => {
     ];
     let selected: number = 0;
 
+    let toasts = ["escape this place", "your connection to the light grows stronger"];
     let currentScene = 0;
     let targetScene = -1;
 
     let charge = 0;
-    let chargeToast = 0;
+    let toast: number[] = [0, 0];
     let seenMaxCharge = 1;
     let chargeSpeed = 1.5;
     let isCharging = false;
@@ -114,10 +115,13 @@ window.addEventListener("load", async (): Promise<void> => {
                                 saveState[selected - 1] = (saveState[selected - 1] + 1) % 2;
                                 saveOptions();
                             }
+                            zzfxPlay(sfxEnemyAlert);
                         } else if (keyState[D_UP] === KEY_WAS_DOWN) {
                             selected = max(0, --selected);
+                            zzfxPlay(sfxEnemyRanged);
                         } else if (keyState[D_DOWN] === KEY_WAS_DOWN) {
                             selected = min(5, ++selected);
+                            zzfxPlay(sfxEnemyRanged);
                         }
                     }
                     let px = gameState[GS_PLAYER_X];
@@ -127,7 +131,8 @@ window.addEventListener("load", async (): Promise<void> => {
                     // Game Scene
                     playMusic(delta);
                     if (gameState[GS_MAX_CHARGE] > seenMaxCharge) {
-                        chargeToast = 3;
+                        toast[0] = 1;
+                        toast[1] = 3;
                         seenMaxCharge = gameState[GS_MAX_CHARGE];
                     }
                     shootCooldown = max(0, shootCooldown - dt);
@@ -140,103 +145,105 @@ window.addEventListener("load", async (): Promise<void> => {
 
                     let dirX = cos(angle);
                     let dirY = sin(angle);
-
-                    if (keyState[MAP_BUTTON] === KEY_WAS_DOWN) {
-                        gameState[GS_OPEN_MAP] = (gameState[GS_OPEN_MAP] + 1) % 2;
-                    }
-
-                    if (keyState[A_BUTTON] === KEY_WAS_DOWN) {
-                        if (interactionId > -1) {
-                            doorAnimActive[interactionId] = 1;
+                    if (gameState[GS_PAUSE_GAME] === 0) {
+                        if (keyState[MAP_BUTTON] === KEY_WAS_DOWN) {
+                            gameState[GS_OPEN_MAP] = (gameState[GS_OPEN_MAP] + 1) % 2;
                         }
-                    }
 
-                    if (keyState[B_BUTTON] === KEY_IS_DOWN && !isCharging && shootCooldown <= 0) {
-                        zzfxPlay(sfxLaserCharge);
-                        isCharging = true;
-                        wasBPressed = true;
-                    } else if (wasBPressed && keyState[B_BUTTON] === KEY_IS_UP) {
-                        if (isCharging) {
-                            fireRainbowBeam(px, py, angle, charge);
-                            shootCooldown = 0.5;
-                            charge = 0;
-                            isCharging = false;
-                        }
-                        wasBPressed = false;
-                    }
-
-                    if (isCharging) {
-                        charge = min(charge + chargeSpeed * dt, gameState[GS_MAX_CHARGE]);
-                    }
-
-                    let moveX = 0;
-                    let moveY = 0;
-
-                    if (keyState[D_UP] === KEY_IS_DOWN) {
-                        moveX += dirX;
-                        moveY += dirY;
-                    }
-                    if (keyState[D_DOWN] === KEY_IS_DOWN) {
-                        moveX -= dirX;
-                        moveY -= dirY;
-                    }
-                    if (keyState[D_LEFT] === KEY_IS_DOWN) {
-                        moveX += dirY;
-                        moveY += -dirX;
-                    }
-                    if (keyState[D_RIGHT] === KEY_IS_DOWN) {
-                        moveX += -dirY;
-                        moveY += dirX;
-                    }
-
-                    let len2 = moveX * moveX + moveY * moveY;
-                    if (len2 > 1) {
-                        let inv = 1 / sqrt(len2);
-                        moveX *= inv;
-                        moveY *= inv;
-                    }
-
-                    if (moveX !== 0 || moveY !== 0) {
-                        [px, py] = rayMove(px, py, moveX * speed, moveY * speed);
-                        moving = true;
-                    }
-
-                    [px, py] = entityPlayerCollide(px, py, 0.25, () => {
-                        gameState[GS_PLAYER_HP] -= 1;
-                        shakeTrigger(16, 100);
-                        zzfxPlay(sfxPlayerHurt);
-                        gameState[GS_PLAYER_INVULNERABLE] = PLAYER_INVULNERABLE_DURATION;
-                        if (gameState[GS_PLAYER_HP] <= 0) {
-                            gameState[GS_PAUSE_GAME] = 1;
-                            targetScene = 0;
-                        }
-                    });
-
-                    let assist = 0;
-                    if (saveState[GS_OPT_AIM]) {
-                        assist = entityAimAssist(px, py, angle);
-                        if (abs(lookDeltaX) > 0.008) assist *= 0.35;
-                    }
-
-                    if (gameState[GS_PLAYER_INVULNERABLE] > 0) gameState[GS_PLAYER_INVULNERABLE] = max(0, gameState[GS_PLAYER_INVULNERABLE] - dt);
-
-                    if (mapData[floor(py) * mapW + floor(px)] === CELL_EXIT) {
-                        gameState[GS_PAUSE_GAME] = 1;
-                        if (targetScene === -1) {
-                            if (gameState[GS_LEVEL]++ < 2) {
-                                targetScene = 1;
-                            } else {
-                                targetScene = 0;
+                        if (keyState[A_BUTTON] === KEY_WAS_DOWN) {
+                            if (interactionId > -1) {
+                                doorAnimActive[interactionId] = 1;
                             }
                         }
+
+                        if (keyState[B_BUTTON] === KEY_IS_DOWN && !isCharging && shootCooldown <= 0) {
+                            zzfxPlay(sfxLaserCharge);
+                            isCharging = true;
+                            wasBPressed = true;
+                        } else if (wasBPressed && keyState[B_BUTTON] === KEY_IS_UP) {
+                            if (isCharging) {
+                                fireRainbowBeam(px, py, angle, charge);
+                                shootCooldown = 0.5;
+                                charge = 0;
+                                isCharging = false;
+                            }
+                            wasBPressed = false;
+                        }
+
+                        if (isCharging) {
+                            charge = min(charge + chargeSpeed * dt, gameState[GS_MAX_CHARGE]);
+                        }
+
+                        let moveX = 0;
+                        let moveY = 0;
+
+                        if (keyState[D_UP] === KEY_IS_DOWN) {
+                            moveX += dirX;
+                            moveY += dirY;
+                        }
+                        if (keyState[D_DOWN] === KEY_IS_DOWN) {
+                            moveX -= dirX;
+                            moveY -= dirY;
+                        }
+                        if (keyState[D_LEFT] === KEY_IS_DOWN) {
+                            moveX += dirY;
+                            moveY += -dirX;
+                        }
+                        if (keyState[D_RIGHT] === KEY_IS_DOWN) {
+                            moveX += -dirY;
+                            moveY += dirX;
+                        }
+
+                        let len2 = moveX * moveX + moveY * moveY;
+                        if (len2 > 1) {
+                            let inv = 1 / sqrt(len2);
+                            moveX *= inv;
+                            moveY *= inv;
+                        }
+
+                        if (moveX !== 0 || moveY !== 0) {
+                            [px, py] = rayMove(px, py, moveX * speed, moveY * speed);
+                            moving = true;
+                        }
+
+                        [px, py] = entityPlayerCollide(px, py, 0.25, () => {
+                            gameState[GS_PLAYER_HP] -= 1;
+                            shakeTrigger(16, 100);
+                            zzfxPlay(sfxPlayerHurt);
+                            gameState[GS_PLAYER_INVULNERABLE] = PLAYER_INVULNERABLE_DURATION;
+                            if (gameState[GS_PLAYER_HP] <= 0) {
+                                gameState[GS_PAUSE_GAME] = 1;
+                                targetScene = 0;
+                            }
+                        });
+
+                        let assist = 0;
+                        if (saveState[GS_OPT_AIM]) {
+                            assist = entityAimAssist(px, py, angle);
+                            if (abs(lookDeltaX) > 0.008) assist *= 0.35;
+                        }
+
+                        if (gameState[GS_PLAYER_INVULNERABLE] > 0) gameState[GS_PLAYER_INVULNERABLE] = max(0, gameState[GS_PLAYER_INVULNERABLE] - dt);
+
+                        if (mapData[floor(py) * mapW + floor(px)] === CELL_EXIT) {
+                            gameState[GS_PAUSE_GAME] = 1;
+                            if (targetScene === -1) {
+                                if (gameState[GS_LEVEL]++ < 2) {
+                                    targetScene = 1;
+                                } else {
+                                    targetScene = 0;
+                                }
+                            }
+                        }
+
+                        gameState[GS_PLAYER_X] = px;
+                        gameState[GS_PLAYER_Y] = py;
+                        gameState[GS_PLAYER_ANGLE] += lookDeltaX + assist * dt;
+
                     }
 
-                    gameState[GS_PLAYER_X] = px;
-                    gameState[GS_PLAYER_Y] = py;
-                    gameState[GS_PLAYER_ANGLE] += lookDeltaX + assist * dt;
-
                     footstepTimer -= dt;
-                    chargeToast = max(0, chargeToast - dt);
+                    toast[1] = max(0, toast[1] - dt);
                     updatePlayerTorch(isCharging);
                     if (moving && footstepTimer <= 0) {
                         zzfxPlay(sfxFootstep);
@@ -282,6 +289,8 @@ window.addEventListener("load", async (): Promise<void> => {
                         seenMaxCharge = gameState[GS_MAX_CHARGE];
                         gameState[GS_PAUSE_GAME] = 0;
                         gameState[GS_SEED] = randInt(1, 1000000);
+                        toast[0] = 0;
+                        toast[1] = 3;
                         generateProcTextures();
                         generateDungeon();
                     } else {
@@ -363,8 +372,8 @@ window.addEventListener("load", async (): Promise<void> => {
                             glPushColorQuad(25 + floor(barWidth * lvl / maxCharge), SCREEN_HEIGHT - 37, 1, 16, 0xffffffff);
                         }
                     }
-                    if (chargeToast > 0) {
-                        glPushText("The powers of light and dark surge through you", SCREEN_HALF_W, SCREEN_HALF_H + 40, min(255 * chargeToast, 255) << 24 | 0xffffff, 1, TEXT_H_ALIGN_CENTER);
+                    if (toast[1] > 0) {
+                        glPushText(toasts[toast[0]], SCREEN_HALF_W, SCREEN_HALF_H + 40, max(1, min(255 * toast[1], 255)) << 24 | 0xffffff, 1, TEXT_H_ALIGN_CENTER);
                     }
                     renderBossBar();
                     if (gameState[GS_OPEN_MAP]) {
