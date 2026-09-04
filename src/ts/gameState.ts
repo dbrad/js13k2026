@@ -1,7 +1,7 @@
 let saveFileName = "js13k2026dbrad";
 let storage = window.localStorage;
 
-export let gameState: GameState = [0, 0, 0, 3, 0, 1, 10, 10, 0, 0, 0, 0];
+export let gameState: GameState = [0, 0, 0, 0, 1, 10, 10, 0, 0, 0, 0];
 export let saveState: SaveState = [1, 1, 1, 1, 0];
 
 export let saveFileExists = (): boolean => {
@@ -12,7 +12,6 @@ export let newGame = (): void => {
     gameState[GS_PLAYER_HP] = 10;
     gameState[GS_PLAYER_MAX_HP] = 10;
     gameState[GS_MAX_CHARGE] = 1;
-    gameState[GS_LIVES] = 3;
     gameState[GS_LEVEL] = 0;
 };
 

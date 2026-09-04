@@ -19,7 +19,7 @@ window.addEventListener("load", async (): Promise<void> => {
     let VERSION = version;
     let canvas = initCanvas();
     glInit(canvas);
-    gameState[GS_SEED] = 1;
+    gameState[GS_SEED] = 10;
     await loadTextureAtlas();
     initPerformanceMeter();
 
@@ -65,12 +65,14 @@ window.addEventListener("load", async (): Promise<void> => {
     ];
     let selected: number = 0;
 
-    let toasts = ["escape this place", "your connection to the light grows stronger"];
+    let toasts = ["fight. run. escape.", "your connection to the light grows stronger", "no escape", "you have escaped... for now"];
+    let toast: number[] = [0, 0];
+
     let currentScene = 0;
     let targetScene = -1;
+    let sceneDelay = 0;
 
     let charge = 0;
-    let toast: number[] = [0, 0];
     let seenMaxCharge = 1;
     let chargeSpeed = 1.5;
     let isCharging = false;
@@ -99,9 +101,11 @@ window.addEventListener("load", async (): Promise<void> => {
                 updateHardwareInput();
                 updateInputState(delta);
 
-                if (targetScene > -1 && !transition) {
+                if (sceneDelay <= 0 && targetScene > -1 && !transition) {
                     transition = true;
                     t = 0.00001;
+                } else if (sceneDelay > 0) {
+                    sceneDelay -= dt;
                 }
 
                 if (currentScene === 0) {
@@ -150,10 +154,8 @@ window.addEventListener("load", async (): Promise<void> => {
                             gameState[GS_OPEN_MAP] = (gameState[GS_OPEN_MAP] + 1) % 2;
                         }
 
-                        if (keyState[A_BUTTON] === KEY_WAS_DOWN) {
-                            if (interactionId > -1) {
-                                doorAnimActive[interactionId] = 1;
-                            }
+                        if (keyState[A_BUTTON] === KEY_WAS_DOWN && interactionId > -1) {
+                            doorAnimActive[interactionId] = 1;
                         }
 
                         if (keyState[B_BUTTON] === KEY_IS_DOWN && !isCharging && shootCooldown <= 0) {
@@ -214,6 +216,9 @@ window.addEventListener("load", async (): Promise<void> => {
                             if (gameState[GS_PLAYER_HP] <= 0) {
                                 gameState[GS_PAUSE_GAME] = 1;
                                 targetScene = 0;
+                                sceneDelay = 2;
+                                toast[0] = 2;
+                                toast[1] = 1.5;
                             }
                         });
 
@@ -232,6 +237,9 @@ window.addEventListener("load", async (): Promise<void> => {
                                     targetScene = 1;
                                 } else {
                                     targetScene = 0;
+                                    sceneDelay = 2;
+                                    toast[0] = 3;
+                                    toast[1] = 1.5;
                                 }
                             }
                         }
@@ -288,7 +296,7 @@ window.addEventListener("load", async (): Promise<void> => {
                         isCharging = false;
                         seenMaxCharge = gameState[GS_MAX_CHARGE];
                         gameState[GS_PAUSE_GAME] = 0;
-                        gameState[GS_SEED] = randInt(1, 1000000);
+                        gameState[GS_SEED] = randInt(1, 999999);
                         toast[0] = 0;
                         toast[1] = 3;
                         generateProcTextures();
@@ -327,8 +335,8 @@ window.addEventListener("load", async (): Promise<void> => {
                     }
 
                     for (let i = 0; i < 6; i++) {
-                        let s = (selected == i ? "> " : "") + options[i];
-                        glPushText(s, 20, SCREEN_HALF_H + (28 * i), 0x88ffffff, 2);
+                        let s = (selected == i ? " " : "") + options[i];
+                        glPushText(s, 20, SCREEN_HALF_H + (28 * i), selected == i ? 0xffffffff : 0x88ffffff, 2);
 
                         if (i === 5)
                             glPushText(saveState[i - 1] ? "zqsd" : "wasd", 260, SCREEN_HALF_H + (28 * i), 0x88ffffff, 2);
@@ -361,7 +369,7 @@ window.addEventListener("load", async (): Promise<void> => {
                         let barWidth = SCREEN_WIDTH - 52;
                         glPushColorQuad(25, SCREEN_HEIGHT - 37, barWidth + 2, 16, 0xee2d2d2d);
                         if (shootCooldown > 0) {
-                            glPushColorQuad(26, SCREEN_HEIGHT - 37, barWidth * shootCooldown, 16, RAINBOW[RED]);
+                            glPushColorQuad(26, SCREEN_HEIGHT - 37, barWidth * shootCooldown * 2, 16, RAINBOW[RED]);
                         } else {
                             let c = charge / maxCharge;
                             for (let r = 0; r < 7; r++) {
@@ -372,12 +380,16 @@ window.addEventListener("load", async (): Promise<void> => {
                             glPushColorQuad(25 + floor(barWidth * lvl / maxCharge), SCREEN_HEIGHT - 37, 1, 16, 0xffffffff);
                         }
                     }
-                    if (toast[1] > 0) {
-                        glPushText(toasts[toast[0]], SCREEN_HALF_W, SCREEN_HALF_H + 40, max(1, min(255 * toast[1], 255)) << 24 | 0xffffff, 1, TEXT_H_ALIGN_CENTER);
-                    }
-                    renderBossBar();
                     if (gameState[GS_OPEN_MAP]) {
                         renderMap(px, py);
+                    }
+
+                    renderBossBar();
+                    let v = 1 - (gameState[GS_PLAYER_HP] / gameState[GS_PLAYER_MAX_HP]);
+                    glPushColorQuad(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, (255 * v * v * v * v * v) << 24 | 0);
+                    if (toast[1] > 0) {
+                        glPushText(toasts[toast[0]], SCREEN_HALF_W - 1, SCREEN_HALF_H - 1 + 20, max(1, min(255 * toast[1], 255)) << 24 | 0, 1, TEXT_H_ALIGN_CENTER);
+                        glPushText(toasts[toast[0]], SCREEN_HALF_W, SCREEN_HALF_H + 20, max(1, min(255 * toast[1], 255)) << 24 | 0xffffff, 1, TEXT_H_ALIGN_CENTER);
                     }
                 }
 

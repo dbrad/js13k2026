@@ -147,10 +147,10 @@ let bpm2 = (1 / (120 / 60) * 1000) * 0.25;
 export let playMusic = (delta: number) => {
     if (!saveState[GS_OPT_MUSIC]) return;
 
-    const boss = bossActive();
-    const combat = inCombat();
+    let boss = bossActive();
+    let combat = inCombat();
 
-    const step = boss || combat ? bpm2 : bpm;
+    let step = boss || combat ? bpm2 : bpm;
 
     timer -= delta;
     if (timer <= 0) {

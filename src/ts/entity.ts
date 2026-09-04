@@ -124,26 +124,12 @@ export let entityAdd = (x: number, y: number, texId: number, scale = 1, flags: n
     }
     let slot = free_[--freeCount];
 
-    x_[slot] = x;
-    y_[slot] = y;
-    z_[slot] = z;
-    vx_[slot] = 0;
-    vy_[slot] = 0;
-    vz_[slot] = 0;
-    preferX_[slot] = 1;
-    preferY_[slot] = 0;
+    x_[slot] = x; y_[slot] = y; z_[slot] = z;
     texId_[slot] = texId;
     scale_[slot] = scale;
     colour_[slot] = colour;
-    phase_[slot] = 0;
-    verticalBob_[slot] = random() * PI * 2;
-    size_[slot] = 1;
     flags_[slot] = flags | FLAG_ACTIVE;
-    data_[slot] = 0;
     type_id_[slot] = type_id;
-    hp_[slot] = 0;
-    lastAttackTime_[slot] = 0;
-    alert_[slot] = 0;
 
     if (type_id > ENEMY_NONE) {
         hp_[slot] = enemyHealth[type_id] * (gameState[GS_LEVEL] + 1);
@@ -283,18 +269,11 @@ let spawnPseudoMelee = (tx: number, ty: number): void => {
     burstParticles(tx, ty, 0.35, 4, 0xffffffff, 1.8, 0.18);
 };
 
-let dmgCalc = (x: number) => {
-    if (x <= 1) {
-        return x * 0.5;
-    } else {
-        return 1.5 * x - 1;
-    }
-};
 export let fireRainbowBeam = (px: number, py: number, angle: number, charge: number = 0): void => {
     zzfxPlay(sfxLaserFire);
     shakeTrigger(8, 100);
 
-    let dmg = 0.5 + dmgCalc(charge);
+    let dmg = 0.5 + (charge <= 1 ? charge * 0.5 : 1.5 * charge - 1);
     let range = floor(3 + 2 * charge);
 
     for (let i = 0; i < 7; i++) {
@@ -586,7 +565,6 @@ export let entityUpdate = (dt: number, px: number, py: number): void => {
             if ((flags_[s] & FLAG_PROJECTILE || flags_[s] & FLAG_DAMAGE) && data_[s] > 0) {
                 data_[s] -= dt;
                 if (data_[s] <= 0) {
-                    flags_[s] = 0;
                     activeCount = entityRemove(i, active, activeCount);
                     continue;
                 }

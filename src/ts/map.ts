@@ -262,7 +262,7 @@ export let renderMap = (px: number, py: number) => {
                 col = 0xff333333;
             } else if (minimapData[idx] === CELL_HORIZONTAL_DOOR || minimapData[idx] === CELL_VERTICAL_DOOR) {
                 col = 0xff00ffff;
-            } else if (minimapData[idx] === CELL_LOCKED_H) {
+            } else if (minimapData[idx] === CELL_LOCKED_H || minimapData[idx] === CELL_EXIT) {
                 col = 0xff00ff00;
             }
             if (px >= x && px < x + 1 && py >= y && py < y + 1) {

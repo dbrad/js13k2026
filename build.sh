@@ -45,7 +45,7 @@ else
     node_modules/.bin/html-minifier-terser --collapse-whitespace --remove-comments --remove-attribute-quotes --output build/release/index.html src/www/index.html > /dev/null
     # node build/scripts/version-bump.mjs
     node build/scripts/release-app.mjs | node_modules/.bin/uglifyjs --config-file build/scripts/minify.config.json -o build/release/main.js
-    last_line=$(node_modules/.bin/roadroller build/release/main.js -O2 -Zab0 -Zlr1064 -Zmc4 -Zmd14 -Zpr16 -S0,1,2,3,7,13,14,21,42,57,344,465 -o build/release/main.js 2>&1 | tail -n 1)
+    last_line=$(node_modules/.bin/roadroller build/release/main.js -O2 -Zab0 -Zlr1064 -Zmc4 -Zmd14 -Zpr16 -S0,1,2,3,7,13,14,21,42,57,323,400 -o build/release/main.js 2>&1 | tail -n 1)
     log "$last_line"
     rm -rf dist
     mkdir -p dist/src
