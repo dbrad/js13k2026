@@ -71,5 +71,7 @@
     - Charge time goes up linearly, damage is calculated by dmgCalc()
     - Need to update the logic around the attack charge bar in main.ts
     - Drawing thin lines as the max goes up on the bar to indicate the charge levels
-- [ ] Faster music for boss fight
+- [x] Scale up enemy hp each level
+- [x] Add sound effect on health pack pickups
+- [x] Faster music for boss fight
     - Need a faster paced song to play during the boss fight
