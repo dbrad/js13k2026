@@ -132,7 +132,7 @@ export let entityAdd = (x: number, y: number, texId: number, scale = 1, flags: n
     type_id_[slot] = type_id;
 
     if (type_id > ENEMY_NONE) {
-        hp_[slot] = enemyHealth[type_id] * (gameState[GS_LEVEL] + 1);
+        hp_[slot] = enemyHealth[type_id] * (gameState[GS_LEVEL] * 0.5 + 1);
         flags_[slot] |= FLAG_ENEMY | FLAG_SOLID;
         alert_[slot] = -1;
     }
@@ -967,7 +967,7 @@ export let entityDraw = (px: number, py: number, angle: number, now: number): vo
 export let bossActive = () => bossId >= 0 && alert_[bossId] === 0 && hp_[bossId] > 0;
 export let inCombat = () => alertCount_ > 0;
 
-let bossMaxHp = () => enemyHealth[type_id_[bossId]] * (gameState[GS_LEVEL] + 1);
+let bossMaxHp = () => enemyHealth[type_id_[bossId]] * ((gameState[GS_LEVEL] * 0.5) + 1);
 export let renderBossBar = () => {
     if (bossActive()) {
         glPushColorQuad(5, 5, SCREEN_WIDTH - 10, 16, 0xaa333333);

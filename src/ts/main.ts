@@ -80,6 +80,7 @@ window.addEventListener("load", async (): Promise<void> => {
 
     let footstepTimer = 0.28;
     let shootCooldown = 0;
+    let regenCooldown = 2.5;
 
     let then = performance.now();
     let tick = (now: number): void => {
@@ -206,6 +207,14 @@ window.addEventListener("load", async (): Promise<void> => {
                         if (moveX !== 0 || moveY !== 0) {
                             [px, py] = rayMove(px, py, moveX * speed, moveY * speed);
                             moving = true;
+                        }
+
+                        if (gameState[GS_PLAYER_HP] < 3) {
+                            regenCooldown -= dt;
+                            if (regenCooldown <= 0) {
+                                regenCooldown = 2.5;
+                                if (gameState[GS_PLAYER_HP] < 3) gameState[GS_PLAYER_HP]++;
+                            }
                         }
 
                         [px, py] = entityPlayerCollide(px, py, 0.25, () => {
@@ -359,25 +368,30 @@ window.addEventListener("load", async (): Promise<void> => {
 
                     // Player health bar
                     let hp = gameState[GS_PLAYER_HP] / gameState[GS_PLAYER_MAX_HP];
-                    glPushColorQuad(5, SCREEN_HEIGHT - 5, 200, 1, 0xffffffff);
+                    glPushColorQuad(5, SCREEN_HEIGHT - 5, 250, 1, 0xffffffff);
                     glPushColorQuad(5, SCREEN_HEIGHT - 5 - 8, 1, 8, 0xffffffff);
-                    glPushColorQuad(7, SCREEN_HEIGHT - 7 - 8, 200 * hp, 2, RAINBOW[GREEN]);
-                    glPushColorQuad(7, SCREEN_HEIGHT - 7 - 8, 200 * hp, 8, 0xdd008800);
+                    glPushColorQuad(7, SCREEN_HEIGHT - 13, 250 * hp, 7, gameState[GS_PLAYER_HP] >= 7 ? RAINBOW[GREEN] : gameState[GS_PLAYER_HP] >= 3 ? RAINBOW[YELLOW] : RAINBOW[RED]);
+
+                    glPushColorQuad(SCREEN_WIDTH - 255, SCREEN_HEIGHT - 5, 250, 1, 0xffffffff);
+                    glPushColorQuad(SCREEN_WIDTH - 6, SCREEN_HEIGHT - 5 - 8, 1, 8, 0xffffffff);
 
                     let maxCharge = gameState[GS_MAX_CHARGE];
+                    for (let lvl = 1; lvl < maxCharge; lvl++) {
+                        glPushColorQuad(SCREEN_WIDTH - 7 - floor(250 * lvl / maxCharge), SCREEN_HEIGHT - 13, 1, 8, 0xffffffff);
+                    }
                     if (shootCooldown > 0 || charge > 0) {
-                        let barWidth = SCREEN_WIDTH - 52;
-                        glPushColorQuad(25, SCREEN_HEIGHT - 37, barWidth + 2, 16, 0xee2d2d2d);
                         if (shootCooldown > 0) {
-                            glPushColorQuad(26, SCREEN_HEIGHT - 37, barWidth * shootCooldown * 2, 16, RAINBOW[RED]);
+                            let cd = 250 * shootCooldown * 2;
+                            glPushColorQuad(SCREEN_WIDTH - 7 - cd, SCREEN_HEIGHT - 13, cd, 7, RAINBOW[RED]);
                         } else {
                             let c = charge / maxCharge;
                             for (let r = 0; r < 7; r++) {
-                                glPushColorQuad(26, SCREEN_HEIGHT - 36 + (r * 2), barWidth * c, 2, (255 * c) << 24 | (RAINBOW[r] & 0xffffff));
+                                let ch = 250 * c;
+                                glPushColorQuad(SCREEN_WIDTH - 7 - ch, SCREEN_HEIGHT - 13 + (r), ch, 1, (255 * c) << 24 | (RAINBOW[r] & 0xffffff));
                             }
                         }
                         for (let lvl = 1; lvl < maxCharge; lvl++) {
-                            glPushColorQuad(25 + floor(barWidth * lvl / maxCharge), SCREEN_HEIGHT - 37, 1, 16, 0xffffffff);
+                            glPushColorQuad(SCREEN_WIDTH - 7 - floor(250 * lvl / maxCharge), SCREEN_HEIGHT - 13, 1, 7, 0xffffffff);
                         }
                     }
                     if (gameState[GS_OPEN_MAP]) {
