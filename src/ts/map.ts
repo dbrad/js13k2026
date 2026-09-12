@@ -18,10 +18,10 @@ export let doorAnimActive: Int32Array;
 export let lightMap: Float32Array;
 export let lightCalculated: Int32Array;
 
-export let AMBIENT = 0.1;
-export let PLAYER_TORCH_INTENSITY = 0.9;
+export let AMBIENT = 0.15;
+export let PLAYER_TORCH_INTENSITY = 0.8;
 export let updatePlayerTorch = (charging: boolean) => {
-    PLAYER_TORCH_INTENSITY = charging ? 1 : 0.9;
+    PLAYER_TORCH_INTENSITY = charging ? 1 : 0.8;
 };
 
 type Room = { id_: number; type_: number; enemyCount_: number, x_: number; y_: number; w_: number; h_: number; n_: number[]; };
@@ -133,35 +133,38 @@ export let generateDungeon = () => {
         let wall = -1;
         for (let w = 0; w < 4; w++) if (parentRoom.n_[w] === WALL_FREE) { wall = w; break; }
         if (wall > -1) {
-            let w = 5, h = 5, x = 0, y = 0, maxW = srandInt(8, 14), maxH = srandInt(8, 14);
-            if (wall === WALL_NORTH || wall === WALL_SOUTH) {
-                x = max(0, srandInt(parentRoom.x_ - 3, parentRoom.x_ + parentRoom.w_ - 3));
-                y = max(0, wall === WALL_NORTH ? parentRoom.y_ - h : parentRoom.y_ + parentRoom.h_);
-            } else {
-                x = max(0, wall === WALL_WEST ? parentRoom.x_ - w : parentRoom.x_ + parentRoom.w_);
-                y = max(0, srandInt(parentRoom.y_ - 3, parentRoom.y_ + parentRoom.h_ - 3));
-            }
-            let testX = x, testY = y, testW = w, testH = h;
-            for (; ;) {
-                let overlap = 0;
-                for (let ri = 0; ri < rooms.length; ri++) {
-                    let o = rooms[ri];
-                    if (max(testX, o.x_) < min(testX + testW, o.x_ + o.w_) && max(testY, o.y_) < min(testY + testH, o.y_ + o.h_)) {
-                        overlap = 1;
-                        break;
+            let w = 6, h = 6, x = 0, y = 0, maxW = srandInt(9, 14), maxH = srandInt(9, 14);
+            let tryPlace = () => {
+                assert(parentRoom !== null, "shouldn't be possible");
+                if (wall === WALL_NORTH || wall === WALL_SOUTH)
+                    x = max(0, srandInt(parentRoom.x_ - 3, parentRoom.x_ + parentRoom.w_ - 3)), y = max(0, wall === WALL_NORTH ? parentRoom.y_ - h : parentRoom.y_ + parentRoom.h_);
+                else
+                    x = max(0, wall === WALL_WEST ? parentRoom.x_ - w : parentRoom.x_ + parentRoom.w_), y = max(0, srandInt(parentRoom.y_ - 3, parentRoom.y_ + parentRoom.h_ - 3));
+                let testX = x, testY = y, testW = w, testH = h;
+                for (; ;) {
+                    let overlap = 0;
+                    for (let ri = 0; ri < rooms.length; ri++) {
+                        let o = rooms[ri];
+                        if (max(testX, o.x_) < min(testX + testW, o.x_ + o.w_) && max(testY, o.y_) < min(testY + testH, o.y_ + o.h_)) {
+                            overlap = 1;
+                            break;
+                        }
+                    }
+                    if (overlap || w >= maxW || h >= maxH || x < 1 || y < 1 || x + w >= mapW - 1 || y + h >= mapH - 1) break;
+                    w = testW; h = testH; x = testX; y = testY;
+                    if (srand() < .5) {
+                        if (wall === WALL_WEST) testX--;
+                        testW++;
+                    } else {
+                        if (wall === WALL_NORTH) testY--;
+                        testH++;
                     }
                 }
-                if (overlap || w >= maxW || h >= maxH || x < 0 || y < 0 || x + w >= mapW || y + h >= mapH) break;
-                w = testW; h = testH; x = testX; y = testY;
-                if (srand() < .5) {
-                    if (wall === WALL_WEST) testX++;
-                    testW++;
-                } else {
-                    if (wall === WALL_NORTH) testY++;
-                    testH++;
-                }
-            }
-            if (w === 5 && h === 5 && testW === 5 && testH === 5) {
+                return !(w === 6 && h === 6 && testW === 6 && testH === 6);
+            };
+            let ok = tryPlace();
+            for (let t = 1; !ok && t++ < 8;) ok = tryPlace();
+            if (!ok) {
                 parentRoom.n_[wall] = WALL_BLOCKED;
                 continue;
             }
@@ -178,8 +181,8 @@ export let generateDungeon = () => {
         }
     }
 
-    for (let my = 0; my < mapH - 5; my++) {
-        for (let mx = 0; mx < mapW - 5; mx++) {
+    for (let my = 1; my < mapH - 5; my++) {
+        for (let mx = 1; mx < mapW - 5; mx++) {
             let ok = 1;
             o: for (let ry = my; ry < my + 5; ry++)
                 for (let rx = mx; rx < mx + 5; rx++)

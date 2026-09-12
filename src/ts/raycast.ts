@@ -208,9 +208,9 @@ export let rayRender = (px: number, py: number, angle: number, now: number, dt: 
             let textureX = floor(wallX * TEXTURE_SIZE);
 
             let wallTexture =
-                cell === CELL_WALL ? TEXTURE_CACHE[TEXTURE_BRICK] :
+                cell >= CELL_HORIZONTAL_DOOR ? TEXTURE_CACHE[TEXTURE_WOOD] :
                     cell === CELL_CRACKED ? TEXTURE_CACHE[TEXTURE_BRICK_CRACK] :
-                        TEXTURE_CACHE[TEXTURE_WOOD];
+                        TEXTURE_CACHE[TEXTURE_BRICK];
             let u0 = wallTexture.u0_ + (textureX / TEXTURE_SIZE) * (wallTexture.u1_ - wallTexture.u0_);
 
             let textureV0 = wallTexture.v0_ + vStart * (wallTexture.v1_ - wallTexture.v0_);
